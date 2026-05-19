@@ -1,0 +1,175 @@
+cd /home/badsha/medusa-dev/apps/my-medusa-store
+ psql -U medusa -d medusa -h localhost 
+-=-- Your flow:
+Login → get token
+Check actor_id
+If no actor → create vendor
+Re-login → get final token
+
+👉 This is correct lifecycle simulation --=- 
+Real flow is:
+
+Browser (frontend)
+or Postman/Insomnia 
+To fully reset a vendor:
+
+You must clear:
+
+vendor_admin
+vendor
+auth_identity.app_metadata
+DELETE FROM vendor_admin;
+DELETE FROM vendor;
+UPDATE auth_identity SET app_metadata = '{}';
+❓ Can you reuse this script?
+
+✔ YES — fully reusable
+✔ Each run creates:
+
+new email → new user
+new vendor
+new vendor_admin
+login → get token → use → expires → login again
+🧠 7. Final architecture validation (your system)
+
+You now have:
+
+✔ Auth layer
+auth_identity ✅
+token with actor_id ✅
+
+✔ Domain
+vendor ✅
+vendor_admin ✅
+✔ Rules
+1 user → 1 vendor ✅ (guard + DB constraint)
+multiple vendors globally ✅
+✔ Workflow
+createVendor → createVendorAdmin → setAuthMetadata ✅
+chmod +x create-vendor.sh
+
+
+./create-vendor.sh
+./create-vendor.sh soman@example.com supersecret
+./create-vendor.sh --email=test@example.com --password=abc
+🔹 Full Auth Flow
+register → login → JWT decode → actor_id detection
+🔹 Conditional Logic
+IF no vendor → create vendor
+ELSE → reuse
+🔹 Product Pipeline
+valid Medusa payload (options + variants)
+🔹 DevOps Style Automation
+idempotent
+reusable
+dynamic (date +%s)
+chmod +x create-product.sh
+./create-product.sh
+./create-product.sh soman@example.com supersecret
+
+TOKEN=...
+curl -X POST .../vendors/products ... 
+export TOKEN=$(./create-product.sh | grep TOKEN | cut -d '=' -f2) 
+echo "$TOKEN" | cut -d '.' -f2 | base64 -d | jq 
+EMAIL=trial@example.com
+PASSWORD=supersecret
+YOUR_ADMIN_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/vendor/emailpass' \
+  -H 'Content-Type: application/json' \
+  --data-raw "{
+    \"email\": \"$EMAIL\",
+    \"password\": \"$PASSWORD\"
+  }" | jq -r '.token // .auth_token // .access_token')
+
+echo $YOUR_ADMIN_TOKEN
+PLATFORM_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/user/emailpass' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "email": "admin@test.com",
+    "password": "supersecret"
+  }' | jq -r '.token')
+
+  # list clean
+
+
+curl -s http://localhost:9000/vendors/products \
+  -H "Authorization: Bearer $TOKEN" \
+  | jq -r '.products[]? 
+    | select(.id != null) 
+    | "\(.id) | \(.title) | \(.handle) | \(.status)"'
+
+# update
+curl -s -X PATCH "http://localhost:9000/vendors/products/$PRODUCT_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Updated Product Title"}' \
+  | jq '.product | {id, title, status}'
+
+  curl -s -X DELETE "http://localhost:9000/vendors/products/$PRODUCT_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  | jq
+
+  EMAIL=trial@example.com
+  EMAIL=trial11@example.com
+  PASSWORD=supersecret
+  PRODUCT_ID=prod_01KQFQ665247KW4TCXZ030DWCK
+  CART_ID=cart_01KQM3QJWYHD5E8EX1N3AJZ663
+  VARIANT_ID=variant_01KQFQ6686753ZTJVNCQSBB2X0
+  APIKEY=pk_6ca3b2c0e56d8431bfba029f3d949bd4443c2357fed0843d1af76bc17715a468
+   echo $PRODUCT_ID <-> $EMAIL
+
+ curl http://localhost:9000/store/carts/$NEW_CART_ID \
+  -H "x-publishable-api-key: $APIKEY"
+
+{"cart":{"id":"cart_01KQM3QJWYHD5E8EX1N3AJZ663","currency_code":"inr","email":null,"locd":"reg_default","created_at":"2026-05-02T10:28:46.114Z","updated_at":"2026-05-02T10:28d_at":null,"total":0,"subtotal":0,"tax_total":0,"discount_total":0,"discount_subtotal":al":0,"original_total":0,"original_tax_total":0,"item_total":0,"item_subtotal":0,"item_discount_total":0,"original_item_total":0,"original_item_subtotal":0,"original_item_tax_total":0,"shipping_subtotal":0,"shipping_tax_total":0,"shipping_discount_total":0,"oritotal":0,"original_shipping_subtotal":0,"original_shipping_total":0,"credit_line_subtottax_total":0,"credit_line_total":0,"metadata":null,"sales_channel_id":"sc_01KQFNPKMTK7Spping_address_id":"caaddr_01KQM3QJX1F98QBEQZWTF0MGX0","customer_id":null,"items":[],"sh"shipping_address":{"id":"caaddr_01KQM3QJX1F98QBEQZWTF0MGX0","first_name":null,"last_nanull,"address_1":null,"address_2":null,"city":null,"postal_code":null,"country_code":"i"phone":null},"billing_address":null,"credit_lines":[],"region":{"id":"reg_default","nacy_code":"inr","automatic_taxes":true,"countries":[{"iso_2":"in","iso_3":"ind","num_codDIA","display_name":"India","region_id":"reg_default","metadata":null,"created_at":"2025Z","updated_at":"2026-04-30T17:06:06.625Z","deleted_at":null}]},"promotions":[]}}badsh
+const vendorId = variants[0]?.product?.vendor?.id;
+
+curl -X POST http://localhost:9000/store/carts/$NEW_CART_ID/line-items \
+  -H "Content-Type: application/json" \
+  -H "x-publishable-api-key: $APIKEY" \
+  -d "{
+    \"variant_id\": \"$VARIANT_ID\",
+    \"quantity\": 1
+  }"
+  # Get cart details (includes line items)
+  
+curl -X GET http://localhost:9000/store/carts/$NEW_CART_ID \
+  -H "x-publishable-api-key: $APIKEY"
+  
+  SELECT id, variant_id, metadata FROM cart_line_item WHERE cart_id = 'cart_01KQM3QJWYHD5E8EX1N3AJZ663';
+  DELETE FROM cart_line_item WHERE cart_id = 'cart_01KQM3QJWYHD5E8EX1N3AJZ663';
+   curl -X GET "http://localhost:9000/store/carts/$CART_ID"   -H "x-publishable-api-key: $APIKEY" | jq '.cart.items[] | {id: .id, title: .title, metadata: .metadata}'
+
+
+  curl -X POST "http://localhost:9000/admin/shipping-options" \
+  -H "Authorization: Bearer $PLATFORM_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"Standard Shipping\",
+    \"service_zone_id\": \"$S_ZONE_ID\",
+    \"shipping_profile_id\": \"sp_01KQFNNRVCT39637JP9R0SMKMR\",
+    \"provider_id\": \"manual_manual\",
+    \"price_type\": \"flat\",
+    \"type\": { \"label\": \"Standard\", \"description\": \"Ship by land\", \"code\": \"std\" },
+    \"prices\": [
+        { \"currency_code\": \"inr\", \"amount\": 500 }
+    ]
+  }"
+
+  F_SET_ID=fuset_01KRCV475V48QZ5W8K7KYHAAP9      curl -s -X POST "http://localhost:9000/admin/fulfillment/fulfillment-sets/$F_SET_ID/service-zones" \
+  -H "Authorization: Bearer $PLATFORM_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "India Zone",
+    "geo_zones": [{"type": "country", "country_code": "in"}]
+  }' | jq -r '.service_zone.id')
+
+echo "Service Zone ID: $S_ZONE_ID"
+curl -s -X POST "http://localhost:9000/admin/fulfillment/fulfillment-sets/$S_ZONE_ID/service-zones" \
+  -H "Authorization: Bearer $PLATFORM_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "India Zone",
+    "geo_zones": [{"type": "country", "country_code": "in"}]
+  }'
+
+  fuset_01KRCV475V48QZ5W8K7KYHAAP9 

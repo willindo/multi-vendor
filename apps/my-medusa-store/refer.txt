@@ -1,0 +1,93 @@
+badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-medusa-store$ touch src/scripts/test-order-link.ts
+mkdir -p src/modules/vendor/{models,services}
+touch src/modules/vendor/index.ts
+touch src/modules/vendor/models/vendor.ts
+touch src/modules/vendor/services/vendor-service.ts
+https://docs.medusajs.com/resources/commerce-modules/auth/create-actor-type
+find ./src/modules -type d -name "migrations" -prune -o -type f -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
+find ./src -type f -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
+find . -type f -iname "*.sh" -not -iname "readme*" -not -path "*/node_modules/*" -not -path "*/migrations/*"  -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \; | grep -v "migrations"
+find ./src -type f -path "*/services/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
+find ./src -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" \) -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
+find . \( -path "./src/modules/*" -o -path "./src/api/*" -o -path "./src/workflows/*" -o -name "medusa-config.ts" -o -name ".env" \) -type f -not -path "*/migrations/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+find . \( -path "./src/subscribers/*"  -o -path "./src/api/*" -o -path "./src/workflows/*" -o -name "medusa-config.ts" -o -name "validate*" -o -name "middlewares" \) -type f -not -path "*/migrations/*" -not -path "*/*product*/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+find . \( -path "./src/modules/*" -o -path "./src/api/*" -o -path "./src/links" -o -path "./src/subscribers/*" -o -name "medusa-config.ts"-o -name "validate*" \) -type f -not -path "*/migrations/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+find . \( -path "./src*/*product*/*" -o -name "medusa-config.ts" -o -name "middlewares" -o -iname "*product*" -o -iname "*validate*" \) -type f -not -iname "readme*" -not -iname "*.sh*" -not -path "*/node_modules/*" -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+find . \( -path "./src/*" -o -name "medusa-config.ts" \) -type f -not -path "*/migrations/*" -not -iname "readme*" -not -iname "seed*" -exec sh -c  'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+find . -type f \
+  -not -iname "readme*" \
+  \( \
+    -path "./src/*" -name "*product*" \
+    -o -iname "*product*" \
+    -o -name "medusa-config.ts" \
+    -o -name "middlewares*" \
+  \) \
+  -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+AuthIdentity data model -=- app_metadata -- custom actor type = manger 
+Manage multiple vendors, each having vendor admins.
+Allow vendor admins to manage the vendor’s products and orders.
+Split orders placed by customers into multiple orders for each vendor.
+const VendorAdmin = model.define("vendor_admin", 
+const Vendor = model.define("vendor", {
+
+    src/modules/marketplace/service.ts
+import { MedusaService } from "@medusajs/framework/utils"
+import Vendor from "./models/vendor"
+import VendorAdmin from "./models/vendor-admin"
+
+class MarketplaceModuleService extends MedusaService({
+  Vendor,
+  VendorAdmin,
+pnpm medusa db:generate marketplace
+pnpm medusa db:migrate 
+Understanding Authentication#
+Before proceeding further, you need to understand some concepts related to authenticating users, especially those of custom actor types.
+
+An actor type is a type of user that can send an authenticated requests. Medusa has two default actor types: customer for customers, and admin for admin users.
+
+You can also create custom actor types, allowing you to authenticate your custom users to specific routes. In this recipe, your custom actor type would be the vendor's admin.
+
+When you create a user of the actor type (for example, a vendor admin), you must:
+
+Retrieve a registration JWT token. Medusa has a /auth/{actor_type}/emailpass/register route to retrieve a registration JWT token for the specified actor type.
+Create the user. This requires creating the user in the database, and associate an auth identity with that user. An auth identity allows this user to later send authenticated requests.
+Retrieve an authenticated JWT token using Medusa's /auth/{actor_type}/emailpass route, which retrieves the token for the specified actor type if the credentials in the request body match a user in the database.
+In the next steps, you'll implement the logic to create a vendor and its admin around the above authentication flow. You can also refer to the following documentation pages to learn more about authentication in Medusa:
+
+
+he workflow accepts two parameters:
+
+vendor_admin_id: The ID of the vendor admin creating the product.
+product: The details of the product to create.
+In the workflow, you first retrieve the default sales channel in the store. This is necessary, as the product can only be purchased in the sales channels it's available in.
+
+Then, you prepare the product's data, combining what's
+All API Routes are prefixed with /admin. So, during development, the API Routes will be available under the path http://localhost:9000/admin. For production, replace http://localhost:9000 with your Medusa application URL. 
+The MarketplaceModuleService extends MedusaService from the Modules SDK which generates a class with data-management methods for your module's data models. This saves you time on implementing Create, Read, Update, and Delete (CRUD) methods.
+So, the MarketplaceModuleService class now has methods like createVendors and retrieveVendorAdmin.
+A module is a reusable package of functionalities related to a single domain or integration. Medusa comes with multiple pre-built modules for core commerce needs, such as the Cart Module that holds the data models and business logic for cart operations.
+
+# Template with placeholders
+find . \( ${INCLUDES} \) -type f -not -path "${EXCLUDE_PATHS}" -not -iname "${EXCLUDE_NAMES}" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+
+# Example usage:
+INCLUDES="-path "./src/subscribers/*" -o -path "./src/api/*" -o -path "./src/workflows/*" -o -path "./src/modules/*" -o -name "medusa-config.ts" -o -name "validate*" -o -name "middlewares" \
+EXCLUDE_PATHS="*/migrations/* "*/*product*/*"" \
+
+INCLUDE="./src/*"
+EXCLUDE_PATHS="
+*/migrations/*
+"
+EXCLUDE_INAMES="readme*"
+EXCLUDE_NAMES=" "
+find . \
+  \( -path "$INCLUDE" -o -name "medusa-config.ts" \) \
+  -type f \
+  $(printf '! -path "%s"\n' ' $EXCLUDE_PATHS) \
+  $(printf '! -iname "%s"\n' ' $EXCLUDE_INAMES) \
+  $(printf '! -name "%s" ' $EXCLUDE_NAMES) \
+  -exec sh -c '
+    echo
+    echo "==== $1 ===="
+    cat "$1"
+  ' _ {} \;

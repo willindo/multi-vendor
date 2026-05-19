@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  # 1. Database Engine
+  db:
+    image: postgres:15
+    container_name: medusa_postgres
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusa
+      POSTGRES_DB: medusa
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Event Bus Broker
+  redis:
+    image: redis:7
+    container_name: medusa_redis
+    restart: unless-stopped
+    mem_limit: 256m
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 3. Typo-Tolerant Search Engine
+  meilisearch:
+    image: getmeili/meilisearch:v1.7  # Pinning a stable version matching your SDK client
+    container_name: medusa_meilisearch
+    restart: unless-stopped
+    mem_limit: 512m
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_HOST: 0.0.0.0:7700
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: masterKey  # Matches your script fallback configurations
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  meili_data:  # Ensures search indexes survive container rebuilds
