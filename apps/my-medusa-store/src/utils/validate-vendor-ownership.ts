@@ -1,4 +1,6 @@
+// ==== ./src/utils/validate-vendor-ownership.ts ====
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { MedusaError } from "@medusajs/framework/utils"
 
 type Scope = {
   resolve: (key: string | symbol) => any
@@ -11,23 +13,36 @@ export const validateVendorProductOwnership = async (
 ) => {
   const query = scope.resolve(ContainerRegistrationKeys.QUERY)
 
-  const { data: [vendorAdmin] } = await query.graph({
+  // Fetch ownership layout information using your core junction entity definitions
+  const { data: vendorAdmins } = await query.graph({
     entity: "vendor_admin",
-    fields: ["vendor.id", "vendor.products.id"],
+    fields: ["vendor.id"],
+    filters: { id: [actor_id] },
+  })
+
+  const vendorId = vendorAdmins[0]?.vendor?.id
+
+  if (!vendorId) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_FOUND,
+      "Vendor profile not found for active user."
+    )
+  }
+
+  // Cross-reference your exact custom link engine layout table mapping target products to vendors
+  const { data: productLinks } = await query.graph({
+    entity: "marketplace_vendor_product_product",
+    fields: ["vendor_id", "product_id"],
     filters: {
-      id: [actor_id],
+      vendor_id: [vendorId],
+      product_id: [product_id],
     },
   })
 
-  if (!vendorAdmin || !vendorAdmin.vendor) {
-    throw new Error("Vendor not found")
-  }
-
-  const ownsProduct = vendorAdmin.vendor.products?.some(
-    (p: any) => p.id === product_id
-  )
-
-  if (!ownsProduct) {
-    throw new Error("Unauthorized: This product does not belong to your vendor")
+  if (!productLinks || productLinks.length === 0) {
+    throw new MedusaError(
+      MedusaError.Types.UNAUTHORIZED,
+      "Access Denied: This target entity does not belong to your vendor organization account."
+    )
   }
 }

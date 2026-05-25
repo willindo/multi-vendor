@@ -1,6 +1,7 @@
-import { loadEnv, defineConfig } from "@medusajs/framework/utils"
+// ==== ./medusa-config.ts ====
+import { loadEnv, defineConfig, } from "@medusajs/framework/utils";
 
-loadEnv(process.env.NODE_ENV || "development", process.cwd())
+loadEnv(process.env.NODE_ENV || "development", process.cwd());
 
 module.exports = defineConfig({
   projectConfig: {
@@ -15,18 +16,32 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     },
   },
-  // modules: [],
-    modules: [
-      {
-      // resolve: "@medusajs/medusa/event-bus-local",
+  modules: [
+    {
       resolve: "@medusajs/medusa/event-bus-redis",
-      options: { 
+      options: {
         redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
       },
     },
     {
       resolve: "./src/modules/marketplace",
-      // key: "vendor",
+    },
+    {
+      resolve: "@medusajs/medusa/auth",
+      options: {
+        scopes: {
+          admin: ["user"],
+          store: ["customer"],
+          vendor: ["vendor_admin", "user"],
+        },
+        providers: [
+              {
+                resolve: "@medusajs/medusa/auth-emailpass",
+                id: "emailpass",
+                options: {},
+              },
+            ],
+      },
     },
   ],
-})
+});

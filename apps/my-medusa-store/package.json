@@ -28,13 +28,17 @@
     "@medusajs/framework": "2.13.6",
     "@medusajs/medusa": "2.13.6",
     "axios": "^1.15.1",
+    "cors": "^2.8.6",
+    "crypto": "^1.0.1",
     "dotenv": "^17.4.2",
-    "meilisearch": "^0.58.0"
+    "meilisearch": "^0.58.0",
+    "razorpay": "^2.9.6"
   },
   "devDependencies": {
     "@medusajs/test-utils": "2.13.6",
     "@swc/core": "^1.7.28",
     "@swc/jest": "^0.2.36",
+    "@types/cors": "^2.8.19",
     "@types/jest": "^29.5.13",
     "@types/node": "^20.12.11",
     "@types/react": "^18.3.2",

@@ -1,4 +1,4 @@
-// src/workflows/marketplace/process-order-payment-splits/steps/calculate-splits.ts
+// ==== Updated ./src/workflows/marketplace/process-order-payment-splits/steps/calculate-splits.ts ====
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
@@ -23,10 +23,10 @@ export const calculateSplitsStep = createStep(
     const { container } = context;
     const query = container.resolve(ContainerRegistrationKeys.QUERY);
     
-    // Use raw query.graph inside an active step execution frame
+    // 1. Updated fields array to pull down shipping methods metadata
     const { data: orders } = await query.graph({
       entity: "order",
-      fields: ["id", "total", "currency_code", "items.*"],
+      fields: ["id", "total", "currency_code", "items.*", "shipping_methods.*"],
       filters: { id: input.orderId }
     });
 
@@ -35,7 +35,6 @@ export const calculateSplitsStep = createStep(
       throw new Error(`[SplitEngine] Order ${input.orderId} has no processable items.`);
     }
 
-    // Explicitly typed filter/map chain to avoid implicit 'any' warnings
     const vendorIdsInOrder = [
       ...new Set(
         order.items
@@ -53,7 +52,6 @@ export const calculateSplitsStep = createStep(
       });
     }
 
-    // Query your vendor custom data rows cleanly
     const { data: vendors } = await query.graph({
       entity: "vendor",
       fields: ["id", "name", "metadata"],
@@ -62,11 +60,28 @@ export const calculateSplitsStep = createStep(
 
     const vendorTotalsMap: Record<string, number> = {};
     
+    // Calculate line items base cost
     for (const item of order.items) {
       if (!item || !item.metadata?.vendor_id) continue;
       const vId = item.metadata.vendor_id as string;
       vendorTotalsMap[vId] = (vendorTotalsMap[vId] || 0) + (item.subtotal || 0);
     }
+
+    // 2. Shipping Allocation Rule: Add shipping fees directly to the vendor balance
+   // Inside calculate-splits.ts
+if (order.shipping_methods) {
+  for (const method of order.shipping_methods) {
+    // 🚀 Added '&& method' check to guard against null elements in the array
+    if (method && method.metadata?.vendor_id) {
+      const shippingVendorId = method.metadata.vendor_id as string;
+      
+      if (vendorTotalsMap[shippingVendorId] !== undefined) {
+        // Medusa v2 uses method.amount for the final calculated shipping price
+        vendorTotalsMap[shippingVendorId] += (method.amount || 0);
+      }
+    }
+  }
+}
 
     const splits: SplitTransferItem[] = [];
 
@@ -77,7 +92,7 @@ export const calculateSplitsStep = createStep(
       const commissionRate = payoutConfig.commission_rate !== undefined ? payoutConfig.commission_rate : 0.10;
 
       if (!razorpayAccountId) {
-        console.warn(`⚠️ Vendor ${vendorId} missing payment routing configurations. Skipping split transaction payload layout.`);
+        console.warn(`⚠️ Vendor ${vendorId} missing payment routing configurations.`);
         continue;
       }
 

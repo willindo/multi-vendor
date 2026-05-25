@@ -1,5 +1,5 @@
 import {
-  AuthenticatedMedusaRequest,
+  AuthenticatedMedusaRequest, MedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"

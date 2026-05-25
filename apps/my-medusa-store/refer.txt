@@ -3,13 +3,21 @@ mkdir -p src/modules/vendor/{models,services}
 touch src/modules/vendor/index.ts
 touch src/modules/vendor/models/vendor.ts
 touch src/modules/vendor/services/vendor-service.ts
+exec_cmd='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;' = "$exec_cmd" 
+exec_cmd=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;) = "${exec_cmd[@]}"
 https://docs.medusajs.com/resources/commerce-modules/auth/create-actor-type
+ -exec grep -l "process\.env" {} \;  rl= list , rn= content with line numbers
+echo "=== Files with process.env (excluding .next and config) ===" && \
+ grep -rl --include="*.ts" --include="*.js" --include="*.tsx" --include="*.jsx" "process\.env" . \
+  --exclude-dir=.next \
+  --exclude="*.config.js" \
+  --exclude="*.sitemap.js" 
 find ./src/modules -type d -name "migrations" -prune -o -type f -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
 find ./src -type f -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
 find . -type f -iname "*.sh" -not -iname "readme*" -not -path "*/node_modules/*" -not -path "*/migrations/*"  -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \; | grep -v "migrations"
 find ./src -type f -path "*/services/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
 find ./src -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" \) -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
-find . \( -path "./src/modules/*" -o -path "./src/api/*" -o -path "./src/workflows/*" -o -name "medusa-config.ts" -o -name ".env" \) -type f -not -path "*/migrations/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+find . \( -path "./src/modules/*" -o -path "./src/api/*" -o -path "*/*product*/*"  -o -name "medusa-config.ts" -o -name "validate*" -o -name "middlewares"\) -type f -not -path "*/migrations/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
 find . \( -path "./src/subscribers/*"  -o -path "./src/api/*" -o -path "./src/workflows/*" -o -name "medusa-config.ts" -o -name "validate*" -o -name "middlewares" \) -type f -not -path "*/migrations/*" -not -path "*/*product*/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
 find . \( -path "./src/modules/*" -o -path "./src/api/*" -o -path "./src/links" -o -path "./src/subscribers/*" -o -name "medusa-config.ts"-o -name "validate*" \) -type f -not -path "*/migrations/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
 find . \( -path "./src*/*product*/*" -o -name "medusa-config.ts" -o -name "middlewares" -o -iname "*product*" -o -iname "*validate*" \) -type f -not -iname "readme*" -not -iname "*.sh*" -not -path "*/node_modules/*" -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
