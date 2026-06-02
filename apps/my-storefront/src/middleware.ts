@@ -95,12 +95,11 @@ async function getCountryCode(
  */
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const vendorJwt = request.cookies.get("medusa_vendor_jwt")?.value
+  const userRole = request.cookies.get("user_role")?.value
 
   // 🚀 VENDOR EXCEPTION BYPASS: Let vendor workspace routes pass cleanly through geographical routing
   if (pathname.startsWith("/vendor")) {
-    const vendorJwt = request.cookies.get("medusa_vendor_jwt")?.value
-
-    // If a merchant attempts to look at dashboard panels without a valid token, bounce them to /account (login)
     if (
       !vendorJwt &&
       pathname !== "/vendor" &&
@@ -109,28 +108,28 @@ export async function middleware(request: NextRequest) {
       const cacheId =
         request.cookies.get("_medusa_cache_id")?.value || crypto.randomUUID()
       const regionMap = await getRegionMap(cacheId)
-
-      // Guard the country code resolution with a clean fallback chain
-      let targetCountry = await getCountryCode(request, regionMap)
-      if (!targetCountry || targetCountry.length !== 2) {
-        targetCountry = DEFAULT_REGION || "in"
-      }
+      let targetCountry = (await getCountryCode(request, regionMap)) || "in"
 
       return NextResponse.redirect(
         new URL(`/${targetCountry.toLowerCase()}/account`, request.url)
       )
     }
 
+    // Clean execution bypass for authenticated vendors
     return NextResponse.next()
   }
 
   // Vendor dashboard specific check
   if (pathname.startsWith("/vendor/dashboard")) {
-    const sessionToken = request.cookies.get("_medusa_jwt")?.value
-    const userRole = request.cookies.get("user_role")?.value
+    if (!vendorJwt || userRole !== "vendor") {
+      const cacheId =
+        request.cookies.get("_medusa_cache_id")?.value || crypto.randomUUID()
+      const regionMap = await getRegionMap(cacheId)
+      let targetCountry = (await getCountryCode(request, regionMap)) || "in"
 
-    if (!sessionToken || userRole !== "vendor_admin") {
-      return NextResponse.redirect(new URL("/account", request.url))
+      return NextResponse.redirect(
+        new URL(`/${targetCountry.toLowerCase()}/account`, request.url)
+      )
     }
   }
 
@@ -173,7 +172,7 @@ export async function middleware(request: NextRequest) {
       { status: 500 }
     )
   }
-  
+
   return response
 }
 

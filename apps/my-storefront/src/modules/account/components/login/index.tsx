@@ -2,12 +2,13 @@
 "use client"
 
 import { login } from "@lib/data/customer"
+import { loginVendor } from "@lib/data/vendor" // 🚀 Imported your new merchant verification action
 import { LOGIN_VIEW, USER_ROLE } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import Input from "@modules/common/components/input"
 import { useActionState } from "react"
-import { useParams } from "next/navigation" // Added for geo-location tracking
+import { useParams } from "next/navigation"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -15,10 +16,11 @@ type Props = {
 }
 
 const Login = ({ setCurrentView, activeRole }: Props) => {
-  const [message, formAction] = useActionState(login, null)
+  // 🚀 Dynamic Action Routing: Select the correct handler based on the active role tab
+  const currentAction = activeRole === "vendor" ? loginVendor : login
+  const [message, formAction] = useActionState(currentAction, null)
   const params = useParams()
   
-  // Safely extract active country from your dynamic routing framework (e.g., /[countryCode]/account)
   const countryCode = (params?.countryCode as string) || "in"
 
   return (
@@ -33,7 +35,6 @@ const Login = ({ setCurrentView, activeRole }: Props) => {
       </p>
 
       <form className="w-full" action={formAction}>
-        {/* 🚀 HIDDEN INJECTIONS: Passes both authorization contexts straight to the Server Action */}
         <input type="hidden" name="user_role" value={activeRole} />
         <input type="hidden" name="country_code" value={countryCode} />
 
@@ -57,11 +58,13 @@ const Login = ({ setCurrentView, activeRole }: Props) => {
           />
         </div>
         <ErrorMessage error={message} data-testid="login-error-message" />
+        
         <SubmitButton data-testid="sign-in-button" className="w-full mt-6">
           {activeRole === "vendor" ? "Access Dashboard" : "Sign in"}
         </SubmitButton>
       </form>
 
+      {/* Hide the member registration foot links when viewing the Vendor dashboard entry */}
       {activeRole === "customer" && (
         <span className="text-center text-ui-fg-base text-small-regular mt-6">
           Not a member?{" "}

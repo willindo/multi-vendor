@@ -8,10 +8,13 @@ const Hero = () => {
         <span>
           <Heading
             level="h1"
-            className="text-3xl leading-10 text-ui-fg-base font-normal"
+            className="text-3xl bg-[yellow] leading-10 text-ui-fg-base font-normal"
           >
             Ecommerce Starter Template
           </Heading>
+          <div className="bg-green-500 text-white p-4">
+  Test Tailwind - this should be red with white text
+</div>
           <Heading
             level="h2"
             className="text-3xl leading-10 text-ui-fg-subtle font-normal"

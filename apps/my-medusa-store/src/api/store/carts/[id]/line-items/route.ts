@@ -17,15 +17,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const { variant_id, quantity } = req.body as AddLineItemBody;
 
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
-  //   const { data: vendorOrders } = await query.graph({
-  //   entity: vendorOrder.entryPoint,
-  //   fields: ["*", "vendor.*", "order.*"],
-  //   filters: {
-  //     order_id: "order_01KRD8X59DV4CVSVFQ8DPYSDSC" // Your recent Order ID
-  //   }
-  // })
-
-  // console.log(vendorOrders)
   /**
    * 🔍 Step 1 — Fetch vendor_id from variant
    */

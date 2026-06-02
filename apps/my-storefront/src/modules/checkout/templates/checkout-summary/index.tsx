@@ -1,36 +1,35 @@
+// src/modules/checkout/templates/checkout-summary/index.tsx
+import React from "react"
 import { Heading } from "@medusajs/ui"
-
-import ItemsPreviewTemplate from "@modules/cart/templates/preview"
-import DiscountCode from "@modules/checkout/components/discount-code"
 import CartTotals from "@modules/common/components/cart-totals"
-import Divider from "@modules/common/components/divider"
-// Import your custom split block
+import ItemsPreviewTemplate from "@modules/cart/templates/preview"
 import VendorSplitSummary from "@modules/checkout/components/vendor-split-summary"
 
-const CheckoutSummary = ({ cart }: { cart: any }) => {
+type CheckoutSummaryProps = {
+  cart: any
+}
+
+export default function CheckoutSummary({ cart }: CheckoutSummaryProps) {
+  if (!cart) return null
+
   return (
-    <div className="sticky top-0 flex flex-col-reverse small:flex-col gap-y-8 py-8 small:py-0 ">
-      <div className="w-full bg-white flex flex-col">
-        <Divider className="my-6 small:hidden" />
-        <Heading
-          level="h2"
-          className="flex flex-row text-3xl-regular items-baseline"
-        >
-          In your Cart
+    <div className="sticky top-0 flex flex-col-reverse small:flex-col gap-y-8 py-8 small:py-0">
+      <div className="w-full bg-white flex flex-col gap-y-6 border border-neutral-200/70 p-6 rounded-2xl shadow-xs">
+        <Heading level="h2" className="text-xl-semi font-black text-neutral-900 tracking-tight">
+          In Your Cart
         </Heading>
-        <Divider className="my-6" />
+        
+        <hr className="border-neutral-100" />
+        
         <CartTotals totals={cart} />
-        
-        {/* Injecting the vendor split visualization breakdown right above the item lists */}
+
         <VendorSplitSummary cart={cart} />
-        
+      </div>
+
+      <div className="w-full bg-white flex flex-col gap-y-6 border border-neutral-200/70 p-6 rounded-2xl shadow-xs">
+        {/* ⚡ FIX: Passing entire unified cart object graph directly to match preview template implementation signature */}
         <ItemsPreviewTemplate cart={cart} />
-        <div className="my-6">
-          <DiscountCode cart={cart} />
-        </div>
       </div>
     </div>
   )
 }
-
-export default CheckoutSummary

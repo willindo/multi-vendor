@@ -38,7 +38,7 @@ export default defineMiddlewares({
           return cors({
             origin: parseCorsOrigins(configModule.projectConfig.http.adminCors),
             credentials: true,
-            methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
             allowedHeaders: ["Content-Type", "Authorization", "x-publishable-api-key"],
           })(req, res, next);
         },

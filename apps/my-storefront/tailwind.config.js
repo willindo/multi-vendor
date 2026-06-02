@@ -1,6 +1,7 @@
 const path = require("path")
 
 module.exports = {
+// const config = {
   darkMode: "class",
   presets: [require("@medusajs/ui-preset")],
   content: [
@@ -9,6 +10,7 @@ module.exports = {
     "./src/components/**/*.{js,ts,jsx,tsx}",
     "./src/modules/**/*.{js,ts,jsx,tsx}",
     "./node_modules/@medusajs/ui/dist/**/*.{js,jsx,ts,tsx}",
+    "./src/styles/**/*.css", // Add this
   ],
   theme: {
     extend: {
@@ -160,3 +162,5 @@ module.exports = {
   },
   plugins: [require("tailwindcss-radix")()],
 }
+
+// export default config;

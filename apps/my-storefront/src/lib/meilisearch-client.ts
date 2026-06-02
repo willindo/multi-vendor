@@ -11,7 +11,80 @@ const meilisearchClient = new Meilisearch({
   host: host,
   apiKey: apiKey,
 })
+/**
+ * Resolves vendor metadata and product list by scanning the index for a matching handle.
+ */
+export async function getStorefrontDataByVendorHandle(
+  handle: string,
+  limit = 12
+) {
+  try {
+    const index = meilisearchClient.index(indexName)
+    const searchResponse = await index.search("", {
+      filter: [`vendor_handle = "${handle.replace(/"/g, '\\"')}"`],
+      limit,
+    })
 
+    const hits = searchResponse.hits || []
+
+    // Extract vendor profile attributes from the first hit found
+    const sampleProduct = hits[0]
+    const vendorMeta = sampleProduct
+      ? {
+          id: sampleProduct.vendor_id,
+          name:
+            sampleProduct.vendor_name ||
+            sampleProduct.vendor_handle ||
+            "Artisan Merchant",
+          handle: sampleProduct.vendor_handle,
+        }
+      : null
+
+    return {
+      vendor: vendorMeta,
+      hits: hits,
+    }
+  } catch (error) {
+    console.error("Failed extracting store page assets from engine:", error)
+    return { vendor: null, hits: [] }
+  }
+}
+/**
+ * Resolves vendor metadata and product hits using the raw vendor UUID index field.
+ */
+export async function getStorefrontDataByVendorId(
+  vendorId: string,
+  limit = 12
+) {
+  try {
+    const index = meilisearchClient.index(indexName)
+    const sanitizedId = vendorId.replace(/"/g, '\\"')
+
+    const searchResponse = await index.search("", {
+      filter: [`vendor_id = "${sanitizedId}"`],
+      limit,
+    })
+
+    const hits = searchResponse.hits || []
+
+    // Fallback info parsed safely from indexed item fields
+    const sampleProduct = hits[0]
+    const vendorMeta = sampleProduct
+      ? {
+          id: sampleProduct.vendor_id,
+          name: sampleProduct.vendor_name || "Featured Artisan",
+        }
+      : null
+
+    return {
+      vendor: vendorMeta,
+      hits: hits,
+    }
+  } catch (error) {
+    console.error("Failed extracting store page assets by vendor ID:", error)
+    return { vendor: null, hits: [] }
+  }
+}
 /**
  * Server-side fallback or direct method to fetch items belonging to a single vendor
  */
@@ -19,7 +92,7 @@ export async function getStorefrontProductsByVendor(vendorId: string) {
   try {
     // Escape double quotes in vendorId to protect the filter string boundaries
     const sanitizedId = vendorId.replace(/"/g, '\\"')
-    
+
     // Target the index using the correctly initialized client instance
     const index = meilisearchClient.index(indexName)
     const searchResponse = await index.search("", {
@@ -45,7 +118,7 @@ export async function searchMarketplaceProducts(query: string, limit = 12) {
       limit,
       attributesToHighlight: ["title", "description"],
     })
-    
+
     return searchResponse.hits || []
   } catch (error) {
     console.error("Meilisearch engine query execution failure:", error)

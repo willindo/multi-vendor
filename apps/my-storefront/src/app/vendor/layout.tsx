@@ -3,12 +3,14 @@ import React from "react"
 import { cookies } from "next/headers"
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import VendorSignoutButton from "@modules/account/components/vendor-signout"
 
 export const dynamic = "force-dynamic" // Prevent Next.js static engine build compilation failure
 
 export const metadata = {
   title: "Healer | Merchant Workspace",
-  description: "Merchant control dashboard panel for updating inventory and tracking shared marketplace operations.",
+  description:
+    "Merchant control dashboard panel for updating inventory and tracking shared marketplace operations.",
 }
 
 export default async function VendorLayout({
@@ -38,34 +40,28 @@ export default async function VendorLayout({
           </div>
 
           <nav className="flex flex-col gap-y-2">
-            <Link 
-              href="/vendor/dashboard" 
+            <Link
+              href="/vendor/dashboard"
               className="px-4 py-2.5 rounded-md text-small-semi text-ui-fg-on-color hover:bg-neutral-900 transition-colors"
             >
               Overview
             </Link>
-            <Link 
-              href="/vendor/dashboard/products" 
+            <Link
+              href="/vendor/dashboard/products"
               className="px-4 py-2.5 rounded-md text-small-semi text-ui-fg-on-color hover:bg-neutral-900 transition-colors"
             >
               My Products
             </Link>
-            <Link 
-              href="/vendor/dashboard/orders" 
+            <Link
+              href="/vendor/dashboard/orders"
               className="px-4 py-2.5 rounded-md text-small-semi text-ui-fg-on-color hover:bg-neutral-900 transition-colors"
             >
               Split Orders
             </Link>
           </nav>
         </div>
-
         <div className="border-t border-neutral-800 pt-4">
-          <Link
-            href="/logout"
-            className="px-4 py-2 text-small-regular text-neutral-400 hover:text-white transition-colors"
-          >
-            Sign Out Workspace
-          </Link>
+          <VendorSignoutButton />
         </div>
       </aside>
 
@@ -78,9 +74,7 @@ export default async function VendorLayout({
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
         </header>
 
-        <div className="p-8 flex-1 w-full max-w-7xl mx-auto">
-          {children}
-        </div>
+        <div className="p-8 flex-1 w-full max-w-7xl mx-auto">{children}</div>
       </main>
     </div>
   )

@@ -11,10 +11,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const orderModuleService = req.scope.resolve(Modules.ORDER) as IOrderModuleService;
 
   try {
-    // 1. Fetch via unified remote query to locate the target line item safely
+    // 1. Resolve unified remote query graph data tracking down all line items
     const { data: [order] } = await query.graph({
       entity: "order",
-      fields: ["id", "items.*"],
+      fields: ["id", "items.id", "items.metadata"],
       filters: { id: [orderId] }
     });
 
@@ -29,7 +29,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.status(404).json({ message: "Target line item not found within this order context." });
     }
 
-    // 2. Prepare our isolated metadata updates
+    // 2. Compute updated metadata block for our target item
     const existingMetadata = targetItem.metadata || {};
     const updatedMetadata = {
       ...existingMetadata,
@@ -37,11 +37,30 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       shipped_at: new Date().toISOString()
     };
 
-    // 3. Apply the update directly to the items array inside the standard update orders wrapper array
+    // 3. Pre-calculate global operational fulfillment statuses across the marketplace split
+    let shippedCount = 0;
+    
+    orderItems.forEach((item: any) => {
+      if (item.id === itemId) {
+        shippedCount++; // This item is shifting to shipped right now
+      } else if (item.metadata?.fulfillment_status === "shipped") {
+        shippedCount++;
+      }
+    });
+
+    let targetGlobalFulfillmentStatus: "not_fulfilled" | "partially_fulfilled" | "fulfilled" = "partially_fulfilled";
+    if (shippedCount === orderItems.length) {
+      targetGlobalFulfillmentStatus = "fulfilled";
+    } else if (shippedCount === 0) {
+      targetGlobalFulfillmentStatus = "not_fulfilled";
+    }
+
+    // 4. Update both the targeted sub-line metadata AND the master order tracking flags
     await orderModuleService.updateOrders([
       {
         id: orderId,
-        // We cast this to 'any' to bypass strict DTO definitions if your local types don't expose deep line-item updates
+        fulfillment_status: targetGlobalFulfillmentStatus,
+        status: "active", // Promotes state out of 'pending' once operational fulfillment kicks off
         items: [
           {
             id: itemId,
@@ -53,8 +72,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     return res.json({
       success: true,
-      message: `Item ${itemId} transitioned to SHIPPED successfully.`,
-      updated_status: "shipped"
+      message: `Item ${itemId} transitioned to SHIPPED. Global layout updated to: ${targetGlobalFulfillmentStatus}`,
+      item_status: "shipped",
+      global_fulfillment_status: targetGlobalFulfillmentStatus
     });
 
   } catch (error: any) {

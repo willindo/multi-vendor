@@ -1,47 +1,7 @@
-// src/app/vendor/dashboard/orders/page.tsx
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-
-interface OrderItem {
-  id: string
-  title: string
-  quantity: number
-  unit_price: number
-  vendor_id: string
-}
-
-interface VendorOrder {
-  id: string
-  display_id: number
-  created_at: string
-  total_vendor_amount: number
-  fulfillment_status:
-    | "not_fulfilled"
-    | "partially_fulfilled"
-    | "fulfilled"
-    | "shipped"
-  payment_routing_status: "pending" | "routed" | "failed"
-  items: OrderItem[]
-}
-
-async function getVendorOrders(token: string): Promise<VendorOrder[]> {
-  const BACKEND_URL = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000"
-  try {
-    const res = await fetch(`${BACKEND_URL}/vendor/orders`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      next: { revalidate: 0 },
-    })
-
-    if (!res.ok) return []
-    const data = await res.json()
-    return data.orders || []
-  } catch (error) {
-    console.error("Failed fetching vendor fulfillment data:", error)
-    return []
-  }
-}
+import Link from "next/link"
+import { getVendorOrders } from "@/lib/data/vendor" // Adjust alias to your directory path
 
 export default async function VendorOrdersPage() {
   const cookieStore = await cookies()
@@ -51,7 +11,8 @@ export default async function VendorOrdersPage() {
     redirect("/vendor/login")
   }
 
-  const orders = await getVendorOrders(token)
+  // Consume cleanly from your centralized data orchestrator layer
+  const orders = await getVendorOrders()
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -109,14 +70,14 @@ export default async function VendorOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 text-neutral-700">
-                {orders.map((order) => (
+                {orders.map((order: any) => (
                   <tr key={order.id} className="hover:bg-neutral-50/40 transition-colors">
                     <td className="p-4 font-mono text-xs font-bold text-neutral-900">
                       #{order.display_id}
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col gap-1.5">
-                        {order.items.map((item) => (
+                        {order.items?.map((item: any) => (
                           <div key={item.id} className="inline-flex items-center gap-1.5 text-xs text-neutral-700 bg-neutral-50 border border-neutral-200/60 px-2 py-1 rounded-md w-fit">
                             <span className="font-bold text-neutral-900">{item.quantity}×</span>
                             <span>{item.title}</span>
@@ -133,7 +94,7 @@ export default async function VendorOrdersPage() {
                           ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                           : "bg-amber-50 text-amber-700 border-amber-200"
                       }`}>
-                        {order.fulfillment_status.replace("_", " ")}
+                        {order.fulfillment_status?.replace("_", " ")}
                       </span>
                     </td>
                     <td className="p-4">
@@ -146,9 +107,12 @@ export default async function VendorOrdersPage() {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <button className="inline-flex items-center justify-center px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium rounded-lg transition-all shadow-sm">
+                      <Link 
+                        href={`/vendor/dashboard/orders/${order.id}`}
+                        className="inline-flex items-center justify-center px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium rounded-lg transition-all shadow-sm"
+                      >
                         Manage Shipment
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}

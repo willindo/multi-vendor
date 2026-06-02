@@ -1,36 +1,11 @@
 badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-medusa-store$ touch src/scripts/test-order-link.ts
+psql -U medusa -d medusa -h localhost
+psql "postgresql://medusa:medusa@localhost:5432/medusa"
 mkdir -p src/modules/vendor/{models,services}
 touch src/modules/vendor/index.ts
 touch src/modules/vendor/models/vendor.ts
 touch src/modules/vendor/services/vendor-service.ts
-exec_cmd='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;' = "$exec_cmd" 
-exec_cmd=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;) = "${exec_cmd[@]}"
-https://docs.medusajs.com/resources/commerce-modules/auth/create-actor-type
- -exec grep -l "process\.env" {} \;  rl= list , rn= content with line numbers
-echo "=== Files with process.env (excluding .next and config) ===" && \
- grep -rl --include="*.ts" --include="*.js" --include="*.tsx" --include="*.jsx" "process\.env" . \
-  --exclude-dir=.next \
-  --exclude="*.config.js" \
-  --exclude="*.sitemap.js" 
-find ./src/modules -type d -name "migrations" -prune -o -type f -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
-find ./src -type f -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
-find . -type f -iname "*.sh" -not -iname "readme*" -not -path "*/node_modules/*" -not -path "*/migrations/*"  -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \; | grep -v "migrations"
-find ./src -type f -path "*/services/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
-find ./src -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" \) -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; nl "$1"; echo' _ {} \;
-find . \( -path "./src/modules/*" -o -path "./src/api/*" -o -path "*/*product*/*"  -o -name "medusa-config.ts" -o -name "validate*" -o -name "middlewares"\) -type f -not -path "*/migrations/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
-find . \( -path "./src/subscribers/*"  -o -path "./src/api/*" -o -path "./src/workflows/*" -o -name "medusa-config.ts" -o -name "validate*" -o -name "middlewares" \) -type f -not -path "*/migrations/*" -not -path "*/*product*/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
-find . \( -path "./src/modules/*" -o -path "./src/api/*" -o -path "./src/links" -o -path "./src/subscribers/*" -o -name "medusa-config.ts"-o -name "validate*" \) -type f -not -path "*/migrations/*" -not -iname "readme*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
-find . \( -path "./src*/*product*/*" -o -name "medusa-config.ts" -o -name "middlewares" -o -iname "*product*" -o -iname "*validate*" \) -type f -not -iname "readme*" -not -iname "*.sh*" -not -path "*/node_modules/*" -not -path "*/migrations/*" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
-find . \( -path "./src/*" -o -name "medusa-config.ts" \) -type f -not -path "*/migrations/*" -not -iname "readme*" -not -iname "seed*" -exec sh -c  'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
-find . -type f \
-  -not -iname "readme*" \
-  \( \
-    -path "./src/*" -name "*product*" \
-    -o -iname "*product*" \
-    -o -name "medusa-config.ts" \
-    -o -name "middlewares*" \
-  \) \
-  -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+
 AuthIdentity data model -=- app_metadata -- custom actor type = manger 
 Manage multiple vendors, each having vendor admins.
 Allow vendor admins to manage the vendor’s products and orders.
@@ -75,27 +50,35 @@ The MarketplaceModuleService extends MedusaService from the Modules SDK which ge
 So, the MarketplaceModuleService class now has methods like createVendors and retrieveVendorAdmin.
 A module is a reusable package of functionalities related to a single domain or integration. Medusa comes with multiple pre-built modules for core commerce needs, such as the Cart Module that holds the data models and business logic for cart operations.
 
-# Template with placeholders
-find . \( ${INCLUDES} \) -type f -not -path "${EXCLUDE_PATHS}" -not -iname "${EXCLUDE_NAMES}" -exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;
+EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
+EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
 
-# Example usage:
-INCLUDES="-path "./src/subscribers/*" -o -path "./src/api/*" -o -path "./src/workflows/*" -o -path "./src/modules/*" -o -name "medusa-config.ts" -o -name "validate*" -o -name "middlewares" \
-EXCLUDE_PATHS="*/migrations/* "*/*product*/*"" \
+cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
+INCL_UDES='-path "*/*product*/*" -o -path "*/*create*/*" -o -iname "*edit*" -o -name ""' 
+EXCL_UDE_PATHS='-not -path  "*//*" -not -path "*/account*/*" -not -path "*/*payment*/*" -not -path  "*/.next/*"  -not -path "*/node_modules/*" -not -iname ""' 
+eval find . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
+ $cont_ents
+contents=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;)
+INCLUDES=(-path "*/order*/*" -o -path "*/subscrib*/*" -o -iname "*order*")
+EXCLUDE_PATHS=(-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "readme*")
+find . \( "${INCLUDES[@]}" \)  -type f \( "${EXCLUDE_PATHS[@]}" \) -print 
+   "${contents[@]}"  
 
-INCLUDE="./src/*"
-EXCLUDE_PATHS="
-*/migrations/*
-"
-EXCLUDE_INAMES="readme*"
-EXCLUDE_NAMES=" "
-find . \
-  \( -path "$INCLUDE" -o -name "medusa-config.ts" \) \
-  -type f \
-  $(printf '! -path "%s"\n' ' $EXCLUDE_PATHS) \
-  $(printf '! -iname "%s"\n' ' $EXCLUDE_INAMES) \
-  $(printf '! -name "%s" ' $EXCLUDE_NAMES) \
-  -exec sh -c '
-    echo
-    echo "==== $1 ===="
-    cat "$1"
-  ' _ {} \;
+-exec grep -l "process\.env" {} \;  rl= list , rn= content with line numbers
+echo "=== Files with process.env (excluding .next and config) ===" && \
+ grep -rl --include="*.ts" --include="*.js" --include="*.tsx" --include="*.jsx" "process\.env" . \
+  --exclude-dir=.next \
+  --exclude="*.config.js" \
+  --exclude="*.sitemap.js" 
+
+# Find all imports of SkeletonCartItem
+grep -r "import.*SkeletonCartItem" --include="*.tsx" --include="*.ts" .
+
+# Find all imports from skeleton-cart-item path
+grep -r "skeleton-cart-item" --include="*.tsx" --include="*.ts" .
+
+# Or use ripgrep if installed (faster)
+rg "SkeletonCartItem" --type tsx --type ts
+
+# Find all usages (not just imports)
+grep -r "SkeletonCartItem" --include="*.tsx" --include="*.ts" .

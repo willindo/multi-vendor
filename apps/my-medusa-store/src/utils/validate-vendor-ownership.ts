@@ -1,48 +1,38 @@
-// ==== ./src/utils/validate-vendor-ownership.ts ====
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { MedusaError } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
-type Scope = {
-  resolve: (key: string | symbol) => any
-}
+export async function validateVendorProductOwnership(
+  scope: any,
+  actorId: string,
+  productId: string
+) {
+  const query = scope.resolve(ContainerRegistrationKeys.QUERY);
 
-export const validateVendorProductOwnership = async (
-  scope: Scope,
-  actor_id: string,
-  product_id: string
-) => {
-  const query = scope.resolve(ContainerRegistrationKeys.QUERY)
-
-  // Fetch ownership layout information using your core junction entity definitions
-  const { data: vendorAdmins } = await query.graph({
+  // 1. Resolve vendor context from the authenticated actor ID
+  const { data: [vendorAdmin] } = await query.graph({
     entity: "vendor_admin",
     fields: ["vendor.id"],
-    filters: { id: [actor_id] },
-  })
+    filters: { id: [actorId] },
+  });
 
-  const vendorId = vendorAdmins[0]?.vendor?.id
-
-  if (!vendorId) {
-    throw new MedusaError(
-      MedusaError.Types.NOT_FOUND,
-      "Vendor profile not found for active user."
-    )
+  if (!vendorAdmin || !vendorAdmin.vendor) {
+    throw new Error("Unauthorized: No vendor context linked to this user account.");
   }
 
-  // Cross-reference your exact custom link engine layout table mapping target products to vendors
-  const { data: productLinks } = await query.graph({
-    entity: "marketplace_vendor_product_product",
+  const vendorId = vendorAdmin.vendor.id;
+
+  // 2. Query the exact link entry table to verify ownership cleanly
+  const { data: links } = await query.graph({
+    entity: "vendor_product", // Matches your link module table registration name
     fields: ["vendor_id", "product_id"],
     filters: {
       vendor_id: [vendorId],
-      product_id: [product_id],
+      product_id: [productId],
     },
-  })
+  });
 
-  if (!productLinks || productLinks.length === 0) {
-    throw new MedusaError(
-      MedusaError.Types.UNAUTHORIZED,
-      "Access Denied: This target entity does not belong to your vendor organization account."
-    )
+  if (!links || links.length === 0) {
+    throw new Error("Unauthorized: You do not own this product resource configuration.");
   }
+
+  return true;
 }

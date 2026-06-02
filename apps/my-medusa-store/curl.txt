@@ -1,57 +1,12 @@
 cd /home/badsha/medusa-dev/apps/my-medusa-store
  psql -U medusa -d medusa -h localhost 
--=-- Your flow:
-Login → get token
-Check actor_id
-If no actor → create vendor
-Re-login → get final token
 
-👉 This is correct lifecycle simulation --=- 
-Real flow is:
-
-Browser (frontend)
-or Postman/Insomnia 
-To fully reset a vendor:
-
-You must clear:
-
-vendor_admin
-vendor
-auth_identity.app_metadata
-DELETE FROM vendor_admin;
-DELETE FROM vendor;
-UPDATE auth_identity SET app_metadata = '{}';
-❓ Can you reuse this script?
-
-✔ YES — fully reusable
-✔ Each run creates:
-
-new email → new user
-new vendor
-new vendor_admin
-login → get token → use → expires → login again
-🧠 7. Final architecture validation (your system)
-
-You now have:
-
-✔ Auth layer
-auth_identity ✅
-token with actor_id ✅
-
-✔ Domain
-vendor ✅
-vendor_admin ✅
-✔ Rules
-1 user → 1 vendor ✅ (guard + DB constraint)
-multiple vendors globally ✅
-✔ Workflow
-createVendor → createVendorAdmin → setAuthMetadata ✅
 chmod +x create-vendor.sh
-
-
 ./create-vendor.sh
 ./create-vendor.sh soman@example.com supersecret
-./create-vendor.sh --email=test@example.com --password=abc
+chmod +x create-product.sh
+./create-product.sh
+./create-product.sh soman@example.com supersecret
 🔹 Full Auth Flow
 register → login → JWT decode → actor_id detection
 🔹 Conditional Logic
@@ -63,9 +18,6 @@ valid Medusa payload (options + variants)
 idempotent
 reusable
 dynamic (date +%s)
-chmod +x create-product.sh
-./create-product.sh
-./create-product.sh soman@example.com supersecret
 
 TOKEN=...
 curl -X POST .../vendors/products ... 

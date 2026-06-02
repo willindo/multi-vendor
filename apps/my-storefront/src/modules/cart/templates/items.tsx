@@ -1,57 +1,94 @@
-import repeat from "@lib/util/repeat"
+// src/modules/cart/templates/items.tsx
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Table } from "@medusajs/ui"
-
 import Item from "@modules/cart/components/item"
 import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 
 type ItemsTemplateProps = {
-  cart?: HttpTypes.StoreCart
+  items?: HttpTypes.StoreCartLineItem[]
+  region?: HttpTypes.StoreRegion
 }
 
-const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
-  const items = cart?.items
+export default function ItemsTemplate({ items, region }: ItemsTemplateProps) {
+  // 🔍 Safely evaluate and cluster items into vendor sub-dictionaries
+  const vendorGroups = items?.reduce((acc, item) => {
+    const vendorId = (item.metadata as any)?.vendor_id || "platform"
+    const vendorName = (item.metadata as any)?.vendor_name || 
+      (vendorId === "platform" ? "Direct Platform Store" : `Partner Artisan (${vendorId.slice(0, 8)})`)
+
+    if (!acc[vendorId]) {
+      acc[vendorId] = { name: vendorName, items: [] }
+    }
+    acc[vendorId].items.push(item)
+    return acc
+  }, {} as Record<string, { name: string; items: HttpTypes.StoreCartLineItem[] }>) || {}
+
   return (
     <div>
-      <div className="pb-3 flex items-center">
-        <Heading className="text-[2rem] leading-[2.75rem]">Cart</Heading>
+      <div className="pb-3 flex items-center border-b border-neutral-200">
+        <Heading level="h2" className="text-xl-semi">
+          Shopping Cart
+        </Heading>
       </div>
-      <Table>
-        <Table.Header className="border-t-0">
-          <Table.Row className="text-ui-fg-subtle txt-medium-plus">
-            <Table.HeaderCell className="!pl-0">Item</Table.HeaderCell>
-            <Table.HeaderCell></Table.HeaderCell>
-            <Table.HeaderCell>Quantity</Table.HeaderCell>
-            <Table.HeaderCell className="hidden small:table-cell">
-              Price
-            </Table.HeaderCell>
-            <Table.HeaderCell className="!pr-0 text-right">
-              Total
-            </Table.HeaderCell>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {items
-            ? items
-                .sort((a, b) => {
-                  return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
-                })
-                .map((item) => {
-                  return (
-                    <Item
-                      key={item.id}
-                      item={item}
-                      currencyCode={cart?.currency_code}
-                    />
-                  )
-                })
-            : repeat(5).map((i) => {
-                return <SkeletonLineItem key={i} />
-              })}
-        </Table.Body>
-      </Table>
+
+      <div className="mt-6 space-y-8">
+        {!items || !region ? (
+          <Table>
+            <Table.Body>
+              {Array.from(Array(5).keys()).map((i) => (
+                <SkeletonLineItem key={i} />
+              ))}
+            </Table.Body>
+          </Table>
+        ) : Object.keys(vendorGroups).length === 0 ? (
+          <p className="text-neutral-500 text-sm">No items added to basket.</p>
+        ) : (
+          Object.entries(vendorGroups).map(([vendorId, group]) => (
+            <div 
+              key={vendorId} 
+              className="border border-neutral-200/80 rounded-2xl bg-white p-6 shadow-2xs"
+            >
+              {/* Corrected Tag Structure Header */}
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-4">
+                <div className="flex items-center gap-x-2">
+                  <span className="w-2 h-2 rounded-full bg-neutral-900" />
+                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                    Shipment Parcel:{" "}
+                    <strong className="text-neutral-900 font-extrabold">{group.name}</strong>
+                  </span> {/* ⚡ FIX: Corrected structural closing span tag matching token */}
+                </div>
+                <span className="text-[10px] bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded font-mono font-bold text-neutral-600">
+                  ID: {vendorId.slice(0, 8)}
+                </span>
+              </div>
+
+              {/* Items Layout Grid Mapping */}
+              <Table>
+                <Table.Header className="border-b-0 text-neutral-400 text-xs uppercase tracking-wider">
+                  <Table.Row className="text-left border-b-0">
+                    <th className="pb-2">Item</th>
+                    <th className="pb-2 text-center">Quantity</th>
+                    <th className="pb-2 hidden sm:table-cell text-right">Price</th>
+                    <th className="pb-2 text-right">Total</th>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body className="divide-y divide-neutral-100">
+                  {group.items
+                    .sort((a, b) => (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1)
+                    .map((item) => (
+                      /* ⚡ FIX: Extracted specific string token expected by Item signature */
+                      <Item 
+                        key={item.id} 
+                        item={item} 
+                        currencyCode={region.currency_code} 
+                      />
+                    ))}
+                </Table.Body>
+              </Table>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )
 }
-
-export default ItemsTemplate
