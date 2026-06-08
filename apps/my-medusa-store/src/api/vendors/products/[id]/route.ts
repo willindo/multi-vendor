@@ -1,61 +1,73 @@
+// src/app/api/vendor/products/[id]/route.ts
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
-} from "@medusajs/framework/http"
-import {Modules } from "@medusajs/framework/utils";
+} from "@medusajs/framework/http";
+import { Modules } from "@medusajs/framework/utils";
+import { validateVendorProductOwnership } from "../../../../utils/validate-vendor-ownership";
+import deleteVendorProductWorkflow from "../../../../workflows/marketplace/delete-vendor-product";
 
-import { validateVendorProductOwnership } from "../../../../utils/validate-vendor-ownership"
-
-type UpdateBody = {
-  title?: string
-}
 export const PATCH = async (
   req: AuthenticatedMedusaRequest<any>,
-  res: MedusaResponse
+  res: MedusaResponse,
 ) => {
-  const product_id = req.params.id
-  const actor_id = req.auth_context.actor_id
+  const product_id = req.params.id;
+  const actor_id = req.auth_context.actor_id;
 
-  // 🛡️ Verify vendor ownership link before editing properties
-  await validateVendorProductOwnership(
-    req.scope,
-    actor_id,
-    product_id
-  )
+  // Ownership validation gate
+  await validateVendorProductOwnership(req.scope, actor_id, product_id);
 
-  const productService = req.scope.resolve(Modules.PRODUCT) 
+  const productService = req.scope.resolve(Modules.PRODUCT);
+  const marketplaceService = req.scope.resolve("marketplace");
 
-  // Capture all core fields passed from the storefront dashboard form payload
-  const updateData: any = {}
-  
-  if (req.body.title !== undefined) updateData.title = req.body.title
-  if (req.body.handle !== undefined) updateData.handle = req.body.handle
-  if (req.body.description !== undefined) updateData.description = req.body.description
-  if (req.body.subtitle !== undefined) updateData.subtitle = req.body.subtitle
-  if (req.body.status !== undefined) updateData.status = req.body.status
-  if (req.body.variants !== undefined) updateData.variants = req.body.variants
+  const updateData: any = {};
+  const coreFields = ['title', 'handle', 'description', 'status', 'subtitle', 'variants'];
+  for (const field of coreFields) {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  }
 
-  // Execute update on the internal Medusa core product engine
-  const updated = await productService.updateProducts(product_id, updateData)
+  const updatedProduct = await productService.updateProducts(
+    product_id,
+    updateData,
+  );
 
-  res.json({ product: updated })
-}
+  if (req.body.apparel_detail !== undefined) {
+    const [existingDetail] = await marketplaceService.listApparelDetails({ product_id });
+
+    if (existingDetail) {
+      await marketplaceService.updateApparelDetails([
+        {
+          id: existingDetail.id,
+          ...req.body.apparel_detail,
+        },
+      ]);
+    } else {
+      await marketplaceService.createApparelDetails({
+        product_id,
+        ...req.body.apparel_detail,
+      });
+    }
+  }
+
+  res.json({ product: updatedProduct });
+};
+
 export const DELETE = async (
   req: AuthenticatedMedusaRequest,
-  res: MedusaResponse
+  res: MedusaResponse,
 ) => {
-  const product_id = req.params.id
-  const actor_id = req.auth_context.actor_id
+  const product_id = req.params.id;
+  const actor_id = req.auth_context.actor_id;
 
-  await validateVendorProductOwnership(
-    req.scope,
-    actor_id,
-    product_id
-  )
+  // 1. Ownership security gate
+  await validateVendorProductOwnership(req.scope, actor_id, product_id);
 
-  const productService = req.scope.resolve(Modules.PRODUCT) 
+  // 2. RUN WORKFLOW (Must pass req.scope into the instantiation function!)
+  await deleteVendorProductWorkflow(req.scope).run({
+    input: { product_id }
+  });
 
-  await productService.deleteProducts([product_id])
-
-  res.json({ deleted: true })
-}
+  res.json({ deleted: true });
+};

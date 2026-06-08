@@ -68,7 +68,7 @@ export default defineMiddlewares({
       matcher: "/vendors/products",
       method: ["POST"],
       middlewares: [
-        validateAndTransformBody(AdminCreateProduct),
+        // validateAndTransformBody(AdminCreateProduct),
       ],
     },
   ],

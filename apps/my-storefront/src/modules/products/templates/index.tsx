@@ -1,26 +1,19 @@
 // ==== ./src/modules/products/templates/index.tsx ====
-
 import React, { Suspense } from "react"
-
 import ImageGallery from "@modules/products/components/image-gallery"
-import ProductActions from "@modules/products/components/product-actions"
 import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
-// Import the new vendor spotlight block
 import VendorSpotlight from "@modules/products/components/vendor/vendor-spotlight" 
+import ProductActionsWrapper from "./product-actions-wrapper"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-
-import ProductActionsWrapper from "./product-actions-wrapper"
+import { ExtendedMarketplaceProduct } from "@/types/marketplace"
 
 type ProductTemplateProps = {
-  product: HttpTypes.StoreProduct & {
-    vendor_id?: string
-    vendor_name?: string
-  }
+  product: ExtendedMarketplaceProduct
   region: HttpTypes.StoreRegion
   countryCode: string
   images: HttpTypes.StoreProductImage[]
@@ -42,11 +35,10 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         className="content-container flex flex-col small:flex-row small:items-start py-6 relative gap-x-8"
         data-testid="product-container"
       >
-        {/* Left Column: Descriptions, Brand Partner, and Technical Accordions */}
+        {/* Left Column: Context Summaries, Vendor Info Card, and Accordion Specifications */}
         <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
           <ProductInfo product={product} />
           
-          {/* Injected Spotlight Card */}
           <VendorSpotlight 
             vendorId={product.vendor_id} 
             vendorName={product.vendor_name} 
@@ -56,32 +48,21 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <ProductTabs product={product} />
         </div>
 
-        {/* Center Column: Core Media Grid */}
+        {/* Center Column: Interactive Layout Media Gallery */}
         <div className="block w-full relative">
           <ImageGallery images={images} />
         </div>
 
-        {/* Right Column: Transaction Options and Add-to-Cart Flow */}
+        {/* Right Column: Checkout Configurations */}
         <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
           <ProductOnboardingCta />
-          <Suspense
-            fallback={
-              <ProductActions
-                disabled={true}
-                product={product}
-                region={region}
-              />
-            }
-          >
+          <Suspense fallback={<ProductActionsWrapper id={product.id} region={region} />}>
             <ProductActionsWrapper id={product.id} region={region} />
           </Suspense>
         </div>
       </div>
 
-      <div
-        className="content-container my-16 small:my-32"
-        data-testid="related-products-container"
-      >
+      <div className="content-container my-16 small:my-32" data-testid="related-products-container">
         <Suspense fallback={<SkeletonRelatedProducts />}>
           <RelatedProducts product={product} countryCode={countryCode} />
         </Suspense>

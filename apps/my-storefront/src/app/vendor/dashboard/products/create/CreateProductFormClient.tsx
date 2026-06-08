@@ -1,95 +1,42 @@
-// ==== ./src/app/vendor/dashboard/products/edit/[id]/EditProductFormClient.tsx ====
+// ==== ./src/app/vendor/dashboard/products/create/CreateProductFormClient.tsx ====
 "use client"
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-interface EditProductFormClientProps {
-  productId: string
-  initialProduct: any | null
+interface CreateProductFormClientProps {
   serverToken?: string
 }
 
-export default function EditProductFormClient({
-  productId,
-  initialProduct,
-  serverToken,
-}: EditProductFormClientProps) {
+export default function CreateProductFormClient({ serverToken }: CreateProductFormClientProps) {
   const router = useRouter()
-  const [product, setProduct] = useState(initialProduct)
-  const [loading, setLoading] = useState(!initialProduct)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [resolvedToken, setResolvedToken] = useState(serverToken || "")
 
-  // Defensive Core Form Fields Initialization
-  const [title, setTitle] = useState(initialProduct?.title || "")
-  const [handle, setHandle] = useState(initialProduct?.handle || "")
-  const [description, setDescription] = useState(initialProduct?.description || "")
+  // Core Medusa Catalog State Hooks
+  const [title, setTitle] = useState("")
+  const [handle, setHandle] = useState("")
+  const [description, setDescription] = useState("")
   
-  // Normalized Apparel Fields matching Medusa DB remote links
-  const [productType, setProductType] = useState(initialProduct?.apparel_detail?.product_type || "READY_WEAR") 
-  const [gender, setGender] = useState(initialProduct?.apparel_detail?.gender || "UNISEX")
-  const [fit, setFit] = useState(initialProduct?.apparel_detail?.fit || "REGULAR")
-  const [season, setSeason] = useState(initialProduct?.apparel_detail?.season || "SUMMER")
-  const [materialComposition, setMaterialComposition] = useState(initialProduct?.apparel_detail?.material_composition || "")
+  // Custom Linked Relational Metadata Matrix 
+  const [productType, setProductType] = useState("READY_WEAR") 
+  const [gender, setGender] = useState("UNISEX")
+  const [fit, setFit] = useState("REGULAR")
+  const [season, setSeason] = useState("SUMMER")
+  const [materialComposition, setMaterialComposition] = useState("")
 
-  // Synchronize state if server-side data loads after initial render mount
+  // Secure token validation fallback loop
   useEffect(() => {
-    if (product) {
-      setTitle(product.title || "")
-      setHandle(product.handle || "")
-      setDescription(product.description || "")
+    if (!resolvedToken) {
+      const clientToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("medusa_vendor_jwt="))
+        ?.split("=")[1] || localStorage.getItem("vendor_token")
       
-      if (product.apparel_detail) {
-        setProductType(product.apparel_detail.product_type || "READY_WEAR")
-        setGender(product.apparel_detail.gender || "UNISEX")
-        setFit(product.apparel_detail.fit || "REGULAR")
-        setSeason(product.apparel_detail.season || "SUMMER")
-        setMaterialComposition(product.apparel_detail.material_composition || "")
-      }
+      if (clientToken) setResolvedToken(clientToken)
     }
-  }, [product])
+  }, [resolvedToken])
 
-  // Client-side fallback fetch loop
-  useEffect(() => {
-    if (initialProduct) return
-
-    const fetchProductClientSide = async () => {
-      try {
-        const clientToken = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("medusa_vendor_jwt="))
-          ?.split("=")[1] || localStorage.getItem("vendor_token")
-
-        if (!clientToken) return
-        setResolvedToken(clientToken)
-        
-        const backendUrl = window.location.hostname === "localhost" ? "http://localhost:9000" : `http://${window.location.hostname}:9000`
-        const response = await fetch(`${backendUrl}/vendors/products`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${clientToken}`,
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          const productList = data.products || data.vendor_products || data.data || []
-          const match = productList.find((p: any) => p && p.id === productId)
-          if (match) setProduct(match)
-        }
-      } catch (err) {
-        console.error("Browser client fetch error:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProductClientSide()
-  }, [initialProduct, productId])
-
-  // Real-time handle sanitization wrapper
   const handleHandleChange = (val: string) => {
     const cleanSlug = val
       .toLowerCase()
@@ -98,7 +45,7 @@ export default function EditProductFormClient({
     setHandle(cleanSlug)
   }
 
-  const handleUpdate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
@@ -106,6 +53,7 @@ export default function EditProductFormClient({
       title,
       handle,
       description,
+      status: "draft", // Defaults state safe for workflow validation
       apparel_detail: {
         product_type: productType,
         gender,
@@ -117,8 +65,8 @@ export default function EditProductFormClient({
 
     try {
       const backendUrl = window.location.hostname === "localhost" ? "http://localhost:9000" : `http://${window.location.hostname}:9000`
-      const response = await fetch(`${backendUrl}/vendors/products/${productId}`, {
-        method: "PATCH",
+      const response = await fetch(`${backendUrl}/vendors/products`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${resolvedToken}`,
           "Content-Type": "application/json",
@@ -126,29 +74,26 @@ export default function EditProductFormClient({
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) throw new Error("Failed to sync structural edit attributes.")
+      if (!response.ok) throw new Error("Failed to provision new catalog item entry.")
       
       router.push("/vendor/dashboard/products")
       router.refresh()
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Error syncing edits.")
+      alert(error instanceof Error ? error.message : "Error establishing product profile.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (loading) {
-    return <div className="p-8 text-center font-mono text-xs text-neutral-400 animate-pulse">Resolving product matrix...</div>
-  }
-
   return (
-    <form onSubmit={handleUpdate} className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 rounded-xl shadow-xs p-6 space-y-6">
       <div className="space-y-4">
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">Product Title</label>
           <input
             type="text"
             required
+            placeholder="e.g., Organic Herbal Indigo Smock"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full px-4 py-2 border border-neutral-200 rounded-lg text-xs outline-hidden focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 transition-all"
@@ -164,13 +109,13 @@ export default function EditProductFormClient({
               required
               value={handle}
               onChange={(e) => handleHandleChange(e.target.value)}
-              placeholder="e.g., raw-silk-infusion"
+              placeholder="organic-herbal-indigo-smock"
               className="w-full pl-6 pr-4 py-2 border border-neutral-200 rounded-lg text-xs font-mono outline-hidden focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 transition-all"
             />
           </div>
         </div>
 
-        {/* Modular Apparel Specification Fields */}
+        {/* Structural Matrix Attributes Panel */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-200/70">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Product Classification</label>
@@ -224,10 +169,10 @@ export default function EditProductFormClient({
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Material Composition</label>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Material Composition Matrix</label>
             <input
               type="text"
-              placeholder="e.g., 100% Raw Silk"
+              placeholder="e.g., 100% Linen Organic Infusion, GOTS Certified"
               value={materialComposition}
               onChange={(e) => setMaterialComposition(e.target.value)}
               className="w-full border border-neutral-200 rounded-md p-1.5 text-xs bg-white focus:outline-hidden focus:border-neutral-900"
@@ -236,11 +181,12 @@ export default function EditProductFormClient({
         </div>
 
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">Description</label>
+          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">Description / Copywriting Artifact</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
+            placeholder="Describe the production origin, weave density, and botanical compound detail references..."
             className="w-full px-4 py-2 border border-neutral-200 rounded-lg text-xs outline-hidden focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 transition-all"
           />
         </div>
@@ -259,7 +205,7 @@ export default function EditProductFormClient({
           disabled={isSubmitting}
           className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold shadow-xs disabled:opacity-50 transition-all"
         >
-          {isSubmitting ? "Saving Matrix Entries..." : "Save Product Details"}
+          {isSubmitting ? "Generating Profile Record..." : "Publish Composition"}
         </button>
       </div>
     </form>

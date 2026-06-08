@@ -128,35 +128,41 @@ export async function addToCart({
   }
 
   const cart = await getOrSetCart(countryCode)
-
   if (!cart) {
     throw new Error("Error retrieving or creating cart")
   }
 
-  const headers = {
-    ...(await getAuthHeaders()),
+  const BACKEND_URL = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000"
+
+  //  Correct: Delegates the complex database join to your secure custom backend route
+  const response = await fetch(
+    `${BACKEND_URL}/store/carts/${cart.id}/line-items`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(await getAuthHeaders()),
+      },
+      body: JSON.stringify({
+        variant_id: variantId,
+        quantity: quantity,
+      }),
+    }
+  )
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}))
+    throw new Error(
+      errData.message || "Failed to append vendor item to marketplace cart."
+    )
   }
 
-  await sdk.store.cart
-    .createLineItem(
-      cart.id,
-      {
-        variant_id: variantId,
-        quantity,
-      },
-      {},
-      headers
-    )
-    .then(async () => {
-      const cartCacheTag = await getCacheTag("carts")
-      revalidateTag(cartCacheTag)
+  const cartCacheTag = await getCacheTag("carts")
+  revalidateTag(cartCacheTag)
 
-      const fulfillmentCacheTag = await getCacheTag("fulfillment")
-      revalidateTag(fulfillmentCacheTag)
-    })
-    .catch(medusaError)
+  const fulfillmentCacheTag = await getCacheTag("fulfillment")
+  revalidateTag(fulfillmentCacheTag)
 }
-
 export async function updateLineItem({
   lineId,
   quantity,

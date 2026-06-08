@@ -37,30 +37,11 @@ PRODUCT_RESPONSE=$(curl -s -X POST 'http://localhost:9000/vendors/products' \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"title\": \"Test Product $(date +%s)\",
-    \"handle\": \"test-product-$(date +%s)\",
-    \"status\": \"published\",
-    \"options\": [
-      {
-        \"title\": \"Default\",
-        \"values\": [\"Default\"]
-      }
-    ],
-    \"variants\": [
-      {
-        \"title\": \"Default\",
-        \"options\": {
-          \"Default\": \"Default\"
-        },
-        \"prices\": [
-          {
-            \"currency_code\": \"usd\",
-            \"amount\": 750
-          }
-        ]
+   
       }
     ]
-  }")
+  }"
+  )
 
 echo "$PRODUCT_RESPONSE" | jq
 

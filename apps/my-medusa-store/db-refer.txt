@@ -1,0 +1,77 @@
+product (The Root Shell)
+├── product_sales_channel (Link table -> product_id)
+├── product_category_product (Link table -> product_id to product_category)
+├── product_tags (Pivot table -> product_id to product_tag)
+├── marketplace_vendor_product_product (Custom Link -> product_id)
+├── product_product_marketplace_apparel_detail (Custom Link -> product_id)
+│   └── apparel_detail (Your standalone custom metadata table)
+│
+├── product_option (Parent to values -> product_id)
+│   └── product_option_value (Child table -> linked via option_id)
+│
+└── product_variant (Parent to variants -> product_id)
+    ├── product_variant_option (Link table -> variant_id)
+    ├── product_variant_inventory_item (Link table -> variant_id)
+    ├── product_variant_price_set (Link table -> variant_id)
+    └── product_variant_product_image (Link table -> variant_id)
+
+Standalone / Global Catalogs (Root records do NOT belong to any single product)
+├── product_category (Global hierarchy tree)
+├── product_collection (Global collection tags)
+├── product_type (Global type directory)
+├── product_tag (Global unique text string store)
+└── product_shipping_profile (Global fulfillment rule mappings)
+
+Failsafe Sequence: It unlinks downstream foreign keys (variants, price sets, channel links) before dropping parent option rows, completely eliminating PostgreSQL constraint errors.
+
+Preserves Store Defaults: It completely leaves global catalogs (product_category, product_shipping_profile, sales_channel) and your migration tables untouched. Your foundational store setup stays completely intact!
+
+Soft-Deleted Tables (Has deleted_at column): product, product_variant, product_variant_price_set, product_variant_inventory_item. When you delete a product via standard workflows, Medusa updates their timestamps to keep historical links alive.
+
+Hard-Deleted Tables (No deleted_at column): product_sales_channel, price, price_set, inventory_item, product_option_value. These tables do not track history. If an active product uses them, deleted_at won't even exist as a column. If they are left behind with active records after a product is gone, they are pure, unlinked orphans.
+exactly how Medusa was designed to behave. 
+
+This layout cleanly handles the deep-cascading soft-delete strategy, ensuring every associated record—from pivot links to isolated module entries—receives a matching timestamp uniformly while avoiding loose database updates.
+
+[ PRODUCT MODULE ]           [ INVENTORY MODULE ]         [ PRICING MODULE ]
+ ┌──────────────────┐         ┌────────────────────┐       ┌──────────────────┐
+ │ product          │         │ inventory_item     │       │ price_set        │
+ │  └─ variant_id   │         │  ├─ sku, title     │       │  └─ id (isolated)│
+ └─────────┬────────┘         │  └─ id             │       └────────┬─────────┘
+           │                  └─────────┬──────────┘                │
+           │                            │                           │  ┌──────────────┐
+           ▼                            ▼                           ▼  │ price        │
+ ┌──────────────────────────────────────────────────────────────────┐  │ └─price_set_id
+ │                       REMOTE LINK ENGINE                         │◄─┴──────────────┘
+ │  ├─ product_variant_inventory_item (variant_id ◄─► inventory_id) │
+ │  └─ product_variant_price_set      (variant_id ◄─► price_set_id) │
+ └──────────────────────────────────────────────────────────────────┘
+ TRUNCATE TABLE 
+  public.product_product_marketplace_apparel_detail,
+  public.product_sales_channel,
+  public.inventory_item,
+  public.product_variant_inventory_item,
+  public.product_variant_price_set,
+  public.price,
+  public.price_set
+RESTART IDENTITY CASCADE;
+NOTICE:  truncate cascades to table "inventory_level"
+NOTICE:  truncate cascades to table "reservation_item"
+NOTICE:  truncate cascades to table "price_rule"
+
+TRUNCATE TABLE 
+  public.product,
+  public.product_option,
+  public.product_option_value,
+  public.product_variant_option,
+  public.product_variant,
+  public.apparel_detail,
+  public.marketplace_vendor_product_product
+RESTART IDENTITY CASCADE;
+NOTICE:  truncate cascades to table "image"
+NOTICE:  truncate cascades to table "product_tags"
+NOTICE:  truncate cascades to table "product_category_product"
+NOTICE:  truncate cascades to table "product_variant_product_image"
+
+successfully performed a hybrid data purge.
+Unique violation / Duplicate key value

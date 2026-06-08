@@ -1,7 +1,9 @@
+// ==== ./src/app/vendor/dashboard/products/VendorProductsClientTable.tsx ====
 "use client"
 
 import React, { useState, useTransition } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { updateVendorProduct, deleteVendorProduct } from "@lib/data/vendor"
 
 interface Variant {
@@ -21,6 +23,7 @@ interface Product {
 }
 
 export default function VendorProductsClientTable({ initialProducts }: { initialProducts: Product[] }) {
+  const router = useRouter()
   const [products, setProducts] = useState<Product[]>(initialProducts || [])
   const [isPending, startTransition] = useTransition()
   const [editingInventoryProductId, setEditingInventoryProductId] = useState<string | null>(null)
@@ -33,7 +36,9 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
 
     startTransition(async () => {
       const res = await updateVendorProduct(product.id, { status: nextStatus })
-      if (!res.success) {
+      if (res.success) {
+        router.refresh()
+      } else {
         alert(res.error || "Failed to update status visibility.")
         setProducts(initialProducts || [])
       }
@@ -47,7 +52,9 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
 
     startTransition(async () => {
       const res = await deleteVendorProduct(productId)
-      if (!res.success) {
+      if (res.success) {
+        router.refresh()
+      } else {
         alert(res.error || "Could not complete item deletion.")
         setProducts(initialProducts || [])
       }
@@ -77,8 +84,6 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
             ) : (
               products.map((product) => {
                 if (!product || !product.id) return null
-
-                // Compute runtime aggregate across variants safely
                 const aggregateStock = product.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) ?? 0
 
                 return (
@@ -147,7 +152,6 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
                       </td>
                     </tr>
 
-                    {/* Inline Quick View Drawer Panel */}
                     {editingInventoryProductId === product.id && (
                       <tr className="bg-neutral-50/50">
                         <td colSpan={5} className="py-4 px-8">
@@ -158,9 +162,12 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
                             <div className="space-y-2 divide-y divide-neutral-50">
                               {product.variants?.map((variant) => {
                                 if (!variant) return null
+                                const isINR = variant.prices?.[0]?.currency_code?.toLowerCase() === "inr"
+                                const currencySign = isINR ? "₹" : "$"
                                 const priceAmount = variant.prices?.[0]?.amount 
-                                  ? `$${(variant.prices[0].amount / 100).toFixed(2)}`
+                                  ? `${currencySign}${(variant.prices[0].amount / 100).toFixed(2)}`
                                   : "No Price Set"
+
                                 return (
                                   <div key={variant.id} className="flex items-center justify-between pt-2 text-xs first:pt-0">
                                     <span className="font-medium text-neutral-800">{variant.title}</span>

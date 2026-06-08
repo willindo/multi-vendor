@@ -52,15 +52,17 @@ A module is a reusable package of functionalities related to a single domain or 
 
 EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
 EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
+-o -path "*//*" -o -path "*/**/*" -o -iname "**" -o -iname "*" -o -iname "" -not -path "*/*product*/*"
 
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/*product*/*" -o -path "*/*create*/*" -o -iname "*edit*" -o -name ""' 
-EXCL_UDE_PATHS='-not -path  "*//*" -not -path "*/account*/*" -not -path "*/*payment*/*" -not -path  "*/.next/*"  -not -path "*/node_modules/*" -not -iname ""' 
+INCL_UDES='-path "*/*vendor*/*"  ' 
+EXCL_UDE_PATHS='-not -path "*/node_modules/*" -not -path "*/*product*/*" -not -path "*/.next/*"' 
 eval find . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
+ 
 contents=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;)
-INCLUDES=(-path "*/order*/*" -o -path "*/subscrib*/*" -o -iname "*order*")
-EXCLUDE_PATHS=(-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "readme*")
+INCLUDES=(-path "*/*order*/*" -o -path "*/*cart*/*" -o -path "*//*" -o -iname "*order*" -o -name "*cart*" -o -iname "*validate*")
+EXCLUDE_PATHS=(-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*//*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*")
 find . \( "${INCLUDES[@]}" \)  -type f \( "${EXCLUDE_PATHS[@]}" \) -print 
    "${contents[@]}"  
 
@@ -82,3 +84,61 @@ rg "SkeletonCartItem" --type tsx --type ts
 
 # Find all usages (not just imports)
 grep -r "SkeletonCartItem" --include="*.tsx" --include="*.ts" .
+
+medusa=# SELECT
+    schemaname,
+    relname,
+    n_live_tup
+FROM pg_stat_user_tables
+WHERE n_live_tup > 0
+ORDER BY relname;
+
+TRUNCATE TABLE 
+  public.apparel_detail,
+  public.inventory_item,
+  public.marketplace_vendor_product_product,
+  public.price,
+  public.price_set,
+  public.product_product_marketplace_apparel_detail,
+  public.product_sales_channel,
+  public.product_variant_inventory_item,
+  public.product_variant_price_set
+RESTART IDENTITY CASCADE;
+
+SELECT
+    relname AS table_name,
+    n_live_tup AS estimated_rows
+FROM pg_stat_user_tables
+ORDER BY relname;
+
+medusa=# SELECT
+    v.id AS vendor_id,
+    v.name,
+    v.handle,
+    va.role,
+    u.email,
+    u.first_name,
+    u.last_name
+FROM vendor v
+LEFT JOIN vendor_admin va
+    ON va.vendor_id = v.id
+LEFT JOIN "user" u
+    ON u.id = va.user_id;
+
+    Navigation
+Press q → quit and return to medusa=#
+Press Space → next page
+Press b → previous page
+Press / → search
+pg_dump -U medusa -d medusa --data-only
+pg_dump -U medusa -d medusa > dump.sql
+rzp_live_RSdqJwUqBHuiYN = Live Key ID
+mwPTjkqRTtsPsTucNyNK75Lg =Live Key Secret
+  "Registered Name": "Razorpay Software Limited",
+  "CIN": "U72200KA2013PLC097389",
+  "PAN": "AAGCR4375J",
+  "TAN": "BLRR14773D"
+}
+# Razorpay (test sandbox)
+RAZORPAY_KEY_ID=Live Key ID
+RAZORPAY_KEY_SECRET=Live Key Secret

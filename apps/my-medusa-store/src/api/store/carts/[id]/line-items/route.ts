@@ -3,8 +3,6 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { addToCartWorkflow } from "@medusajs/medusa/core-flows";
 import { Modules } from "@medusajs/framework/utils";
-import { ICartModuleService } from "@medusajs/framework/types";
-import vendorOrder from "../../../../../links/vendor-order";
 
 type AddLineItemBody = {
   variant_id: string;
@@ -12,51 +10,52 @@ type AddLineItemBody = {
 };
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
-  console.log("CUSTOM LINE-ITEM ROUTE HIT");
   const cartId = req.params.id;
   const { variant_id, quantity } = req.body as AddLineItemBody;
 
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
-  /**
-   * 🔍 Step 1 — Fetch vendor_id from variant
-   */
-  const { data: variants } = await query.graph({
-    entity: "product_variant",
-    fields: ["id", "product_id"],
-    filters: { id: variant_id },
-  });
-  console.log("Variant:", variant_id);
 
-  const productId = variants[0]?.product_id;
-  if (!productId) {
-    throw new Error(`Could not find product_id for variant: ${variant_id}`);
-  }
-  /**
-   * 🔗 Get vendor from link table
-   */
+  // 1. Fetch Vendor details (ID and Name) through the Link
   const { data: products } = await query.graph({
     entity: "product",
-    fields: ["id", "vendor.*"],
-    filters: { id: productId },
+    fields: [
+      "id",
+      "variants.id",
+      "vendor.id",
+      "vendor.handle",
+      "vendor.name", // Added name for your UI
+    ],
+    filters: {
+      variants: { id: [variant_id] },
+    },
   });
 
-  console.log("Full Product Data:", JSON.stringify(products[0], null, 2));
-  const rawVendor = products[0]["vendor"];
-  // const rawVendor = products[0]?.vendor;
-  const vendorId = Array.isArray(rawVendor) ? rawVendor[0]?.id : rawVendor?.id;
+  const product = products[0];
+  const vendor = Array.isArray(product?.vendor)
+    ? product.vendor[0]
+    : product?.vendor;
 
-  console.log("Extracted Vendor ID:", vendorId);
-
-  if (!vendorId) {
-    return res.status(400).json({ message: "Vendor not linked to product" });
+  if (!vendor?.id) {
+    return res
+      .status(400)
+      .json({ message: "This product is not linked to a vendor." });
   }
-  /**
-   * 🛒 Step 2 — Use Medusa workflow
-   */
+
+  // 2. Run Workflow with full metadata
+  // This ensures the line item is created/updated with the correct parcel info
   const { result, errors } = await addToCartWorkflow(req.scope).run({
     input: {
       cart_id: cartId,
-      items: [{ variant_id, quantity, metadata: { vendor_id: vendorId } }],
+      items: [
+        {
+          variant_id,
+          quantity,
+          metadata: {
+            vendor_id: vendor.id,
+            vendor_name: vendor.name || vendor.handle || "Unknown Vendor",
+          },
+        },
+      ],
     },
     throwOnError: false,
   });
@@ -64,27 +63,29 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   if (errors?.length) {
     return res.status(400).json({ message: "Workflow Error", errors });
   }
-  /**
-   * 🧩 Step 3 — Inject vendor_id (extend, not replace)
-   */
-  const cartService = req.scope.resolve(Modules.CART) as ICartModuleService;
 
-  const cartItems = await cartService.listLineItems({
-    cart_id: cartId,
-    variant_id: variant_id,
+  // 3. Retrieve the specific line item from the workflow result securely
+  const cartModule = req.scope.resolve(Modules.CART);
+
+  // Ensure relations are loaded safely if your service configuration requires it
+  const cart = await cartModule.retrieveCart(cartId, {
+    select: ["items.*"],
   });
 
-  if (!cartItems.length) {
-    return res.status(400).json({
-      message: "Item was not added. Check inventory/backorder settings.",
+  // ⚡ TypeScript Fix: Use optional chaining (?.) and fallback to an empty array
+  const latestItem = (cart?.items || []).find(
+    (i) => i.variant_id === variant_id,
+  );
+
+  if (!latestItem) {
+    return res.status(404).json({
+      success: false,
+      message: `Variant ${variant_id} was not found inside the updated cart array.`,
     });
   }
 
-  /**
-   * 📤 Step 4 — return clean response
-   */
   return res.json({
     success: true,
-    item: cartItems[0],
+    item: latestItem,
   });
 }

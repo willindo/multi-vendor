@@ -26,7 +26,15 @@ export default async function productUpsertHandler({
       data: [product],
     } = await query.graph({
       entity: "product",
-      fields: ["id", "title", "description", "handle", "thumbnail", "vendor.*"],
+      fields: [
+        "id",
+        "title",
+        "description",
+        "handle",
+        "thumbnail",
+        "vendor.*",
+        "apparel_detail.*",
+      ],
       filters: {
         id: [productId],
       },
@@ -42,6 +50,10 @@ export default async function productUpsertHandler({
       ? product.vendor[0]
       : product.vendor;
     // 3. Format a flat document specifically optimized for your cloth wear storefront
+    // const vendorData = Array.isArray(product.vendor) ? product.vendor[0] : product.vendor;
+    const apparelData = Array.isArray(product.apparel_detail)
+      ? product.apparel_detail[0]
+      : product.apparel_detail;
     const searchDocument = {
       id: product.id,
       title: product.title,
@@ -52,6 +64,15 @@ export default async function productUpsertHandler({
       // vendor_name: product.vendor?.name || "Platform Store",
       vendor_id: vendorData?.id || "platform",
       vendor_name: vendorData?.name || "Platform Store",
+
+      // Custom Apparel Search Facets
+      gender: apparelData?.gender,
+      product_type: apparelData?.product_type,
+      fit: apparelData?.fit,
+      season: apparelData?.season,
+      material_type: apparelData?.material_type,
+      material_composition: apparelData?.material_composition,
+      pattern: apparelData?.pattern,
     };
 
     // 4. Push data straight to your "products" index
