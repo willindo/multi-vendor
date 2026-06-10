@@ -75,3 +75,6 @@ NOTICE:  truncate cascades to table "product_variant_product_image"
 
 successfully performed a hybrid data purge.
 Unique violation / Duplicate key value
+
+FOREIGN KEY (totals_id) REFERENCES order_item(id) ON UPDATE CASCADE ON DELETE CASCADE = This means if an order_item entity drops or updates its primary ID, it ripples right through to the line item configurations. 
+Soft Deletes vs. Hard Deletes: Medusa Core uses soft deletes (deleted_at timestamps) for complex entities like Products, Orders, and Links to avoid accidental orphan states. However, join tables or calculation adjustments (like line item discounts or tax lines) apply hard deletes (ON DELETE CASCADE) to instantly wipe the slate clean if a parent item leaves the cart.

@@ -1,23 +1,19 @@
 // src/modules/checkout/components/vendor-split-summary/index.tsx
 import React from "react"
 import { HttpTypes } from "@medusajs/types"
+import { convertToLocale } from "@lib/util/money"
 
 type VendorSplitSummaryProps = {
   cart: HttpTypes.StoreCart
 }
 
 export default function VendorSplitSummary({ cart }: VendorSplitSummaryProps) {
-  // Cluster items using the metadata injected by your custom line-item endpoint
   const vendorGroups = cart.items?.reduce((acc, item) => {
-    // Safely look up your custom metadata fields
     const vendorId = (item.metadata as any)?.vendor_id || "platform"
-    const vendorName =
-      (item.metadata as any)?.vendor_name ||
-      `Partner Vendor (${vendorId.slice(0, 8)})`
-    // We can clean up the naming convention or fall back gracefully
-    // const groupKey = vendorId === "platform" ? "Direct Platform Store" : `Partner Vendor (${vendorId.slice(0, 8)})`
-    const groupKey =
-      vendorId === "platform" ? "Direct Platform Store" : vendorName
+    const vendorName = (item.metadata as any)?.vendor_name || `Partner Vendor (${vendorId.slice(0, 8)})`
+    
+    const groupKey = vendorId === "platform" ? "Direct Platform Store" : vendorName
+
     if (!acc[groupKey]) {
       acc[groupKey] = []
     }
@@ -31,7 +27,7 @@ export default function VendorSplitSummary({ cart }: VendorSplitSummaryProps) {
     <div className="space-y-4 my-6">
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-neutral-900" />
-        <h3 className="text-sm font-semibold text-neutral-950 uppercase tracking-wider text-xs">
+        <h3 className="text-xs font-semibold text-neutral-950 uppercase tracking-wider">
           Marketplace Fulfillment Split
         </h3>
       </div>
@@ -74,10 +70,10 @@ export default function VendorSplitSummary({ cart }: VendorSplitSummaryProps) {
                   </div>
                 </div>
                 <p className="font-semibold text-neutral-900">
-                  {new Intl.NumberFormat("en-IN", {
-                    style: "currency",
-                    currency: cart.currency_code?.toUpperCase() || "INR",
-                  }).format((item.unit_price * item.quantity) / 100)}
+                  {convertToLocale({
+                    amount: item.unit_price * item.quantity,
+                    currency_code: cart.currency_code
+                  })}
                 </p>
               </div>
             ))}

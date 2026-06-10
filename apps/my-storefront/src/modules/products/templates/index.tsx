@@ -1,4 +1,4 @@
-// ==== ./src/modules/products/templates/index.tsx ====
+// src/modules/products/templates/index.tsx
 import React, { Suspense } from "react"
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"

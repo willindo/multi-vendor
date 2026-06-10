@@ -112,7 +112,7 @@ const ApparelInfoTab = ({ apparelDetail }: { apparelDetail: NonNullable<Extended
         {apparelDetail.sizing_group && (
           <div>
             <span className="font-semibold">Sizing Scale</span>
-            <p className="text-ui-fg-subtle uppercase">{apparelDetail.sizing_group.replace("_", " ")}</p>
+            <p className="text-ui-fg-subtle uppercase">{apparelDetail.sizing_group.replace(/_/g, " ")}</p>
           </div>
         )}
         {apparelDetail.season && (

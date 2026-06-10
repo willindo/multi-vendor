@@ -1,20 +1,45 @@
 // src/app/vendor/dashboard/orders/[id]/page.tsx
 "use client"
+
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
+
+interface VendorOrderLineItem {
+  id: string
+  title: string
+  quantity: number
+  metadata?: {
+    fulfillment_status?: string
+    vendor_id?: string
+    vendor_name?: string
+  }
+}
+
+interface VendorOrderGraph {
+  id: string
+  display_id: number
+  items?: VendorOrderLineItem[]
+  shipping_address?: {
+    first_name?: string
+    last_name?: string
+    address_1?: string
+    city?: string
+    postal_code?: string
+  }
+}
 
 export default function VendorOrderDetailsPage() {
-  const { id: orderId } = useParams()
-  const router = useRouter()
+  const params = useParams()
+  const orderId = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : ""
   
-  const [order, setOrder] = useState<any>(null)
+  const [order, setOrder] = useState<VendorOrderGraph | null>(null)
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
 
-  // Fetch contextual order graph matrices natively on mount
   useEffect(() => {
     async function fetchDetails() {
+      if (!orderId) return
       try {
         const res = await fetch(`/api/vendors/orders/${orderId}`)
         if (res.ok) {
@@ -27,11 +52,11 @@ export default function VendorOrderDetailsPage() {
         setLoading(false)
       }
     }
-    if (orderId) fetchDetails()
+    fetchDetails()
   }, [orderId])
 
-  // Triggers state propagation up through the backend architecture
   const handleShipItem = async (itemId: string) => {
+    if (!orderId) return
     setProcessingId(itemId)
     try {
       const res = await fetch(`/api/vendors/orders/${orderId}/items/${itemId}/ship`, {
@@ -41,8 +66,6 @@ export default function VendorOrderDetailsPage() {
 
       if (res.ok) {
         alert("Fulfillment dispatch logged successfully.")
-        // Refresh local view memory state configurations instantly
-        router.refresh()
         const refreshRes = await fetch(`/api/vendors/orders/${orderId}`)
         if (refreshRes.ok) {
           const data = await refreshRes.json()
@@ -50,7 +73,7 @@ export default function VendorOrderDetailsPage() {
         }
       } else {
         const data = await res.json()
-        alert(`Fulfillment rejected: ${data.message}`)
+        alert(`Fulfillment rejected: ${data.message || "Unknown error"}`)
       }
     } catch (err: any) {
       alert(`Execution error occurred: ${err.message}`)
@@ -60,26 +83,32 @@ export default function VendorOrderDetailsPage() {
   }
 
   if (loading) {
-    return <div className="p-12 text-center text-xs font-semibold text-neutral-400 animate-pulse font-mono">Resolving allocation buffers...</div>
+    return (
+      <div className="p-12 text-center text-xs font-semibold text-neutral-400 animate-pulse font-mono">
+        Resolving allocation buffers...
+      </div>
+    )
   }
 
   if (!order) {
     return (
       <div className="p-12 text-center max-w-xl mx-auto space-y-4">
         <p className="text-xs text-neutral-400 font-medium">Fulfillment tracking node not linked to this session.</p>
-        <Link href="/vendor/dashboard/orders" className="text-xs text-neutral-900 underline font-bold">Return to dashboard</Link>
+        <Link href="/vendor/dashboard/orders" className="text-xs text-neutral-900 underline font-bold">
+          Return to dashboard
+        </Link>
       </div>
     )
   }
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      
-      {/* Navigation & Header Controls */}
       <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
         <div>
           <div className="flex items-center gap-x-2 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-            <Link href="/vendor/dashboard/orders" className="hover:text-neutral-900 transition-colors">Shipments Ledger</Link>
+            <Link href="/vendor/dashboard/orders" className="hover:text-neutral-900 transition-colors">
+              Shipments Ledger
+            </Link>
             <span>/</span>
             <span className="text-neutral-900 font-mono">#{order.display_id}</span>
           </div>
@@ -88,13 +117,13 @@ export default function VendorOrderDetailsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Interactive Manifest Items Ledger */}
         <div className="md:col-span-2 space-y-4">
           <div className="bg-white border border-neutral-200 rounded-2xl p-5 shadow-xs">
-            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4">Consignment Contents Ledger</h3>
+            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4">
+              Consignment Contents Ledger
+            </h3>
             <div className="divide-y divide-neutral-100">
-              {order.items?.map((item: any) => {
+              {order.items?.map((item) => {
                 const currentStatus = item.metadata?.fulfillment_status || "pending"
                 const isShipped = currentStatus === "shipped"
 
@@ -104,11 +133,12 @@ export default function VendorOrderDetailsPage() {
                       <p className="text-xs font-bold text-neutral-900">{item.title}</p>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
                         Units Allocated: <strong className="text-neutral-700">{item.quantity}</strong> · Status:{" "}
-                        <span className={`font-bold capitalize ${isShipped ? "text-emerald-600" : "text-amber-600"}`}>{currentStatus}</span>
+                        <span className={`font-bold capitalize ${isShipped ? "text-emerald-600" : "text-amber-600"}`}>
+                          {currentStatus}
+                        </span>
                       </p>
                     </div>
 
-                    {/* Ship Trigger Button Action */}
                     {!isShipped ? (
                       <button
                         onClick={() => handleShipItem(item.id)}
@@ -129,16 +159,18 @@ export default function VendorOrderDetailsPage() {
           </div>
         </div>
 
-        {/* Delivery Destination Sidebar Card */}
         <div className="bg-white border border-neutral-200 rounded-2xl p-5 h-fit shadow-xs space-y-4">
           <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Destination Address</h3>
           <div className="text-xs text-neutral-700 space-y-1 font-medium">
-            <p className="font-bold text-neutral-900">{order.shipping_address?.first_name} {order.shipping_address?.last_name}</p>
+            <p className="font-bold text-neutral-900">
+              {order.shipping_address?.first_name} {order.shipping_address?.last_name}
+            </p>
             <p className="text-neutral-500">{order.shipping_address?.address_1}</p>
-            <p className="text-neutral-500">{order.shipping_address?.city} - {order.shipping_address?.postal_code}</p>
+            <p className="text-neutral-500">
+              {order.shipping_address?.city} {order.shipping_address?.postal_code ? `- ${order.shipping_address.postal_code}` : ""}
+            </p>
           </div>
         </div>
-
       </div>
     </div>
   )

@@ -30,6 +30,7 @@ export async function generateStaticParams() {
     (category: any) => category.handle
   )
 
+  // Builds an exact permutations matrix of [countryCode] x [categoryHandles]
   const staticParams = countryCodes
     ?.map((countryCode: string | undefined) =>
       categoryHandles.map((handle: any) => ({

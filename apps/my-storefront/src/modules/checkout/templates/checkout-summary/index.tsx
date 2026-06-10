@@ -1,12 +1,14 @@
 // src/modules/checkout/templates/checkout-summary/index.tsx
 import React from "react"
 import { Heading } from "@medusajs/ui"
+import { HttpTypes } from "@medusajs/types"
 import CartTotals from "@modules/common/components/cart-totals"
 import ItemsPreviewTemplate from "@modules/cart/templates/preview"
 import VendorSplitSummary from "@modules/checkout/components/vendor-split-summary"
 
 type CheckoutSummaryProps = {
-  cart: any
+  // cart: HttpTypes.StoreCart
+cart: any
 }
 
 export default function CheckoutSummary({ cart }: CheckoutSummaryProps) {
@@ -27,7 +29,6 @@ export default function CheckoutSummary({ cart }: CheckoutSummaryProps) {
       </div>
 
       <div className="w-full bg-white flex flex-col gap-y-6 border border-neutral-200/70 p-6 rounded-2xl shadow-xs">
-        {/* ⚡ FIX: Passing entire unified cart object graph directly to match preview template implementation signature */}
         <ItemsPreviewTemplate cart={cart} />
       </div>
     </div>

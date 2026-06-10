@@ -9,7 +9,6 @@ interface VendorSpotlightProps {
 }
 
 export default function VendorSpotlight({ vendorId, vendorName, countryCode }: VendorSpotlightProps) {
-  // Gracefully hide if the product payload doesn't contain custom vendor indices
   if (!vendorId) return null
 
   const displayName = vendorName || "Featured Artisan"
@@ -17,7 +16,6 @@ export default function VendorSpotlight({ vendorId, vendorName, countryCode }: V
   return (
     <div className="p-4 bg-neutral-50 border border-neutral-100 rounded-xl flex flex-col gap-y-3 transition-all hover:border-neutral-200 shadow-sm">
       <div className="flex items-start gap-x-3">
-        {/* Minimalist Visual Initial Badge */}
         <div className="h-9 w-9 shrink-0 rounded-full bg-neutral-900 flex items-center justify-center text-white text-xs font-semibold tracking-wider select-none">
           {displayName.slice(0, 2).toUpperCase()}
         </div>
@@ -36,7 +34,6 @@ export default function VendorSpotlight({ vendorId, vendorName, countryCode }: V
         This premium composition fulfills and ships directly from the partner's dedicated facility.
       </p>
 
-      {/* Linked route with explicit regional path resolution */}
       <Link
         href={`/${countryCode}/vendors/${vendorId}`}
         className="block w-full text-center py-2 bg-white border border-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg hover:bg-neutral-900 hover:text-white hover:border-neutral-900 transition-all shadow-xs"

@@ -1,7 +1,8 @@
+// ./src/modules/order/components/shipping-details/index.tsx
+import React from "react"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text } from "@medusajs/ui"
-
 import Divider from "@modules/common/components/divider"
 
 type ShippingDetailsProps = {
@@ -9,6 +10,8 @@ type ShippingDetailsProps = {
 }
 
 const ShippingDetails = ({ order }: ShippingDetailsProps) => {
+  const deliveryMethod = order.shipping_methods?.[0]
+
   return (
     <div>
       <Heading level="h2" className="flex flex-row text-3xl-regular my-6">
@@ -23,16 +26,13 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
             Shipping Address
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shipping_address?.first_name}{" "}
-            {order.shipping_address?.last_name}
+            {order.shipping_address?.first_name} {order.shipping_address?.last_name}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shipping_address?.address_1}{" "}
-            {order.shipping_address?.address_2}
+            {order.shipping_address?.address_1} {order.shipping_address?.address_2}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shipping_address?.postal_code},{" "}
-            {order.shipping_address?.city}
+            {order.shipping_address?.postal_code}, {order.shipping_address?.city}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
             {order.shipping_address?.country_code?.toUpperCase()}
@@ -45,7 +45,7 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">Contact</Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shipping_address?.phone}
+            {order.shipping_address?.phone || "-"}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">{order.email}</Text>
         </div>
@@ -56,12 +56,18 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">Method</Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {(order as any).shipping_methods[0]?.name} (
-            {convertToLocale({
-              amount: order.shipping_methods?.[0].total ?? 0,
-              currency_code: order.currency_code,
-            })}
-            )
+            {deliveryMethod ? (
+              <>
+                {deliveryMethod.name} (
+                {convertToLocale({
+                  amount: deliveryMethod.total ?? 0,
+                  currency_code: order.currency_code,
+                })}
+                )
+              </>
+            ) : (
+              "No delivery method specified"
+            )}
           </Text>
         </div>
       </div>

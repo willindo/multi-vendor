@@ -1,22 +1,31 @@
+// src/modules/checkout/components/review/index.tsx
 "use client"
 
+import React from "react"
 import { Heading, Text, clx } from "@medusajs/ui"
-
-import PaymentButton from "../payment-button"
+import { HttpTypes } from "@medusajs/types"
 import { useSearchParams } from "next/navigation"
+import PaymentButton from "../payment-button"
 
-const Review = ({ cart }: { cart: any }) => {
+type ReviewProps = {
+  cart: HttpTypes.StoreCart
+}
+
+const Review: React.FC<ReviewProps> = ({ cart }:{cart:any}) => {
   const searchParams = useSearchParams()
-
   const isOpen = searchParams.get("step") === "review"
 
-  const paidByGiftcard =
-    cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
+  // Safely fallback to empty array layers to protect against structural runtime crashes
+  const giftCards = cart?.gift_cards ?? []
+  const shippingMethods = cart?.shipping_methods ?? []
 
-  const previousStepsCompleted =
-    cart.shipping_address &&
-    cart.shipping_methods.length > 0 &&
-    (cart.payment_collection || paidByGiftcard)
+  const paidByGiftcard = giftCards.length > 0 && cart?.total === 0
+
+  const previousStepsCompleted = !!(
+    cart?.shipping_address &&
+    shippingMethods.length > 0 &&
+    (cart?.payment_collection || paidByGiftcard)
+  )
 
   return (
     <div className="bg-white">

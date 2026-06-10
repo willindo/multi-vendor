@@ -4,6 +4,7 @@ import EmptyCartMessage from "../components/empty-cart-message"
 import SignInPrompt from "../components/sign-in-prompt"
 import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
+import type { StorefrontLineItem } from "@lib/data/cart"
 
 const CartTemplate = ({
   cart,
@@ -24,16 +25,14 @@ const CartTemplate = ({
                   <Divider />
                 </>
               )}
-              <ItemsTemplate items={cart?.items} />
+              <ItemsTemplate items={cart.items as StorefrontLineItem[]} region={cart.region} />
             </div>
             <div className="relative">
               <div className="flex flex-col gap-y-8 sticky top-12">
                 {cart && cart.region && (
-                  <>
-                    <div className="bg-white py-6">
-                      <Summary cart={cart as any} />
-                    </div>
-                  </>
+                  <div className="bg-white py-6">
+                    <Summary cart={cart as any} />
+                  </div>
                 )}
               </div>
             </div>

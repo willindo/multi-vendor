@@ -15,6 +15,23 @@ import { useEffect, useState } from "react"
 
 const PICKUP_OPTION_ON = "__PICKUP_ON"
 const PICKUP_OPTION_OFF = "__PICKUP_OFF"
+// Extended type definition mapping the expanded backend fields query
+type StoreCartShippingOptionWithZone = HttpTypes.StoreCartShippingOption & {
+  service_zone?: {
+    id: string
+    name: string
+    fulfillment_set?: {
+      id: string
+      name: string
+      type: string // "pickup" | "delivery"
+      location?: {
+        id: string
+        name: string
+        address?: HttpTypes.StoreCartAddress | null
+      }
+    }
+  }
+}
 
 type ShippingProps = {
   cart: HttpTypes.StoreCart
@@ -70,11 +87,15 @@ const Shipping: React.FC<ShippingProps> = ({
 
   const isOpen = searchParams.get("step") === "delivery"
 
-  const _shippingMethods = availableShippingMethods?.filter(
+  // ⚡ Cast options array to the extended structure right here
+  const typedMethods = (availableShippingMethods ||
+    []) as StoreCartShippingOptionWithZone[]
+
+  const _shippingMethods = typedMethods.filter(
     (sm) => sm.service_zone?.fulfillment_set?.type !== "pickup"
   )
 
-  const _pickupMethods = availableShippingMethods?.filter(
+  const _pickupMethods = typedMethods.filter(
     (sm) => sm.service_zone?.fulfillment_set?.type === "pickup"
   )
 
@@ -343,7 +364,7 @@ const Shipping: React.FC<ShippingProps> = ({
                               <span className="text-base-regular text-ui-fg-muted">
                                 {formatAddress(
                                   option.service_zone?.fulfillment_set?.location
-                                    ?.address
+                                    ?.address as HttpTypes.StoreCartAddress
                                 )}
                               </span>
                             </div>
