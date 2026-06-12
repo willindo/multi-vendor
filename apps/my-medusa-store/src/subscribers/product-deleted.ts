@@ -1,4 +1,7 @@
+// src/subscribers/product-deleted.ts
+
 import { SubscriberArgs, type SubscriberConfig } from "@medusajs/framework";
+import { getProductsIndex } from "../lib/meilisearch"
 
 export default async function productDeletedHandler({
   event: { data },
@@ -11,17 +14,9 @@ export default async function productDeletedHandler({
   console.log(`🗑️ Search Index Sync triggered for Deletion: ${productIds.join(", ")}`);
 
   try {
-    const { Meilisearch } = await import("meilisearch");
-
-    const meiliClient = new Meilisearch({
-      host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700",
-      apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
-    });
-
-    const index = meiliClient.index("products");
 
     // Purge the matching documents instantly from the cluster floor index
-    await index.deleteDocuments(productIds);
+    const index = getProductsIndex()
 
     console.log(`✅ Successfully removed deleted items from Meilisearch index references.`);
   } catch (error: any) {

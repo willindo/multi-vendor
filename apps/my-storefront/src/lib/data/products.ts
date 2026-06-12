@@ -1,3 +1,4 @@
+// src/lib/data/products.ts
 "use server"
 
 import { sdk } from "@lib/config"

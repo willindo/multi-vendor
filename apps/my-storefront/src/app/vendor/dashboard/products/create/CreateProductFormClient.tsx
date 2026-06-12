@@ -29,7 +29,7 @@ export default function CreateProductFormClient({ serverToken }: CreateProductFo
   const [ageGroup, setAgeGroup] = useState("ADULT")
   const [sizingGroup, setSizingGroup] = useState("REGULAR")
   
-  const [productType, setProductType] = useState("TOP")
+  const [garmentCategory, setgarmentCategory] = useState("TOP")
   const [fit, setFit] = useState("REGULAR")
   const [pattern, setPattern] = useState("SOLID")
   const [styleType, setStyleType] = useState("CASUAL")
@@ -77,7 +77,7 @@ export default function CreateProductFormClient({ serverToken }: CreateProductFo
         gender,
         age_group: ageGroup,
         sizing_group: sizingGroup,
-        product_type: productType,
+        product_type: garmentCategory,
         fit,
         pattern,
         style_type: styleType,
@@ -193,7 +193,7 @@ export default function CreateProductFormClient({ serverToken }: CreateProductFo
           {/* Design Layout Specs */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Garment Structural Type</label>
-            <select value={productType} onChange={(e) => setProductType(e.target.value)} className="w-full border rounded-md p-1.5 text-xs bg-white focus:outline-hidden">
+            <select value={garmentCategory} onChange={(e) => setgarmentCategory(e.target.value)} className="w-full border rounded-md p-1.5 text-xs bg-white focus:outline-hidden">
               <option value="TOP">Top / Shirt</option>
               <option value="BOTTOM">Bottom / Pants</option>
               <option value="SET">Matching Set</option>

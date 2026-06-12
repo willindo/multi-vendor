@@ -1,4 +1,3 @@
-// ==== ./src/app/vendor/dashboard/products/edit/[id]/EditProductFormClient.tsx ====
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -10,6 +9,16 @@ interface EditProductFormClientProps {
   serverToken?: string
 }
 
+interface UIVariantState {
+  id: string
+  title: string
+  sku: string
+  inventory_quantity: number
+  priceAmount: number
+  currencyCode: string
+  weight: number
+}
+
 export default function EditProductFormClient({ productId, initialProduct, serverToken }: EditProductFormClientProps) {
   const router = useRouter()
   const [product, setProduct] = useState(initialProduct)
@@ -17,23 +26,20 @@ export default function EditProductFormClient({ productId, initialProduct, serve
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [resolvedToken, setResolvedToken] = useState(serverToken || "")
 
-  // --- STANDARD IDENTIFIERS & PRICING INITIALIZATION ---
+  // --- CORE IDENTIFIERS ---
   const [title, setTitle] = useState(initialProduct?.title || "")
   const [handle, setHandle] = useState(initialProduct?.handle || "")
   const [description, setDescription] = useState(initialProduct?.description || "")
   const [weight, setWeight] = useState<number>(initialProduct?.weight || 0)
   
-  const defaultVariant = initialProduct?.variants?.[0]
-  const [sku, setSku] = useState(defaultVariant?.sku || "")
-  const [inventoryQuantity, setInventoryQuantity] = useState<number>(defaultVariant?.inventory_quantity || 0)
-  const [priceAmount, setPriceAmount] = useState<number>(defaultVariant?.prices?.[0]?.amount ? defaultVariant.prices[0].amount / 100 : 0)
-  const [currencyCode, setCurrencyCode] = useState(defaultVariant?.prices?.[0]?.currency_code?.toUpperCase() || "USD")
+  // --- MULTI-VARIANT RUNTIME ENGINE ---
+  const [uiVariants, setUiVariants] = useState<UIVariantState[]>([])
 
-  // --- COMPLETE EXTENDED APPAREL STATE SPECIFICATIONS ---
+  // --- APPAREL DETAILS SPECS ---
   const [gender, setGender] = useState(initialProduct?.apparel_detail?.gender || "UNISEX")
   const [ageGroup, setAgeGroup] = useState(initialProduct?.apparel_detail?.age_group || "ADULT")
   const [sizingGroup, setSizingGroup] = useState(initialProduct?.apparel_detail?.sizing_group || "REGULAR")
-  const [productType, setProductType] = useState(initialProduct?.apparel_detail?.product_type || "TOP")
+  const [garmentCategory, setgarmentCategory] = useState(initialProduct?.apparel_detail?.product_type || "TOP")
   const [fit, setFit] = useState(initialProduct?.apparel_detail?.fit || "REGULAR")
   const [pattern, setPattern] = useState(initialProduct?.apparel_detail?.pattern || "SOLID")
   const [styleType, setStyleType] = useState(initialProduct?.apparel_detail?.style_type || "CASUAL")
@@ -43,7 +49,6 @@ export default function EditProductFormClient({ productId, initialProduct, serve
   const [season, setSeason] = useState(initialProduct?.apparel_detail?.season || "ALL_SEASON")
   const [condition, setCondition] = useState(initialProduct?.apparel_detail?.condition || "NEW")
 
-  // Sync state cleanly if dynamic server components rehydrate fields downstream
   useEffect(() => {
     if (product) {
       setTitle(product.title || "")
@@ -51,21 +56,24 @@ export default function EditProductFormClient({ productId, initialProduct, serve
       setDescription(product.description || "")
       setWeight(product.weight || 0)
       
-      const v = product.variants?.[0]
-      if (v) {
-        setSku(v.sku || "")
-        setInventoryQuantity(v.inventory_quantity || 0)
-        if (v.prices?.[0]) {
-          setPriceAmount(v.prices[0].amount / 100)
-          setCurrencyCode(v.prices[0].currency_code?.toUpperCase() || "USD")
-        }
+      if (product.variants && product.variants.length > 0) {
+        const structuralRows = product.variants.map((v: any) => ({
+          id: v.id,
+          title: v.title || "Default Variant",
+          sku: v.sku || "",
+          inventory_quantity: v.inventory_quantity || 0,
+          priceAmount: v.prices?.[0]?.amount ? v.prices[0].amount / 100 : 0,
+          currencyCode: v.prices?.[0]?.currency_code?.toUpperCase() || "USD",
+          weight: v.weight || product.weight || 0
+        }))
+        setUiVariants(structuralRows)
       }
 
       if (product.apparel_detail) {
         setGender(product.apparel_detail.gender || "UNISEX")
         setAgeGroup(product.apparel_detail.age_group || "ADULT")
         setSizingGroup(product.apparel_detail.sizing_group || "REGULAR")
-        setProductType(product.apparel_detail.product_type || "TOP")
+        setgarmentCategory(product.apparel_detail.product_type || "TOP")
         setFit(product.apparel_detail.fit || "REGULAR")
         setPattern(product.apparel_detail.pattern || "SOLID")
         setStyleType(product.apparel_detail.style_type || "CASUAL")
@@ -111,6 +119,10 @@ export default function EditProductFormClient({ productId, initialProduct, serve
     setHandle(cleanSlug)
   }
 
+  const handleVariantCellChange = (id: string, key: keyof UIVariantState, value: any) => {
+    setUiVariants(prev => prev.map(v => v.id === id ? { ...v, [key]: value } : v))
+  }
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -120,16 +132,19 @@ export default function EditProductFormClient({ productId, initialProduct, serve
       handle,
       description,
       weight: Number(weight),
-      variants: [{
-        sku,
-        inventory_quantity: Number(inventoryQuantity),
-        prices: [{ amount: Math.round(priceAmount * 100), currency_code: currencyCode.toLowerCase() }]
-      }],
+      variants: uiVariants.map(v => ({
+        id: v.id,
+        title: v.title,
+        sku: v.sku,
+        inventory_quantity: Number(v.inventory_quantity),
+        weight: Number(v.weight),
+        prices: [{ amount: Math.round(Number(v.priceAmount) * 100), currency_code: v.currencyCode.toLowerCase() }]
+      })),
       apparel_detail: {
         gender,
         age_group: ageGroup,
         sizing_group: sizingGroup,
-        product_type: productType,
+        product_type: garmentCategory,
         fit,
         pattern,
         style_type: styleType,
@@ -158,12 +173,12 @@ export default function EditProductFormClient({ productId, initialProduct, serve
     }
   }
 
-  if (loading) return <div className="p-8 text-center font-mono text-xs text-neutral-400 animate-pulse">Resolving complete operational matrix...</div>
+  if (loading) return <div className="p-8 text-center font-mono text-xs text-neutral-400 animate-pulse">Resolving operational layout...</div>
 
   return (
     <form onSubmit={handleUpdate} className="bg-white border border-neutral-200 rounded-xl p-6 space-y-6 shadow-sm">
       
-      {/* 01. CORE IDENTIFIERS */}
+      {/* 01. IDENTITY */}
       <div className="space-y-4">
         <h3 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest border-b pb-1">01. Identity Matrix</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -178,38 +193,44 @@ export default function EditProductFormClient({ productId, initialProduct, serve
         </div>
       </div>
 
-      {/* 02. REVISED PRICING INFRASTRUCTURE */}
+      {/* 02. COMMERCE MATRIX TARGETS */}
       <div className="space-y-4">
         <h3 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest border-b pb-1">02. Commerce Base</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">Price</label>
-            <input type="number" step="0.01" required value={priceAmount || ""} onChange={(e) => setPriceAmount(parseFloat(e.target.value) || 0)} className="w-full p-2 border rounded-md text-xs focus:outline-hidden" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">Currency</label>
-            <select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} className="w-full p-2 border rounded-md text-xs bg-white focus:outline-hidden">
-              <option value="USD">USD ($)</option>
-              <option value="INR">INR (₹)</option>
-              <option value="EUR">EUR (€)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">SKU</label>
-            <input type="text" value={sku} onChange={(e) => setSku(e.target.value)} className="w-full p-2 border rounded-md text-xs font-mono focus:outline-hidden" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">Stock Vol</label>
-            <input type="number" required value={inventoryQuantity} onChange={(e) => setInventoryQuantity(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded-md text-xs focus:outline-hidden" />
-          </div>
-          <div className="col-span-2 md:col-span-1">
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">Weight (g)</label>
-            <input type="number" value={weight || ""} onChange={(e) => setWeight(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded-md text-xs focus:outline-hidden" />
-          </div>
+        <div className="overflow-x-auto border border-neutral-200 rounded-lg">
+          <table className="w-full border-collapse text-left bg-white text-xs">
+            <thead className="bg-neutral-50 border-b font-mono text-neutral-500 uppercase text-[10px]">
+              <tr>
+                <th className="p-3">Variant Specification</th>
+                <th className="p-3">SKU Identifier</th>
+                <th className="p-3 w-20">Stock</th>
+                <th className="p-3 w-28">Price</th>
+                <th className="p-3 w-24">Currency</th>
+                <th className="p-3 w-24">Weight (g)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {uiVariants.map((v) => (
+                <tr key={v.id} className="hover:bg-neutral-50/50">
+                  <td className="p-3 font-medium font-mono text-neutral-800">{v.title}</td>
+                  <td className="p-3"><input type="text" value={v.sku} onChange={(e) => handleVariantCellChange(v.id, "sku", e.target.value)} className="w-full p-1 border rounded-sm font-mono text-[11px]" /></td>
+                  <td className="p-3"><input type="number" value={v.inventory_quantity} onChange={(e) => handleVariantCellChange(v.id, "inventory_quantity", parseInt(e.target.value) || 0)} className="w-full p-1 border rounded-sm text-[11px]" /></td>
+                  <td className="p-3"><input type="number" step="0.01" value={v.priceAmount} onChange={(e) => handleVariantCellChange(v.id, "priceAmount", parseFloat(e.target.value) || 0)} className="w-full p-1 border rounded-sm text-[11px]" /></td>
+                  <td className="p-3">
+                    <select value={v.currencyCode} onChange={(e) => handleVariantCellChange(v.id, "currencyCode", e.target.value)} className="w-full p-1 border rounded-sm bg-white text-[11px]">
+                      <option value="USD">USD</option>
+                      <option value="INR">INR</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </td>
+                  <td className="p-3"><input type="number" value={v.weight} onChange={(e) => handleVariantCellChange(v.id, "weight", parseInt(e.target.value) || 0)} className="w-full p-1 border rounded-sm text-[11px]" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* 03. ALL ATTRIBUTES LINKED */}
+      {/* 03. APPAREL FILTERS SPECS */}
       <div className="space-y-4">
         <h3 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest border-b pb-1">03. Production Specifications Matrix</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-neutral-50 p-4 rounded-xl border">
@@ -243,7 +264,7 @@ export default function EditProductFormClient({ productId, initialProduct, serve
           </div>
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Garment Structural Type</label>
-            <select value={productType} onChange={(e) => setProductType(e.target.value)} className="w-full border rounded-md p-1.5 text-xs bg-white focus:outline-hidden">
+            <select value={garmentCategory} onChange={(e) => setgarmentCategory(e.target.value)} className="w-full border rounded-md p-1.5 text-xs bg-white focus:outline-hidden">
               <option value="TOP">Top / Shirt</option>
               <option value="BOTTOM">Bottom / Pants</option>
               <option value="SET">Matching Set</option>

@@ -1,3 +1,4 @@
+// src/lib/util/sort-products.ts
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 

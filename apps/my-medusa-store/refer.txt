@@ -51,12 +51,12 @@ A module is a reusable package of functionalities related to a single domain or 
 
 EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
 EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
--o -path "*//*" -o -path "*/*cart*/*" -o -iname "*cart*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
+-o -path "*//*" -o -path "*/*edit*/*" -o -iname "*cart*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
 -not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"
 -not -path "*/*.next/*" -not -path "*/node_modules/*" 
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/*variant*/*" -o -iname "*variant*" -o -iname "*variant*"  ' 
+INCL_UDES='-path "*/*create*/*" -o -path "*/*edit*/*" ' 
 EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*"'
 eval find . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
@@ -76,7 +76,7 @@ echo "=== Files with process.env (excluding .next and config) ===" && \
   --exclude="*.sitemap.js" 
 
 # Find all imports of SkeletonCartItem
-grep -r "import.*SkeletonCartItem" --include="*.tsx" --include="*.ts" .
+grep -r "import.*marketplace*" --include="*.tsx" --include="*.ts" .
 grep -r "import.*products/templates/index" --include="*.tsx" --include="*.ts" .
 
 # Find all imports from skeleton-cart-item path
@@ -147,3 +147,5 @@ RAZORPAY_KEY_ID=Live Key ID
 RAZORPAY_KEY_SECRET=Live Key Secret
 
 Let's carefully analyze the exact architecture you provided, finalize the data schema contract, and then look at the absolute precise implementation code. ////
+
+please provide payload to fill  -=- guide the proper flow while fill and  generate any subsequent ? . . .
