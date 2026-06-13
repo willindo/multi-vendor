@@ -75,6 +75,7 @@ export default async function productUpsertHandler({
 
       vendor_id: vendorData?.id || "platform",
       vendor_name: vendorData?.name || "Platform Store",
+      vendor_handle: vendorData?.handle ?? null,
 
       gender: apparelData?.gender || "UNISEX",
       age_group: apparelData?.age_group || null,

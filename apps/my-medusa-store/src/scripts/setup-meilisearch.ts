@@ -1,11 +1,14 @@
 // src/scripts/setup-meilisearch.ts
-import { getProductsIndex } from "../lib/meilisearch"
+import { getProductsIndex } from "../lib/meilisearch";
 
 export default async function setupMeilisearch() {
- const index = await getProductsIndex()
+  const index = await getProductsIndex();
 
   await index.updateFilterableAttributes([
     "vendor_id",
+
+    "sizes",
+    "colors",
 
     "gender",
     "age_group",
@@ -29,13 +32,14 @@ export default async function setupMeilisearch() {
     "condition",
   ]);
 
-  await index.updateSortableAttributes([]);
+  await index.updateDistinctAttribute("id");
 
   await index.updateSearchableAttributes([
     "title",
     "description",
 
     "vendor_name",
+    "vendor_handle",
 
     "garment_category",
     "garment_subcategory",
@@ -44,6 +48,10 @@ export default async function setupMeilisearch() {
 
     "material_composition",
   ]);
+
+  await index.updateFaceting({
+    maxValuesPerFacet: 100,
+  });
 
   console.log("✅ Meilisearch configured");
 }

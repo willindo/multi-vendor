@@ -135,3 +135,28 @@ export const listProductsWithSort = async ({
     queryParams,
   }
 }
+export const listProductsByHandles = async ({
+  countryCode,
+  handles,
+}: {
+  countryCode: string
+  handles: string[]
+}) => {
+  if (!handles.length) {
+    return []
+  }
+
+  const {
+    response: { products },
+  } = await listProducts({
+    countryCode,
+    queryParams: {
+      handle: handles,
+      limit: handles.length,
+    },
+  })
+
+  const map = new Map(products.map((p) => [p.handle, p]))
+
+  return handles.map((h) => map.get(h)).filter(Boolean)
+}

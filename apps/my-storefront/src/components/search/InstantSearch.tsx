@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { searchMarketplaceProducts } from "@lib/meilisearch-client"
 
 export default function InstantSearch() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -20,7 +19,16 @@ export default function InstantSearch() {
       setIsSearching(true)
       try {
         // This function handles the network boundary directly, keeping secrets out of the browser
-        const hits = await searchMarketplaceProducts(searchTerm)
+        const response = await fetch(
+          `/api/search/suggestions?q=${encodeURIComponent(searchTerm)}`
+        )
+
+        if (!response.ok) {
+          throw new Error("Search failed")
+        }
+
+        const hits = await response.json()
+
         setResults(hits)
       } catch (error) {
         console.error("Search extraction error:", error)
@@ -41,6 +49,13 @@ export default function InstantSearch() {
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && searchTerm.trim()) {
+              window.location.href = `/${
+                window.location.pathname.split("/")[1]
+              }/search?q=${encodeURIComponent(searchTerm)}`
+            }
+          }}
           placeholder="Search items, vendor lines, categories..."
           className="w-full px-4 py-2.5 bg-white border border-ui-border-base rounded-md text-small-regular placeholder-ui-fg-muted focus:outline-none focus:border-ui-fg-interactive transition-colors shadow-sm text-black"
         />
@@ -55,7 +70,9 @@ export default function InstantSearch() {
           {results.map((hit) => (
             <Link
               key={hit.id}
-              href={`/products/${hit.handle}`}
+              href={`/${window.location.pathname.split("/")[1]}/products/${
+                hit.handle
+              }`}
               className="block p-4 hover:bg-ui-bg-subtle/40 transition-colors group"
               onClick={() => setResults([])}
             >

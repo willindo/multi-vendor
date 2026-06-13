@@ -51,12 +51,13 @@ A module is a reusable package of functionalities related to a single domain or 
 
 EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
 EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
--o -path "*//*" -o -path "*/*edit*/*" -o -iname "*cart*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
--not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"
+-o -path "*//*" -o -path "*/*edit*/*" -o -iname "*vendor*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
 -not -path "*/*.next/*" -not -path "*/node_modules/*" 
+
+EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/*create*/*" -o -path "*/*edit*/*" ' 
+INCL_UDES='-path "*/*vendor*/*" -o -iname "*vendor*"' 
 EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*"'
 eval find . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
@@ -86,7 +87,7 @@ grep -r "skeleton-cart-item" --include="*.tsx" --include="*.ts" .
 rg "SkeletonCartItem" --type tsx --type ts
 
 # Find all usages (not just imports)
-grep -r "SkeletonCartItem" --include="*.tsx" --include="*.ts" .
+grep -r "garment" --include="*.tsx" --include="*.ts" --exclude-dir=.next --exclude-dir=*node* .
 
 medusa=# SELECT
     schemaname,
@@ -149,3 +150,7 @@ RAZORPAY_KEY_SECRET=Live Key Secret
 Let's carefully analyze the exact architecture you provided, finalize the data schema contract, and then look at the absolute precise implementation code. ////
 
 please provide payload to fill  -=- guide the proper flow while fill and  generate any subsequent ? . . .
+
+tree -h > structure.txt  -f -a -L 2 
+touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
+touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
