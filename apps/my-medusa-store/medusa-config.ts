@@ -1,5 +1,7 @@
 // ==== ./medusa-config.ts ====
-import { loadEnv, defineConfig, } from "@medusajs/framework/utils";
+import { loadEnv, defineConfig } from "@medusajs/framework/utils";
+
+const path = require("path");
 
 loadEnv(process.env.NODE_ENV || "development", process.cwd());
 
@@ -35,13 +37,14 @@ module.exports = defineConfig({
           vendor: ["vendor_admin", "user"],
         },
         providers: [
-              {
-                resolve: "@medusajs/medusa/auth-emailpass",
-                id: "emailpass",
-                options: {},
-              },
-            ],
+          {
+            resolve: "@medusajs/medusa/auth-emailpass",
+            id: "emailpass",
+            options: {},
+          },
+        ],
       },
     },
+   
   ],
 });

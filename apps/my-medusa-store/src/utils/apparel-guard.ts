@@ -1,4 +1,5 @@
 // src/utils/apparel-guard.ts
+import type { ApparelDetails } from "@shared/index";
 
 const FORBIDDEN_WORDS = [
   "undergarment",
@@ -127,7 +128,7 @@ export const VALID_CLOSURE_TYPES = [
   "TIE_UP",
 ] as const;
 
-export function validateAndCleanApparelInput(body: any) {
+export function validateAndCleanApparelInput(body: any):ApparelDetails {
   const { title, description, apparel_detail } = body;
 
   if (!apparel_detail) {
@@ -175,7 +176,7 @@ export function validateAndCleanApparelInput(body: any) {
     style_type: (apparel_detail.style_type || "CASUAL").toUpperCase(),
     gender: (apparel_detail.gender || "UNISEX").toUpperCase(),
     fit: (apparel_detail.fit || "REGULAR").toUpperCase(),
-    occason: (apparel_detail.occasion || "CASUAL").toUpperCase(),
+    occasion: (apparel_detail.occasion || "CASUAL").toUpperCase(),
     season: (apparel_detail.season || "ALL_SEASON").toUpperCase(),
     material_type: (apparel_detail.material_type || "NATURAL").toUpperCase(),
     material_composition: apparel_detail.material_composition || "100% Cotton",

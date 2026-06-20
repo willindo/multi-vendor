@@ -15,11 +15,12 @@ import {
 } from "@medusajs/medusa/core-flows";
 import { Modules } from "@medusajs/framework/utils";
 import { MARKETPLACE_MODULE } from "../../../modules/marketplace";
+import type {ApparelDetails } from "@shared/index"
 
 type Input = {
   vendor_admin_id: string;
   product: CreateProductWorkflowInputDTO;
-  apparel_detail: any;
+  apparel_detail: ApparelDetails;
 };
 
 // =================================================================
@@ -27,7 +28,7 @@ type Input = {
 // =================================================================
 const createApparelDetailStep = createStep(
   "create-apparel-detail-step",
-  async (input: { product_id: string; apparel_detail: any }, { container }) => {
+  async (input: { product_id: string; apparel_detail: ApparelDetails }, { container }) => {
     const marketplaceService = container.resolve("marketplace");
     
     const detail = await marketplaceService.createApparelDetails({

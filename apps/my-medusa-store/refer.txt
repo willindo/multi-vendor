@@ -1,5 +1,5 @@
-badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-medusa-store$ touch src/scripts/test-order-link.ts
-psql -U medusa -d medusa -h localhost
+cd ~/medusa-dev/apps/my-medusa-store cd ~/medusa-dev/apps/my-storefront touch src/scripts/test-order-link.ts
+psql -U medusa -d medusa -h localhost rm -rf .medusa/server dist .medusa
 psql "postgresql://medusa:medusa@localhost:5432/medusa"
 mkdir -p src/modules/vendor/{models,services}
 touch src/modules/vendor/index.ts
@@ -51,25 +51,26 @@ A module is a reusable package of functionalities related to a single domain or 
 
 EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
 EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
--o -path "*//*" -o -path "*/*edit*/*" -o -iname "*vendor*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
--not -path "*/*.next/*" -not -path "*/node_modules/*" 
+-o -path "*//*" -o -path "*/*edit*/*" -o -iname "*product*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
+-not -path "*/*.medusa/*" -not -path "*/node_modules/*" 
+EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/*.medusa/*" -not -path "*/node_modules/*" -not -iname "*.tsx" -not -iname "*lock*" -not -iname "*.cjs"'
 
+INCL_UDES='-path "*//*" -o -iname "*tsconfig*"' 
 EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/*vendor*/*" -o -iname "*vendor*"' 
-EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*"'
+INCL_UDES='-path "*/src/components/vendor/products/apparel/*"  ' 
 eval find . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
  
 contents=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;)
-INCLUDES=(-path "*/*order*/*" -o -path "*/*cart*/*" -o -path "*//*" -o -iname "*order*" -o -name "*cart*" -o -iname "*validate*")
+INCLUDES=(-path "*apps/packages/*"")
 EXCLUDE_PATHS=(-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*")
 find . \( "${INCLUDES[@]}" \)  -type f \( "${EXCLUDE_PATHS[@]}" \) -print 
    "${contents[@]}"  
 
 -exec grep -l "process\.env" {} \;  rl= list , rn= content with line numbers
-grep -r "import.*data/categories" --include="*.tsx" --include="*.ts"
+grep -r "import.*@shared/apparel*" --include="*.tsx" --include="*.ts" .
 echo "=== Files with process.env (excluding .next and config) ===" && \
  grep -rl --include="*.ts" --include="*.js" --include="*.tsx" --include="*.jsx" "process\.env" . \
   --exclude-dir=.next \
@@ -77,7 +78,7 @@ echo "=== Files with process.env (excluding .next and config) ===" && \
   --exclude="*.sitemap.js" 
 
 # Find all imports of SkeletonCartItem
-grep -r "import.*marketplace*" --include="*.tsx" --include="*.ts" .
+grep -r "import.*@modules/store/templates*" --include="*.tsx" --include="*.ts" .
 grep -r "import.*products/templates/index" --include="*.tsx" --include="*.ts" .
 
 # Find all imports from skeleton-cart-item path
@@ -154,3 +155,4 @@ please provide payload to fill  -=- guide the proper flow while fill and  genera
 tree -h > structure.txt  -f -a -L 2 
 touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
 touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
+ grep -r -n -E "^\s*(function|const|let|var)\s+\w+" ./src/components ./packages  ./src/app/vendor/dashboard/products/edit/[id]

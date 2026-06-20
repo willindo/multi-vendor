@@ -15,7 +15,6 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
-    "@repo/shared": "workspace:*",
     "@headlessui/react": "^2.2.0",
     "@medusajs/icons": "latest",
     "@medusajs/js-sdk": "latest",
@@ -53,7 +52,8 @@
     "postcss": "^8.5.15",
     "prettier": "^2.8.8",
     "tailwindcss": "^3.4.19",
-    "typescript": "^5.3.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   },
   "resolutions": {
     "@types/react": "19.0.5",

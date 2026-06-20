@@ -1,9 +1,21 @@
 // ==== ./src/app/vendor/dashboard/products/create/CreateProductFormClient.tsx ====
 "use client"
 
-import React, { useState, useEffect, Component } from "react"
+import type {
+  VariantOption,
+  VariantCombination,
+} from "@shared/index"
+
+import { DEFAULT_APPAREL_DETAILS } from "@shared/apparel/apparel-defaults"
+import type { ApparelDetails } from "@shared/apparel/apparel-types"
+import ApparelDetailsSection from "@/components/vendor/products/apparel/ApparelDetailsSection"
+import VariantMatrixBuilder from "@/components/vendor/products/VariantMatrixBuilder"
+import VariantMatrixTable, {
+  VariantMatrixRow,
+} from "@/components/vendor/products/VariantMatrixTable"
+
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { APPAREL_DEFAULTS } from "@/packages/shared/src"
 
 interface CreateProductFormClientProps {
   serverToken?: string
@@ -27,12 +39,11 @@ export default function CreateProductFormClient({
   const [manageInventory, setManageInventory] = useState(true)
   const [weight, setWeight] = useState<number>(0)
 
-const [gender, setGender] =
-  useState(APPAREL_DEFAULTS.gender)
-const [ageGroup, setAgeGroup] =
-  useState(APPAREL_DEFAULTS.age_group)
-const [sizingGroup, setSizingGroup] =
-  useState(APPAREL_DEFAULTS.sizing_group)
+  const [apparel, setApparel] = useState<ApparelDetails>(
+    DEFAULT_APPAREL_DETAILS
+  )
+
+  const [variantRows, setVariantRows] = useState<VariantMatrixRow[]>([])
 
   useEffect(() => {
     if (!resolvedToken) {
@@ -45,6 +56,11 @@ const [sizingGroup, setSizingGroup] =
     }
   }, [resolvedToken])
 
+  // --- SAFEGUARD 01: AUTO-PURGE STALE VARIANTS ON TAXONOMY CHANGE ---
+  useEffect(() => {
+    setVariantRows([])
+  }, [apparel.garment_category, apparel.garment_subcategory])
+
   const handleHandleChange = (val: string) => {
     const cleanSlug = val
       .toLowerCase()
@@ -53,31 +69,110 @@ const [sizingGroup, setSizingGroup] =
     setHandle(cleanSlug)
   }
 
+  function handleGenerateVariants(combinations: VariantCombination[]) {
+    const skuPrefix = handle.trim() || "SKU"
+    setVariantRows(
+      combinations.map((combination) => ({
+        ...combination,
+        sku:
+          combination.sku ??
+          `${skuPrefix}-${combination.title
+            .toLowerCase()
+            .replace(/\s*\/\s*/g, "-")
+            .replace(/[^a-z0-9-]/g, "")
+            .replace(/-+/g, "-")}`,
+
+        price: combination.price ?? priceAmount,
+        inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
+        enabled: true,
+      }))
+    )
+  }
+
+  function buildProductOptions() {
+    const map = new Map<string, Set<string>>()
+
+    variantRows
+      .filter((v) => v.enabled)
+      .forEach((v) => {
+        v.options.forEach((option) => {
+          if (!map.has(option.optionName)) {
+            map.set(option.optionName, new Set())
+          }
+          map.get(option.optionName)!.add(option.value)
+        })
+      })
+
+    return Array.from(map.entries()).map(([title, values]) => ({
+      title,
+      values: Array.from(values),
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    const options = buildProductOptions()
+
+    // --- SAFEGUARD 02: CLEAN ARCHITECTURE PAYLOAD NORMALIZATION ---
+   const finalizedApparelDetail = { ...apparel } as Partial<typeof apparel>
+    
+    // Normalize empty strings to undefined to align with server schemas
+    if (!finalizedApparelDetail.garment_subcategory) {
+      delete finalizedApparelDetail.garment_subcategory
+    }
+
+    // Ensure dependent fields are dropped based on category properties
+    if (finalizedApparelDetail.garment_category === "BOTTOM") {
+      delete finalizedApparelDetail.sleeve_type
+      delete finalizedApparelDetail.neck_type
+    }
 
     const payload = {
       title,
       handle,
       description,
       status: "draft",
-      weight: Number(weight),
-      variants: [
-        {
-          title: "Default Variant",
-          sku: sku || `${handle}-default`,
-          inventory_quantity: Number(inventoryQuantity),
-          manage_inventory: manageInventory,
-          prices: [
-            {
-              amount: Math.round(priceAmount * 100),
-              currency_code: currencyCode.toLowerCase(),
-            },
-          ],
-        },
-      ],
-      apparel_detail: apparel,
+      weight,
+      options: options.map((option) => ({
+        title: option.title,
+        values: option.values,
+      })),
+      variants:
+        variantRows.length > 0
+          ? variantRows
+              .filter((v) => v.enabled)
+              .map((v) => ({
+                title: v.title,
+                sku: v.sku,
+                inventory_quantity: v.inventoryQuantity ?? 0,
+                manage_inventory: manageInventory,
+                prices: [
+                  {
+                    amount: Math.round((v.price ?? 0) * 100),
+                    currency_code: currencyCode.toLowerCase(),
+                  },
+                ],
+                options: v.options.map((option) => ({
+                  title: option.optionName,
+                  value: option.value,
+                })),
+              }))
+          : [
+              {
+                title: "Default Variant",
+                sku: sku || `${handle}-default`,
+                inventory_quantity: inventoryQuantity,
+                manage_inventory: manageInventory,
+                prices: [
+                  {
+                    amount: Math.round(priceAmount * 100),
+                    currency_code: currencyCode.toLowerCase(),
+                  },
+                ],
+              },
+            ],
+      apparel_detail: finalizedApparelDetail,
     }
 
     try {
@@ -221,19 +316,16 @@ const [sizingGroup, setSizingGroup] =
         </div>
       </div>
 
-      {/* ============================= */}
-      {/* APPAREL DETAILS */}
-      {/* ============================= */}
+      <ApparelDetailsSection value={apparel} onChange={setApparel} />
 
-      <ApparelDetailsSection
-        values={apparel}
-        onChange={(field, value) =>
-          setApparel((prev) => ({
-            ...prev,
-            [field]: value,
-          }))
-        }
+      <VariantMatrixBuilder
+        category={apparel.garment_category}
+        subcategory={apparel.garment_subcategory}
+        onGenerate={handleGenerateVariants}
       />
+      
+      <VariantMatrixTable variants={variantRows} onChange={setVariantRows} />
+      
       {/* 04. COPYWRITING */}
       <div className="space-y-2">
         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500">

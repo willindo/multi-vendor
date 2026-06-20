@@ -25,13 +25,22 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  
+  // ✅ ADD THIS: Tell Next.js to transpile the shared package
+  transpilePackages: ['@shared'],
+  
+  // ✅ ADD THIS: Allow Next.js to watch files outside the root
+  // watchOptions: {
+  //   poll: true,
+  //   interval: 1000,
+  // },
+  
   images: {
     remotePatterns: [
       {
         protocol: "http",
         hostname: "localhost",
       },
-      // Keep your existing S3 patterns intact...
       {
         protocol: "https",
         hostname: "medusa-public-images.s3.eu-west-1.amazonaws.com",
@@ -55,8 +64,11 @@ const nextConfig = {
         : []),
     ],
   },
-  // Keep empty or remove if no other experimental flags are active
-  experimental: {}, 
+  
+  experimental: {
+    // ✅ ADD THIS: Enable external dir support (optional, for Next.js 13+)
+    externalDir: true, // This allows importing from outside the project root
+  },
 }
 
 module.exports = nextConfig

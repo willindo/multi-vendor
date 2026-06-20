@@ -1,22 +1,26 @@
+// ==== ./src/app/vendor/dashboard/products/edit/EditProductFormClient.tsx ====
 "use client"
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
+import type {
+  VariantCombination,
+  VariantOption,
+  ApparelDetails,
+} from "@shared/index"
+import { DEFAULT_APPAREL_DETAILS } from "@shared/index"
+
+import ApparelDetailsSection from "@/components/vendor/products/apparel/ApparelDetailsSection"
+import VariantMatrixBuilder from "@/components/vendor/products/VariantMatrixBuilder"
+import VariantMatrixTable, {
+  VariantMatrixRow,
+} from "@/components/vendor/products/VariantMatrixTable"
+
 interface EditProductFormClientProps {
   productId: string
   initialProduct: any | null
   serverToken?: string
-}
-
-interface UIVariantState {
-  id: string
-  title: string
-  sku: string
-  inventory_quantity: number
-  priceAmount: number
-  currencyCode: string
-  weight: number
 }
 
 export default function EditProductFormClient({
@@ -39,61 +43,24 @@ export default function EditProductFormClient({
   const [weight, setWeight] = useState<number>(initialProduct?.weight || 0)
 
   // --- MULTI-VARIANT RUNTIME ENGINE ---
-  const [uiVariants, setUiVariants] = useState<UIVariantState[]>([])
-
+  const [variantRows, setVariantRows] = useState<VariantMatrixRow[]>([])
+  const [builderOptions, setBuilderOptions] = useState<VariantOption[]>([])
+  const [manageInventory, setManageInventory] = useState(true)
   // --- APPAREL DETAILS SPECS ---
-  const [gender, setGender] = useState(
-    initialProduct?.apparel_detail?.gender || "UNISEX"
-  )
-  const [ageGroup, setAgeGroup] = useState(
-    initialProduct?.apparel_detail?.age_group || "ADULT"
-  )
-  const [sizingGroup, setSizingGroup] = useState(
-    initialProduct?.apparel_detail?.sizing_group || "REGULAR"
-  )
-  const [garmentCategory, setGarmentCategory] = useState(
-    initialProduct?.apparel_detail?.garment_category || "TOP"
+  const [apparel, setApparel] = useState<ApparelDetails>(
+    DEFAULT_APPAREL_DETAILS
   )
 
-  const [garmentSubcategory, setGarmentSubcategory] = useState(
-    initialProduct?.apparel_detail?.garment_subcategory || ""
-  )
-
-  const [occasion, setOccasion] = useState(
-    initialProduct?.apparel_detail?.occasion || "CASUAL"
-  )
-
-  const [sleeveType, setSleeveType] = useState(
-    initialProduct?.apparel_detail?.sleeve_type || ""
-  )
-
-  const [neckType, setNeckType] = useState(
-    initialProduct?.apparel_detail?.neck_type || ""
-  )
-  const [fit, setFit] = useState(
-    initialProduct?.apparel_detail?.fit || "REGULAR"
-  )
-  const [pattern, setPattern] = useState(
-    initialProduct?.apparel_detail?.pattern || "SOLID"
-  )
-  const [styleType, setStyleType] = useState(
-    initialProduct?.apparel_detail?.style_type || "CASUAL"
-  )
-  const [materialType, setMaterialType] = useState(
-    initialProduct?.apparel_detail?.material_type || "NATURAL"
-  )
-  const [materialComposition, setMaterialComposition] = useState(
-    initialProduct?.apparel_detail?.material_composition || ""
-  )
-  const [careInstructions, setCareInstructions] = useState(
-    initialProduct?.apparel_detail?.care_instructions || ""
-  )
-  const [season, setSeason] = useState(
-    initialProduct?.apparel_detail?.season || "ALL_SEASON"
-  )
-  const [condition, setCondition] = useState(
-    initialProduct?.apparel_detail?.condition || "NEW"
-  )
+  useEffect(() => {
+    if (!resolvedToken) {
+      const clientToken =
+        document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("medusa_vendor_jwt="))
+          ?.split("=")[1] || localStorage.getItem("vendor_token")
+      if (clientToken) setResolvedToken(clientToken)
+    }
+  }, [resolvedToken])
 
   useEffect(() => {
     if (product) {
@@ -102,42 +69,44 @@ export default function EditProductFormClient({
       setDescription(product.description || "")
       setWeight(product.weight || 0)
 
-      if (product.variants && product.variants.length > 0) {
-        const structuralRows = product.variants.map((v: any) => ({
-          id: v.id,
-          title: v.title || "Default Variant",
-          sku: v.sku || "",
-          inventory_quantity: v.inventory_quantity || 0,
-          priceAmount: v.prices?.[0]?.amount ? v.prices[0].amount / 100 : 0,
-          currencyCode: v.prices?.[0]?.currency_code?.toUpperCase() || "USD",
-          weight: v.weight || product.weight || 0,
-        }))
-        setUiVariants(structuralRows)
+      if (product?.variants) {
+        const rows: VariantMatrixRow[] = product.variants.map(
+          (variant: any) => ({
+            id: variant.id,
+            title: variant.title,
+            sku: variant.sku ?? "",
+            // Verification check: Medusa prices array structure translation
+            price: variant.prices?.[0]?.amount
+              ? variant.prices[0].amount / 100
+              : 0,
+            currencyCode:
+              variant.prices?.[0]?.currency_code?.toLowerCase() || "usd",
+            inventoryQuantity: variant.inventory_quantity ?? 0,
+            manageInventory: variant.manage_inventory ?? true,
+            // DB entries are initialized as enabled
+            enabled: variant.enabled ?? true,
+            // Mapping options relationship array: variants -> pivot options -> option titles
+            options:
+              variant.options?.map((option: any) => ({
+                optionName: option.option?.title || option.title || "",
+                value: option.value,
+              })) ?? [],
+          })
+        )
+
+        setVariantRows(rows)
+        setBuilderOptions(reconstructOptionsFromVariants(rows))
       }
 
-      if (product.apparel_detail) {
-        setGender(product.apparel_detail.gender || "UNISEX")
-        setAgeGroup(product.apparel_detail.age_group || "ADULT")
-        setSizingGroup(product.apparel_detail.sizing_group || "REGULAR")
-        setGarmentCategory(product.apparel_detail.garment_category || "TOP")
+      const apparelDetail = Array.isArray(product.apparel_detail)
+        ? product.apparel_detail[0]
+        : product.apparel_detail
 
-        setGarmentSubcategory(product.apparel_detail.garment_subcategory || "")
-
-        setOccasion(product.apparel_detail.occasion || "CASUAL")
-
-        setSleeveType(product.apparel_detail.sleeve_type || "")
-
-        setNeckType(product.apparel_detail.neck_type || "")
-        setFit(product.apparel_detail.fit || "REGULAR")
-        setPattern(product.apparel_detail.pattern || "SOLID")
-        setStyleType(product.apparel_detail.style_type || "CASUAL")
-        setMaterialType(product.apparel_detail.material_type || "NATURAL")
-        setMaterialComposition(
-          product.apparel_detail.material_composition || ""
-        )
-        setCareInstructions(product.apparel_detail.care_instructions || "")
-        setSeason(product.apparel_detail.season || "ALL_SEASON")
-        setCondition(product.apparel_detail.condition || "NEW")
+      if (apparelDetail) {
+        setApparel({
+          ...DEFAULT_APPAREL_DETAILS,
+          ...apparelDetail,
+        })
       }
     }
   }, [product])
@@ -181,6 +150,14 @@ export default function EditProductFormClient({
     fetchProductClientSide()
   }, [initialProduct, productId])
 
+  function variantKey(options: { optionName: string; value: string }[]) {
+    return options
+      .slice()
+      .sort((a, b) => a.optionName.localeCompare(b.optionName))
+      .map((o) => `${o.optionName}:${o.value}`)
+      .join("|")
+  }
+
   const handleHandleChange = (val: string) => {
     const cleanSlug = val
       .toLowerCase()
@@ -189,71 +166,121 @@ export default function EditProductFormClient({
     setHandle(cleanSlug)
   }
 
-  const handleVariantCellChange = (
-    id: string,
-    key: keyof UIVariantState,
-    value: any
-  ) => {
-    setUiVariants((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, [key]: value } : v))
-    )
+  function reconstructOptionsFromVariants(
+    rows: VariantMatrixRow[]
+  ): VariantOption[] {
+    const map = new Map<string, Set<string>>()
+
+    rows.forEach((row) => {
+      if (!row.enabled) return // Skip dead configurations
+      row.options.forEach((option) => {
+        if (!option.optionName) return
+        if (!map.has(option.optionName)) {
+          map.set(option.optionName, new Set())
+        }
+        map.get(option.optionName)!.add(option.value)
+      })
+    })
+
+    return Array.from(map.entries()).map(([name, values]) => ({
+      name,
+      values: Array.from(values),
+    }))
+  }
+
+  function handleGenerateVariants(combinations: VariantCombination[]) {
+    setVariantRows((existing) => {
+      const existingMap = new Map(
+        existing.map((row) => [variantKey(row.options), row])
+      )
+
+      const merged = combinations.map((combination) => {
+        const key = variantKey(combination.options)
+        const old = existingMap.get(key)
+
+        if (old) {
+          return {
+            ...old,
+            title: combination.title,
+            options: combination.options,
+            enabled: true, // Reactivated if regenerated
+          }
+        }
+
+        return {
+          title: combination.title,
+          sku:
+            combination.sku ??
+            `${handle}-${combination.title
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/\//g, "-")}`,
+          price: combination.price ?? 0,
+          currencyCode: "usd",
+          inventoryQuantity: combination.inventoryQuantity ?? 0,
+          manageInventory: combination.manageInventory ?? true,
+          enabled: true,
+          options: combination.options,
+        }
+      })
+
+      // Soft delete: flag unselected rows to notify DB layer of removal
+      existing.forEach((row) => {
+        const key = variantKey(row.options)
+        const stillExists = combinations.some(
+          (combination) => variantKey(combination.options) === key
+        )
+
+        if (!stillExists) {
+          merged.push({
+            ...row,
+            enabled: false,
+          })
+        }
+      })
+
+      return merged
+    })
   }
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
+    // Dynamic clean-up logic of payload properties to prevent validation schema conflicts
+    const finalizedApparelDetail = { ...apparel } as Partial<typeof apparel>
+    if (!finalizedApparelDetail.garment_subcategory) {
+      delete finalizedApparelDetail.garment_subcategory
+    }
+    if (finalizedApparelDetail.garment_category === "BOTTOM") {
+      delete finalizedApparelDetail.sleeve_type
+      delete finalizedApparelDetail.neck_type
+    }
+
     const payload = {
       title,
       handle,
       description,
       weight: Number(weight),
-      variants: uiVariants.map((v) => ({
-        id: v.id,
+      variants: variantRows.map((v) => ({
+        ...(v.id && { id: v.id }),
         title: v.title,
         sku: v.sku,
-        inventory_quantity: Number(v.inventory_quantity),
-        weight: Number(v.weight),
+        inventory_quantity: v.inventoryQuantity ?? 0,
+        manage_inventory: v.manageInventory ?? true,
         prices: [
           {
-            amount: Math.round(Number(v.priceAmount) * 100),
-            currency_code: v.currencyCode.toLowerCase(),
+            amount: Math.round((v.price ?? 0) * 100),
+            currency_code: (v.currencyCode || "usd").toLowerCase(),
           },
         ],
+        options: v.options.map((o) => ({
+          title: o.optionName,
+          value: o.value,
+        })),
+        enabled: v.enabled,
       })),
-      apparel_detail: {
-        gender,
-
-        age_group: ageGroup,
-
-        sizing_group: sizingGroup,
-
-        garment_category: garmentCategory,
-
-        garment_subcategory: garmentSubcategory || null,
-
-        fit,
-
-        pattern,
-
-        style_type: styleType,
-
-        occasion,
-
-        sleeve_type: sleeveType || null,
-
-        neck_type: neckType || null,
-
-        material_type: materialType,
-
-        material_composition: materialComposition || null,
-
-        care_instructions: careInstructions || null,
-
-        season,
-
-        condition,
-      },
+      apparel_detail: finalizedApparelDetail,
     }
 
     try {
@@ -293,7 +320,7 @@ export default function EditProductFormClient({
   return (
     <form
       onSubmit={handleUpdate}
-      className="bg-white border border-neutral-200 rounded-xl p-6 space-y-6 shadow-sm"
+      className="bg-white border border-neutral-200 rounded-xl p-6 space-y-6 shadow-xs"
     >
       {/* 01. IDENTITY */}
       <div className="space-y-4">
@@ -328,424 +355,17 @@ export default function EditProductFormClient({
         </div>
       </div>
 
-      {/* 02. COMMERCE MATRIX TARGETS */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest border-b pb-1">
-          02. Commerce Base
-        </h3>
-        <div className="overflow-x-auto border border-neutral-200 rounded-lg">
-          <table className="w-full border-collapse text-left bg-white text-xs">
-            <thead className="bg-neutral-50 border-b font-mono text-neutral-500 uppercase text-[10px]">
-              <tr>
-                <th className="p-3">Variant Specification</th>
-                <th className="p-3">SKU Identifier</th>
-                <th className="p-3 w-20">Stock</th>
-                <th className="p-3 w-28">Price</th>
-                <th className="p-3 w-24">Currency</th>
-                <th className="p-3 w-24">Weight (g)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {uiVariants.map((v) => (
-                <tr key={v.id} className="hover:bg-neutral-50/50">
-                  <td className="p-3 font-medium font-mono text-neutral-800">
-                    {v.title}
-                  </td>
-                  <td className="p-3">
-                    <input
-                      type="text"
-                      value={v.sku}
-                      onChange={(e) =>
-                        handleVariantCellChange(v.id, "sku", e.target.value)
-                      }
-                      className="w-full p-1 border rounded-sm font-mono text-[11px]"
-                    />
-                  </td>
-                  <td className="p-3">
-                    <input
-                      type="number"
-                      value={v.inventory_quantity}
-                      onChange={(e) =>
-                        handleVariantCellChange(
-                          v.id,
-                          "inventory_quantity",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      className="w-full p-1 border rounded-sm text-[11px]"
-                    />
-                  </td>
-                  <td className="p-3">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={v.priceAmount}
-                      onChange={(e) =>
-                        handleVariantCellChange(
-                          v.id,
-                          "priceAmount",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      className="w-full p-1 border rounded-sm text-[11px]"
-                    />
-                  </td>
-                  <td className="p-3">
-                    <select
-                      value={v.currencyCode}
-                      onChange={(e) =>
-                        handleVariantCellChange(
-                          v.id,
-                          "currencyCode",
-                          e.target.value
-                        )
-                      }
-                      className="w-full p-1 border rounded-sm bg-white text-[11px]"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="INR">INR</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </td>
-                  <td className="p-3">
-                    <input
-                      type="number"
-                      value={v.weight}
-                      onChange={(e) =>
-                        handleVariantCellChange(
-                          v.id,
-                          "weight",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
-                      className="w-full p-1 border rounded-sm text-[11px]"
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* 02. APPAREL CLASSIFICATION */}
+      <ApparelDetailsSection value={apparel} onChange={setApparel} />
 
-      {/* ============================= */}
-      {/* APPAREL DETAILS */}
-      {/* ============================= */}
-
-      <div className="space-y-8 rounded-xl border border-neutral-200 bg-white p-6">
-        <div>
-          <h2 className="text-lg font-semibold">Apparel Details</h2>
-
-          <p className="text-sm text-neutral-500">
-            Classification and specifications for this garment.
-          </p>
-        </div>
-
-        {/* Classification */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* Gender */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Gender</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-            >
-              <option value="UNISEX">Unisex</option>
-              <option value="MEN">Men</option>
-              <option value="WOMEN">Women</option>
-              <option value="BOYS">Boys</option>
-              <option value="GIRLS">Girls</option>
-            </select>
-          </div>
-
-          {/* Age Group */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Age Group</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={ageGroup}
-              onChange={(e) => setAgeGroup(e.target.value)}
-            >
-              <option value="ADULT">Adult</option>
-              <option value="TEEN">Teen</option>
-              <option value="KIDS">Kids</option>
-              <option value="TODDLER">Toddler</option>
-              <option value="INFANT">Infant</option>
-            </select>
-          </div>
-
-          {/* Sizing Group */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Sizing Group
-            </label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={sizingGroup}
-              onChange={(e) => setSizingGroup(e.target.value)}
-            >
-              <option value="MENS">Mens</option>
-              <option value="WOMENS">Womens</option>
-              <option value="UNISEX">Unisex</option>
-              <option value="BOYS">Boys</option>
-              <option value="GIRLS">Girls</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Garment */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Garment Category
-            </label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={garmentCategory}
-              onChange={(e) => setGarmentCategory(e.target.value)}
-            >
-              <option value="TOP">Top</option>
-              <option value="BOTTOM">Bottom</option>
-              <option value="DRESS">Dress</option>
-              <option value="OUTERWEAR">Outerwear</option>
-              <option value="ETHNIC">Ethnic</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Garment Subcategory
-            </label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={garmentSubcategory}
-              onChange={(e) => setGarmentSubcategory(e.target.value)}
-            >
-              <option value="">Select</option>
-
-              <option value="KURTI">Kurti</option>
-
-              <option value="SHIRT">Shirt</option>
-
-              <option value="T_SHIRT">T-Shirt</option>
-
-              <option value="DRESS">Dress</option>
-
-              <option value="JEANS">Jeans</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Styling */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Fit</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={fit}
-              onChange={(e) => setFit(e.target.value)}
-            >
-              <option value="REGULAR">Regular</option>
-              <option value="SLIM">Slim</option>
-              <option value="RELAXED">Relaxed</option>
-              <option value="OVERSIZED">Oversized</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Pattern</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={pattern}
-              onChange={(e) => setPattern(e.target.value)}
-            >
-              <option value="SOLID">Solid</option>
-              <option value="FLORAL">Floral</option>
-              <option value="PRINTED">Printed</option>
-              <option value="STRIPED">Striped</option>
-              <option value="CHECKED">Checked</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Style</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={styleType}
-              onChange={(e) => setStyleType(e.target.value)}
-            >
-              <option value="CASUAL">Casual</option>
-              <option value="A_LINE">A-Line</option>
-              <option value="STRAIGHT">Straight</option>
-              <option value="BOHO">Boho</option>
-              <option value="SPORT">Sport</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Occasion</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={occasion}
-              onChange={(e) => setOccasion(e.target.value)}
-            >
-              <option value="CASUAL">Casual</option>
-
-              <option value="FORMAL">Formal</option>
-
-              <option value="PARTY">Party</option>
-
-              <option value="FESTIVE">Festive</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Construction */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Sleeve Type
-            </label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={sleeveType}
-              onChange={(e) => setSleeveType(e.target.value)}
-            >
-              <option value="">Select</option>
-
-              <option value="SHORT">Short</option>
-
-              <option value="THREE_QUARTER">Three Quarter</option>
-
-              <option value="FULL">Full</option>
-
-              <option value="SLEEVELESS">Sleeveless</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Neck Type</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={neckType}
-              onChange={(e) => setNeckType(e.target.value)}
-            >
-              <option value="">Select</option>
-
-              <option value="ROUND_NECK">Round Neck</option>
-
-              <option value="V_NECK">V Neck</option>
-
-              <option value="COLLAR">Collar</option>
-
-              <option value="MANDARIN_COLLAR">Mandarin Collar</option>
-
-              <option value="SQUARE_NECK">Square Neck</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Material */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Material Type
-            </label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={materialType}
-              onChange={(e) => setMaterialType(e.target.value)}
-            >
-              <option value="COTTON">Cotton</option>
-              <option value="POLYESTER">Polyester</option>
-              <option value="LINEN">Linen</option>
-              <option value="WOOL">Wool</option>
-              <option value="DENIM">Denim</option>
-              <option value="SILK">Silk</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Material Composition
-            </label>
-
-            <input
-              className="w-full rounded border p-2"
-              value={materialComposition}
-              onChange={(e) => setMaterialComposition(e.target.value)}
-              placeholder="100% Cotton"
-            />
-          </div>
-        </div>
-
-        {/* Care */}
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Care Instructions
-          </label>
-
-          <textarea
-            className="w-full rounded border p-2"
-            rows={3}
-            value={careInstructions}
-            onChange={(e) => setCareInstructions(e.target.value)}
-            placeholder="Machine wash cold. Dry in shade."
-          />
-        </div>
-
-        {/* Lifecycle */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium mb-1">Season</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={season}
-              onChange={(e) => setSeason(e.target.value)}
-            >
-              <option value="ALL_SEASON">All Season</option>
-
-              <option value="SUMMER">Summer</option>
-
-              <option value="WINTER">Winter</option>
-
-              <option value="SPRING">Spring</option>
-
-              <option value="AUTUMN">Autumn</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Condition</label>
-
-            <select
-              className="w-full rounded border p-2"
-              value={condition}
-              onChange={(e) => setCondition(e.target.value)}
-            >
-              <option value="NEW">New</option>
-
-              <option value="REFURBISHED">Refurbished</option>
-
-              <option value="USED">Used</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* 03. VARIANT MATRIX COMPOSER */}
+      <VariantMatrixBuilder
+        category={apparel.garment_category}
+        subcategory={apparel.garment_subcategory}
+        initialOptions={builderOptions}
+        onGenerate={handleGenerateVariants}
+      />
+      <VariantMatrixTable variants={variantRows} onChange={setVariantRows} />
 
       {/* ACTIONS */}
       <div className="pt-4 border-t flex justify-end gap-x-4">

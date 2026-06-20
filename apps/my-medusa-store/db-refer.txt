@@ -1,3 +1,19 @@
+// Inside your parent entry form view or layout manager:
+import { deserializeApparelDetails } from "@shared/apparel/apparel-utils"
+
+// Use this to hydrate your form state safely, guaranteeing 
+// that 'value.garment_category' always has a string fallback
+const [apparelState, setApparelState] = useState(
+  deserializeApparelDetails(initialDbData?.metadata?.apparel_details)
+)   which file ? <<<<<===========---------
+{variants.map((variant, index) => {
+  return <tr key={index}>...</tr>
+})}
+If a vendor has generated a large matrix (e.g., 4 sizes × 5 colors × 3 fabrics = 60 variants), typing a single character into an input field updates the top-level state block. This causes all 60 rows to re-evaluate and re-render concurrently, degrading performance.
+
+how -=> Recommendation: Generate a predictable unique string id for your rows during matrix creation (e.g., combining the variant labels, like id: "top-s-blue") and use key={variant.id} instead of the raw loop index.
+const parsed = parseInt(e.target.value, 10);
+inventoryQuantity: isNaN(parsed) ? undefined : parsed  <<=- how integrate
 product (The Root Shell)
 ├── product_sales_channel (Link table -> product_id)
 ├── product_category_product (Link table -> product_id to product_category)
@@ -78,9 +94,10 @@ Unique violation / Duplicate key value
 
 FOREIGN KEY (totals_id) REFERENCES order_item(id) ON UPDATE CASCADE ON DELETE CASCADE = This means if an order_item entity drops or updates its primary ID, it ripples right through to the line item configurations. 
 Soft Deletes vs. Hard Deletes: Medusa Core uses soft deletes (deleted_at timestamps) for complex entities like Products, Orders, and Links to avoid accidental orphan states. However, join tables or calculation adjustments (like line item discounts or tax lines) apply hard deletes (ON DELETE CASCADE) to instantly wipe the slate clean if a parent item leaves the cart.
-Product (Medusa Commerce Root)
+Product (Commerce Root) = decoupled database design schema tree
 │
 ├── Product Information
+│   ├── id
 │   ├── title
 │   ├── subtitle
 │   ├── description
@@ -92,49 +109,224 @@ Product (Medusa Commerce Root)
 │   ├── height
 │   ├── width
 │   ├── origin_country
+│   ├── hs_code
+│   ├── mid_code
 │   ├── material
-│   └── metadata
+│   ├── metadata
+│   ├── collection_id
+│   └── type_id
 │
-├── Variants
-│   ├── Option Definitions
+├── Shared Product Images
+│   └── image
+│
+├── Categories
+│   ├── product_category_product
+│   └── product_category
+│       └── parent_category_id
+│
+├── Collections
+│   └── product_collection
+│
+├── Product Type
+│   └── product_type
+│
+├── Tags
+│   ├── product_tags
+│   └── product_tag
+│
+├── Sales Channels
+│   └── product_sales_channel
+│
+├── Shipping Profile
+│   └── product_shipping_profile
+│
+├── Marketplace Vendor
+│   └── marketplace_vendor_product_product
+│
+├── Apparel Detail (1:1)
+│   ├── gender
+│   ├── age_group
+│   ├── sizing_group
+│   │
+│   ├── garment_category
+│   ├── garment_subcategory
+│   │
+│   ├── fit
+│   ├── pattern
+│   ├── style_type
+│   ├── occasion
+│   ├── sleeve_type
+│   ├── neck_type
+│   │
+│   ├── material_type
+│   ├── material_composition
+│   ├── care_instructions
+│   │
+│   ├── season
+│   └── condition
+│
+├── Product Options
+│   ├── product_option
 │   │   ├── Size
 │   │   ├── Color
 │   │   ├── Length
 │   │   ├── Width
 │   │   └── Pack Size
 │   │
-│   └── Sellable Variants
-│       ├── SKU
-│       ├── Option Values
-│       ├── Price
-│       ├── Inventory
-│       └── Variant Images
+│   └── product_option_value
 │
-├── Shared Product Images
-├── Categories       (navigation)
-├── Collections      (marketing)
-├── Tags
-├── Sales Channels
-├── Shipping Profile
-│
-└── Apparel Detail (1:1)
-    ├── gender
-    ├── age_group
-    ├── sizing_group
+└── Product Variants
     │
-    ├── garment_category
-    ├── garment_subcategory
-    │ -=- 
-    ├── fit
-    ├── pattern
-    ├── style_type
-    ├── occasion
-    ├── sleeve_type
-    ├── neck_type
+    ├── product_variant
+    │   ├── sku
+    │   ├── barcode
+    │   ├── ean
+    │   ├── upc
+    │   ├── thumbnail
+    │   ├── weight
+    │   ├── dimensions
+    │   ├── material
+    │   ├── manage_inventory
+    │   ├── allow_backorder
+    │   └── metadata
     │
-    ├── material_type
-    ├── material_composition
-    ├── care_instructions
+    ├── Variant Option Values
+    │   └── product_variant_option
     │
-    ├── season
-    └── condition
+    ├── Variant Images
+    │   └── product_variant_product_image
+    │
+    ├── Inventory Module Link
+    │   └── product_variant_inventory_item
+    │        │
+    │        ▼
+    │     inventory_item
+    │        ├── sku
+    │        ├── title
+    │        ├── dimensions
+    │        ├── material
+    │        ├── requires_shipping
+    │        │
+    │        ├── inventory_level
+    │        └── reservation_item
+    │
+    └── Pricing Module Link
+         └── product_variant_price_set
+              │
+              ▼
+           price_set
+              │
+              ▼
+             price
+
+    SELECT
+    tc.table_name AS source_table,
+    kcu.column_name AS source_column,
+    ccu.table_name AS target_table,
+    ccu.column_name AS target_column
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu
+    ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND (
+    tc.table_name = 'product'
+    OR ccu.table_name = 'product'
+);    
+SELECT
+    tc.table_name,
+    kcu.column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND ccu.table_name = 'product';
+SELECT
+    tc.table_name,
+    kcu.column_name,
+    ccu.table_name AS referenced_table,
+    ccu.column_name AS referenced_column
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+ORDER BY tc.table_name;
+SELECT
+    tc.table_name,
+    kcu.column_name,
+    ccu.table_name AS referenced_table,
+    ccu.column_name AS referenced_column
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+    ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+ORDER BY tc.table_name;
+SELECT
+    table_name,
+    string_agg(column_name, ', ' ORDER BY column_name) AS id_columns
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND column_name LIKE '%id'
+GROUP BY table_name
+HAVING COUNT(*) >= 2
+ORDER BY table_name;
+SELECT
+    table_name,
+    string_agg(column_name, ', ' ORDER BY column_name) AS link_columns
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND (
+    column_name = 'product_id'
+    OR column_name = 'variant_id'
+    OR column_name = 'inventory_item_id'
+    OR column_name = 'price_set_id'
+    OR column_name = '%option_id'
+    OR column_name = '%inventory%_id'
+)
+GROUP BY table_name
+HAVING COUNT(*) >= 2
+ORDER BY table_name;
+SELECT
+    table_name,
+    string_agg(column_name, ', ' ORDER BY column_name) AS id_columns
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND table_name LIKE '%inventory%'
+AND column_name LIKE '%_id'
+GROUP BY table_name
+ORDER BY table_name;
+
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND column_name LIKE '%inventory%';
+
+[ public.product ]
+                          │
+         ┌────────────────┴────────────────┬────────────────┐
+  (1:1 Extension)                  (Many-to-Many)     (1:Many Options)
+         ▼                                 ▼                ▼
+[ apparel_detail ]             [ product_category_product ] [ product_option ]
+  • gender, fit, pattern...                │                │
+  • garment_category                       ▼                ▼
+  • garment_subcategory            [ product_category ]   [ product_option_value ]
+                                                            ▲
+                          ┌─────────────────────────────────┘
+                          ▼
+                  [ product_variant ] ◄─── Matches Rows in VariantMatrixTable
+                          │
+         ┌────────────────┴────────────────┐
+         ▼                                 ▼
+[ product_variant_inventory_item ] [ product_variant_price_set ]
+         │                                 │
+         ▼                                 ▼
+   [ inventory_item ]                [ price_set ]
+   • inventory_level                       • price (amount, currency)
+   • reservation_item

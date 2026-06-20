@@ -57,3 +57,29 @@ PLATFORM_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/user/emailpass' \
  curl http://localhost:9000/store/carts/$NEW_CART_ID \
   -H "x-publishable-api-key: $APIKEY"
 
+Medusa Vendor Core
+        ✅
+
+Shared Taxonomy
+        ✅
+
+Reusable Apparel UI
+        ✅
+
+Variant Matrix Builder
+        ← NOW
+
+Bulk Variant Actions
+        NEXT
+
+Variant Images
+        LATER
+
+CSV Import/Export
+        LATER
+
+ Auto SKU generation
+Bulk pricing
+Bulk inventory
+Variant images
+CSV import/export       
