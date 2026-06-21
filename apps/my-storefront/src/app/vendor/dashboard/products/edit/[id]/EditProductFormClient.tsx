@@ -258,6 +258,7 @@ export default function EditProductFormClient({
     }
 
     const payload = {
+      id: productId,
       title,
       handle,
       description,
@@ -275,14 +276,14 @@ export default function EditProductFormClient({
           },
         ],
         options: v.options.map((o) => ({
-          title: o.optionName,
+          optionName: o.optionName,
           value: o.value,
         })),
         enabled: v.enabled,
       })),
       apparel_detail: finalizedApparelDetail,
     }
-
+    console.log("Payload:", payload)
     try {
       const backendUrl =
         window.location.hostname === "localhost"

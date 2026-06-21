@@ -1,5 +1,6 @@
-// ==== ./src/app/vendor/dashboard/products/create/CreateProductFormClient.tsx ====
 "use client"
+import { useEffect, useState, useCallback, useMemo } from "react"
+import { useRouter } from "next/navigation"
 
 import type {
   VariantOption,
@@ -14,8 +15,6 @@ import VariantMatrixTable, {
   VariantMatrixRow,
 } from "@/components/vendor/products/VariantMatrixTable"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 
 interface CreateProductFormClientProps {
   serverToken?: string
@@ -26,7 +25,19 @@ export default function CreateProductFormClient({
 }: CreateProductFormClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [resolvedToken, setResolvedToken] = useState(serverToken || "")
+
+  // ✅ Improved token resolution with SSR safety
+  const [resolvedToken, setResolvedToken] = useState(() => {
+    if (serverToken) return serverToken
+    if (typeof window === "undefined") return ""
+
+    const cookieToken = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("medusa_vendor_jwt="))
+      ?.split("=")[1]
+
+    return cookieToken || localStorage.getItem("vendor_token") || ""
+  })
 
   // --- CORE SYSTEM FIELDS ---
   const [title, setTitle] = useState("")
@@ -45,51 +56,67 @@ export default function CreateProductFormClient({
 
   const [variantRows, setVariantRows] = useState<VariantMatrixRow[]>([])
 
+  // ✅ Memoized derived state
+  const apparelCategory = useMemo(() => apparel.garment_category, [apparel.garment_category])
+  const apparelSubcategory = useMemo(() => apparel.garment_subcategory, [apparel.garment_subcategory])
+
+  // ✅ Token sync effect (simplified)
   useEffect(() => {
-    if (!resolvedToken) {
+    if (!resolvedToken && typeof window !== "undefined") {
       const clientToken =
         document.cookie
           .split("; ")
           .find((row) => row.startsWith("medusa_vendor_jwt="))
           ?.split("=")[1] || localStorage.getItem("vendor_token")
-      if (clientToken) setResolvedToken(clientToken)
+      if (clientToken) {
+        setResolvedToken(clientToken)
+      }
     }
   }, [resolvedToken])
 
   // --- SAFEGUARD 01: AUTO-PURGE STALE VARIANTS ON TAXONOMY CHANGE ---
   useEffect(() => {
     setVariantRows([])
-  }, [apparel.garment_category, apparel.garment_subcategory])
+  }, [apparelCategory, apparelSubcategory])
 
-  const handleHandleChange = (val: string) => {
+  // ✅ Memoized handlers
+  const handleHandleChange = useCallback((val: string) => {
     const cleanSlug = val
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
     setHandle(cleanSlug)
-  }
+  }, [])
 
-  function handleGenerateVariants(combinations: VariantCombination[]) {
-    const skuPrefix = handle.trim() || "SKU"
-    setVariantRows(
-      combinations.map((combination) => ({
+  const handleGenerateVariants = useCallback((combinations: VariantCombination[]) => {
+    // Safe fallback if handle isn't set yet
+    const skuPrefix = (handle && typeof handle === "string") ? handle.trim() : "sku"
+
+    const processedRows = combinations.map((combination) => {
+      // Fallback title generation if combination.title comes back weird
+      const titleSlug = combination.title
+        ? combination.title.toLowerCase()
+        : combination.options.map(o => o.value).join("-").toLowerCase()
+
+      const cleanSku = combination.sku ?? `${skuPrefix}-${titleSlug}`
+        .replace(/\s*\/\s*/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+
+      return {
         ...combination,
-        sku:
-          combination.sku ??
-          `${skuPrefix}-${combination.title
-            .toLowerCase()
-            .replace(/\s*\/\s*/g, "-")
-            .replace(/[^a-z0-9-]/g, "")
-            .replace(/-+/g, "-")}`,
-
+        sku: cleanSku,
         price: combination.price ?? priceAmount,
         inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
         enabled: true,
-      }))
-    )
-  }
+      }
+    })
+    console.log("Setting Variant Rows to:", processedRows)
+    setVariantRows(processedRows)
+  }, [handle, priceAmount, inventoryQuantity])
 
-  function buildProductOptions() {
+  // ✅ Memoized build functions
+  const buildProductOptions = useCallback(() => {
     const map = new Map<string, Set<string>>()
 
     variantRows
@@ -107,16 +134,49 @@ export default function CreateProductFormClient({
       title,
       values: Array.from(values),
     }))
-  }
+  }, [variantRows])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    const options = buildProductOptions()
+  const buildVariantPayload = useCallback(() => {
+    if (variantRows.length === 0) {
+      return [
+        {
+          title: "Default Variant",
+          sku: sku || `${handle}-default`,
+          inventory_quantity: inventoryQuantity,
+          manage_inventory: manageInventory,
+          prices: [
+            {
+              amount: Math.round(priceAmount * 100),
+              currency_code: currencyCode.toLowerCase(),
+            },
+          ],
+        },
+      ]
+    }
 
-    // --- SAFEGUARD 02: CLEAN ARCHITECTURE PAYLOAD NORMALIZATION ---
-   const finalizedApparelDetail = { ...apparel } as Partial<typeof apparel>
-    
+    return variantRows
+      .filter((v) => v.enabled)
+      .map((v) => ({
+        title: v.title,
+        sku: v.sku,
+        inventory_quantity: v.inventoryQuantity ?? 0,
+        manage_inventory: manageInventory,
+        prices: [
+          {
+            amount: Math.round((v.price ?? 0) * 100),
+            currency_code: currencyCode.toLowerCase(),
+          },
+        ],
+        options: v.options.reduce((acc, option) => {
+          acc[option.optionName] = option.value
+          return acc
+        }, {} as Record<string, string>),
+      }))
+  }, [variantRows, sku, handle, inventoryQuantity, manageInventory, priceAmount, currencyCode])
+
+  const buildApparelPayload = useCallback(() => {
+    const finalizedApparelDetail = { ...apparel } as Partial<typeof apparel>
+
     // Normalize empty strings to undefined to align with server schemas
     if (!finalizedApparelDetail.garment_subcategory) {
       delete finalizedApparelDetail.garment_subcategory
@@ -128,6 +188,17 @@ export default function CreateProductFormClient({
       delete finalizedApparelDetail.neck_type
     }
 
+    return finalizedApparelDetail
+  }, [apparel])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    const options = buildProductOptions()
+    const variants = buildVariantPayload()
+    const apparelDetail = buildApparelPayload()
+
     const payload = {
       title,
       handle,
@@ -138,41 +209,8 @@ export default function CreateProductFormClient({
         title: option.title,
         values: option.values,
       })),
-      variants:
-        variantRows.length > 0
-          ? variantRows
-              .filter((v) => v.enabled)
-              .map((v) => ({
-                title: v.title,
-                sku: v.sku,
-                inventory_quantity: v.inventoryQuantity ?? 0,
-                manage_inventory: manageInventory,
-                prices: [
-                  {
-                    amount: Math.round((v.price ?? 0) * 100),
-                    currency_code: currencyCode.toLowerCase(),
-                  },
-                ],
-                options: v.options.map((option) => ({
-                  title: option.optionName,
-                  value: option.value,
-                })),
-              }))
-          : [
-              {
-                title: "Default Variant",
-                sku: sku || `${handle}-default`,
-                inventory_quantity: inventoryQuantity,
-                manage_inventory: manageInventory,
-                prices: [
-                  {
-                    amount: Math.round(priceAmount * 100),
-                    currency_code: currencyCode.toLowerCase(),
-                  },
-                ],
-              },
-            ],
-      apparel_detail: finalizedApparelDetail,
+      variants,
+      apparel_detail: apparelDetail,
     }
 
     try {
@@ -188,8 +226,12 @@ export default function CreateProductFormClient({
         },
         body: JSON.stringify(payload),
       })
-      if (!response.ok)
-        throw new Error("Failed to save full schema composition.")
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Failed to save full schema composition.")
+      }
+
       router.push("/vendor/dashboard/products")
       router.refresh()
     } catch (error) {
@@ -322,10 +364,15 @@ export default function CreateProductFormClient({
         category={apparel.garment_category}
         subcategory={apparel.garment_subcategory}
         onGenerate={handleGenerateVariants}
+      // disabled={apparel.garment_category }
       />
-      
-      <VariantMatrixTable variants={variantRows} onChange={setVariantRows} />
-      
+
+      {variantRows.length > 0 && (
+        <VariantMatrixTable
+          variants={variantRows}
+          onChange={setVariantRows} // or however your table component manages adjustments
+        />
+      )}
       {/* 04. COPYWRITING */}
       <div className="space-y-2">
         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500">
