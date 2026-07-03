@@ -4,9 +4,8 @@ import {
 } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
+import createVendorWorkflow from "@/workflows/marketplace/create-vendor"
 
-import createVendorWorkflow from "../../workflows/marketplace/create-vendor"
- 
 const Schema = z.object({
   name: z.string(),
   handle: z.string().optional(),

@@ -14,7 +14,14 @@ TOKEN=...
 curl -X POST .../vendors/products ... 
 export TOKEN=$(./create-product.sh | grep TOKEN | cut -d '=' -f2) 
 echo "$TOKEN" | cut -d '.' -f2 | base64 -d | jq 
-EMAIL=trial@example.com
+PLATFORM_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/user/emailpass' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "email": "admin@test.com",
+    "password": "supersecret"
+  }' | jq -r '.token')
+  
+EMAIL=soman@example.com
 PASSWORD=supersecret
 YOUR_ADMIN_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/vendor/emailpass' \
   -H 'Content-Type: application/json' \
@@ -24,19 +31,12 @@ YOUR_ADMIN_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/vendor/emailpass'
   }" | jq -r '.token // .auth_token // .access_token')
 
 echo $YOUR_ADMIN_TOKEN
-PLATFORM_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/user/emailpass' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "email": "admin@test.com",
-    "password": "supersecret"
-  }' | jq -r '.token')
 
   # list clean
+curl -X GET http://localhost:9000/vendors/products/prod_01KW7PNXZ1TKVQ6HJ5MQATGEGY \
+  -H "Authorization: Bearer $YOUR_ADMIN_TOKEN" \
+  -H "Content-Type: application/json"
 
-
-  | jq -r '.products[]? 
-    | select(.id != null) 
-    | "\(.id) | \(.title) | \(.handle) | \(.status)"'
 
 # update
   | jq '.product | {id, title, status}'
@@ -44,7 +44,54 @@ PLATFORM_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/user/emailpass' \
   curl -s -X DELETE "http://localhost:9000/vendors/products/$PRODUCT_ID" \
   -H "Authorization: Bearer $TOKEN" \
   | jq
+  -H "Authorization: Bearer $PLATFORM_TOKEN" \
 
+curl -X GET 'http://localhost:9000/store/products'   -H "x-publishable-api-key: $APIKEY" 
+  -H 'Content-Type: application/json' \
+  | jq -r '.products[]? 
+    | select(.id != null) 
+    | "\(.id) | \(.title) | \(.handle) | \(.apparel_details)"'
+curl -X GET 'http://localhost:9000/vendors/products' \
+  -H "Authorization: Bearer $YOUR_ADMIN_TOKEN" \
+*,variants.*,variants.options.*,variants.price_set.*,variants.price_set.prices.*,variants.inventory_items.*,variants.inventory_items.inventory_item.*,
+curl -X GET 'http://localhost:9000/store/products'   -H "x-publishable-api-key: $APIKEY" 
+  -H 'Content-Type: application/json' \
+   --data-urlencode 'fields=variants.options.*'
+  | jq 'walk(
+      if type == "object" then 
+        with_entries(
+          select(
+            (.key | test("created_at|updated_at|deleted_at") | not) and 
+            (.value != null) and 
+            (.value | type != "boolean")
+          )
+        ) 
+      else . end
+    )'   
+  -H "Authorization: Bearer $PLATFORM_TOKEN" \
+    curl -X GET 'http://localhost:9000/vendors/products' \
+  -H "Authorization: Bearer $YOUR_ADMIN_TOKEN" \
+curl -X GET 'http://localhost:9000/store/products' \
+   -H "x-publishable-api-key: $APIKEY" \
+  -H 'Content-Type: application/json' \
+  | jq 'walk(
+      if type == "object" then 
+        with_entries(
+          select(
+            # 1. ALWAYS drop timestamps
+            (.key | test("created_at|updated_at|deleted_at") | not) and 
+            (
+              # 2. FORCE-KEEP specific object keys even if they evaluate to null/blank
+              (.key | test("price|inventory|apparel_detail")) or 
+              (
+                # 3. For everything else: ignore nulls and booleans
+                (.value != null) and (.value | type != "boolean")
+              )
+            )
+          )
+        ) 
+      else . end
+    )'
   EMAIL=trial@example.com
   EMAIL=trial11@example.com
   PASSWORD=supersecret
@@ -57,29 +104,46 @@ PLATFORM_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/user/emailpass' \
  curl http://localhost:9000/store/carts/$NEW_CART_ID \
   -H "x-publishable-api-key: $APIKEY"
 
-Medusa Vendor Core
-        ✅
-
-Shared Taxonomy
-        ✅
-
-Reusable Apparel UI
-        ✅
-
-Variant Matrix Builder
-        ← NOW
-
-Bulk Variant Actions
-        NEXT
-
-Variant Images
-        LATER
-
-CSV Import/Export
-        LATER
-
  Auto SKU generation
 Bulk pricing
 Bulk inventory
 Variant images
 CSV import/export       
+  --data-urlencode 'fields=id,title,handle,apparel_detail.*' \
+curl -G 'http://localhost:9000/store/products' \
+  -H "x-publishable-api-key: $APIKEY" \
+ | jq -r '.products[]
+    | "\(.id) | \(.title) | \(.handle) | \(.apparel_detail)"'
+    
+    curl -G 'http://localhost:9000/store/products' \
+  -H "x-publishable-api-key: $APIKEY" \
+  --data-urlencode 'fields=id,apparel_detail.*'
+
+ curl -G 'http://localhost:9000/store/products'  
+  -H "x-publishable-api-key: $APIKEY"  
+   --data-urlencode 'fields=id,apparel_detail.*,id,,variants.*,price_set.prices.*,id,inventory_items.*' \
+| jq '
+def strip_nulls:
+  walk(
+    if type == "object"
+    then with_entries(select(.value != null))
+    else .
+    end
+  );
+
+.products | map(strip_nulls)
+' 
+curl -G 'http://localhost:9000/store/products' \
+  -H "x-publishable-api-key: $APIKEY" \
+  --data-urlencode 'fields=id,title,handle,apparel_detail.*,variants.*,variants.price_set.prices.*,variants.inventory_items.inventory_item.location_levels.*' \
+| jq '.products[] | {
+    id,
+    title,
+    apparel_detail,
+    variants: [.variants[] | {
+      id,
+      sku,
+      prices: .price_set.prices,
+      stock: .inventory_items[].inventory_item.location_levels
+    }]
+}'

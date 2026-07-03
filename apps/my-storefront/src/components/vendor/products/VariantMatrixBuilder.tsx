@@ -43,13 +43,11 @@ export default function VariantMatrixBuilder({
     const hydratedSelections: Record<string, string[]> = {}
 
     dimensions.forEach((dimension) => {
+      // Match case-insensitively so "Size" from old data hydrates into "SIZE" bucket
       const match = initialOptions.find(
         (o) => o.name.toUpperCase() === dimension.toUpperCase()
       )
-      console.log("Match found for dimension ", dimension, match)
-      hydratedSelections[dimension] = match
-        ? [...match.values]
-        : []
+      hydratedSelections[dimension] = match ? [...match.values] : []
     })
 
     setSelections(hydratedSelections)
@@ -120,11 +118,13 @@ export default function VariantMatrixBuilder({
     )
   }, [dimensions, selections, disabled])
 
-  // Build variant options for generation
+  // Build variant options for generation.
+  // Dimension names are kept in UPPERCASE to match ApparelVariantDimension literals
+  // ("SIZE", "COLOR", "MATERIAL") and the product_option.title stored in the DB.
   const variantOptions = useMemo(() => {
     return dimensions.map(
       (dimension): VariantOption => ({
-        name: dimension.charAt(0).toUpperCase() + dimension.slice(1).toLowerCase(),
+        name: dimension.toUpperCase(),
         values: selections[dimension] ?? [],
       })
     )

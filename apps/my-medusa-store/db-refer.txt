@@ -7,36 +7,14 @@ const [apparelState, setApparelState] = useState(
   deserializeApparelDetails(initialDbData?.metadata?.apparel_details)
 )   which file ? <<<<<===========---------
 {variants.map((variant, index) => {
-  return <tr key={index}>...</tr>
+  return <tr key={index}>...</tr> 
 })}
 If a vendor has generated a large matrix (e.g., 4 sizes × 5 colors × 3 fabrics = 60 variants), typing a single character into an input field updates the top-level state block. This causes all 60 rows to re-evaluate and re-render concurrently, degrading performance.
 
 how -=> Recommendation: Generate a predictable unique string id for your rows during matrix creation (e.g., combining the variant labels, like id: "top-s-blue") and use key={variant.id} instead of the raw loop index.
 const parsed = parseInt(e.target.value, 10);
 inventoryQuantity: isNaN(parsed) ? undefined : parsed  <<=- how integrate
-product (The Root Shell)
-├── product_sales_channel (Link table -> product_id)
-├── product_category_product (Link table -> product_id to product_category)
-├── product_tags (Pivot table -> product_id to product_tag)
-├── marketplace_vendor_product_product (Custom Link -> product_id)
-├── product_product_marketplace_apparel_detail (Custom Link -> product_id)
-│   └── apparel_detail (Your standalone custom metadata table)
-│
-├── product_option (Parent to values -> product_id)
-│   └── product_option_value (Child table -> linked via option_id)
-│
-└── product_variant (Parent to variants -> product_id)
-    ├── product_variant_option (Link table -> variant_id)
-    ├── product_variant_inventory_item (Link table -> variant_id)
-    ├── product_variant_price_set (Link table -> variant_id)
-    └── product_variant_product_image (Link table -> variant_id)
 
-Standalone / Global Catalogs (Root records do NOT belong to any single product)
-├── product_category (Global hierarchy tree)
-├── product_collection (Global collection tags)
-├── product_type (Global type directory)
-├── product_tag (Global unique text string store)
-└── product_shipping_profile (Global fulfillment rule mappings)
 
 Failsafe Sequence: It unlinks downstream foreign keys (variants, price sets, channel links) before dropping parent option rows, completely eliminating PostgreSQL constraint errors.
 
@@ -49,19 +27,7 @@ exactly how Medusa was designed to behave.
 
 This layout cleanly handles the deep-cascading soft-delete strategy, ensuring every associated record—from pivot links to isolated module entries—receives a matching timestamp uniformly while avoiding loose database updates.
 
-[ PRODUCT MODULE ]           [ INVENTORY MODULE ]         [ PRICING MODULE ]
- ┌──────────────────┐         ┌────────────────────┐       ┌──────────────────┐
- │ product          │         │ inventory_item     │       │ price_set        │
- │  └─ variant_id   │         │  ├─ sku, title     │       │  └─ id (isolated)│
- └─────────┬────────┘         │  └─ id             │       └────────┬─────────┘
-           │                  └─────────┬──────────┘                │
-           │                            │                           │  ┌──────────────┐
-           ▼                            ▼                           ▼  │ price        │
- ┌──────────────────────────────────────────────────────────────────┐  │ └─price_set_id
- │                       REMOTE LINK ENGINE                         │◄─┴──────────────┘
- │  ├─ product_variant_inventory_item (variant_id ◄─► inventory_id) │
- │  └─ product_variant_price_set      (variant_id ◄─► price_set_id) │
- └──────────────────────────────────────────────────────────────────┘
+
  TRUNCATE TABLE 
   public.product_product_marketplace_apparel_detail,
   public.product_sales_channel,
@@ -231,9 +197,15 @@ JOIN information_schema.constraint_column_usage ccu
     ON tc.constraint_name = ccu.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
 AND (
-    tc.table_name = 'product'
-    OR ccu.table_name = 'product'
+    tc.table_name LIKE '%inventory%'
+    OR ccu.table_name LIKE '%inventory%'
 );    
+
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND column_name LIKE '%inventory%';
+
 SELECT
     tc.table_name,
     kcu.column_name
@@ -243,7 +215,9 @@ JOIN information_schema.key_column_usage kcu
 JOIN information_schema.constraint_column_usage ccu
     ON ccu.constraint_name = tc.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
-AND ccu.table_name = 'product';
+AND ccu.table_name LIKE '%option%';
+
+
 SELECT
     tc.table_name,
     kcu.column_name,
@@ -295,18 +269,59 @@ HAVING COUNT(*) >= 2
 ORDER BY table_name;
 SELECT
     table_name,
+    string_agg(column_name, ', ' ORDER BY column_name) AS link_columns
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND (
+    column_name LIKE '%product%'
+    OR column_name LIKE '%variant%'
+    OR column_name LIKE '&inventory_item%'
+    OR column_name LIKE '%price%'
+    OR column_name LIKE '%option%'
+    OR column_name LIKE '%inventory%'
+)
+GROUP BY table_name
+HAVING COUNT(*) >= 2
+ORDER BY table_name;
+SELECT
+    table_name,
     string_agg(column_name, ', ' ORDER BY column_name) AS id_columns
 FROM information_schema.columns
 WHERE table_schema = 'public'
-AND table_name LIKE '%inventory%'
+AND table_name LIKE '%option%'
 AND column_name LIKE '%_id'
 GROUP BY table_name
 ORDER BY table_name;
 
-SELECT table_name, column_name
-FROM information_schema.columns
-WHERE table_schema = 'public'
-AND column_name LIKE '%inventory%';
+SELECT pv.id AS variant_id, pv.sku, il.stocked_quantity, il.location_id
+FROM product_variant pv
+JOIN product_variant_inventory_item pvii ON pv.id = pvii.variant_id
+JOIN inventory_level il ON pvii.inventory_item_id = il.inventory_item_id;
+
+SELECT
+    pv.id AS variant_id,
+    pv.sku,
+    pr.amount,
+    pr.currency_code
+FROM product_variant pv
+JOIN product_variant_price_set pvps
+    ON pv.id = pvps.variant_id
+JOIN price pr
+    ON pvps.price_set_id = pr.price_set_id;
+
+    SELECT
+    pv.sku,
+    pr.id,
+    pr.amount,
+    pr.currency_code,
+    pr.min_quantity,
+    pr.max_quantity
+FROM product_variant pv
+JOIN product_variant_price_set pvps
+    ON pv.id = pvps.variant_id
+JOIN price pr
+    ON pvps.price_set_id = pr.price_set_id
+ORDER BY pv.sku, pr.currency_code;
 
 [ public.product ]
                           │
@@ -330,3 +345,43 @@ AND column_name LIKE '%inventory%';
    [ inventory_item ]                [ price_set ]
    • inventory_level                       • price (amount, currency)
    • reservation_item
+   
+
+   [ PRODUCT MODULE ]           [ INVENTORY MODULE ]         [ PRICING MODULE ]
+ ┌──────────────────┐         ┌────────────────────┐       ┌──────────────────┐
+ │ product          │         │ inventory_item     │       │ price_set        │
+ │  └─ variant_id   │         │  ├─ sku, title     │       │  └─ id (isolated)│
+ └─────────┬────────┘         │  └─ id             │       └────────┬─────────┘
+           │                  └─────────┬──────────┘                │
+           │                            │                           │  ┌──────────────┐
+           ▼                            ▼                           ▼  │ price        │
+ ┌──────────────────────────────────────────────────────────────────┐  │ └─price_set_id
+ │                       REMOTE LINK ENGINE                         │◄─┴──────────────┘
+ │  ├─ product_variant_inventory_item (variant_id ◄─► inventory_id) │
+ │  └─ product_variant_price_set      (variant_id ◄─► price_set_id) │
+ └──────────────────────────────────────────────────────────────────┘
+
+ product (The Root Shell)
+├── product_sales_channel (Link table -> product_id)
+├── product_category_product (Link table -> product_id to product_category)
+├── product_tags (Pivot table -> product_id to product_tag)
+├── marketplace_vendor_product_product (Custom Link -> product_id)
+├── product_product_marketplace_apparel_detail (Custom Link -> product_id)
+│   └── apparel_detail (Your standalone custom metadata table)
+│
+├── product_option (Parent to values -> product_id)
+│   └── product_option_value (Child table -> linked via option_id)
+│
+└── product_variant (Parent to variants -> product_id)
+    ├── product_variant_option (Link table -> variant_id)
+    ├── product_variant_inventory_item (Link table -> variant_id)
+    ├── product_variant_price_set (Link table -> variant_id)
+    └── product_variant_product_image (Link table -> variant_id)
+
+Standalone / Global Catalogs (Root records do NOT belong to any single product)
+├── product_category (Global hierarchy tree)
+├── product_collection (Global collection tags)
+├── product_type (Global type directory)
+├── product_tag (Global unique text string store)
+└── product_shipping_profile (Global fulfillment rule mappings)
+

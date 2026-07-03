@@ -35,7 +35,7 @@ export default function ApparelClassification({
       <div className="grid gap-4 md:grid-cols-3">
         <ApparelSelect
           label="Gender"
-          value={value.gender}
+          value={value.gender || ""}
           options={GENDER_OPTIONS}
           onChange={(gender) =>
             onChange({
@@ -48,7 +48,7 @@ export default function ApparelClassification({
 
         <ApparelSelect
           label="Age Group"
-          value={value.age_group}
+          value={value.age_group || ""}
           options={
             AGE_GROUP_OPTIONS
           }
@@ -65,9 +65,7 @@ export default function ApparelClassification({
 
         <ApparelSelect
           label="Sizing Group"
-          value={
-            value.sizing_group
-          }
+          value={value.sizing_group || ""}
           options={
             SIZING_GROUP_OPTIONS
           }

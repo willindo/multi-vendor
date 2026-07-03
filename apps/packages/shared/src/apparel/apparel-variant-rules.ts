@@ -10,261 +10,98 @@ export type ApparelVariantDimension =
 
 export interface VariantRule {
   recommendedDimensions: ApparelVariantDimension[]
-
-  predefinedValues?: Partial<
-    Record<ApparelVariantDimension, string[]>
-  >
-
+  predefinedValues?: Partial<Record<ApparelVariantDimension, string[]>>
   customValueDimensions?: ApparelVariantDimension[]
 }
 
 const DEFAULT_RULE: VariantRule = {
   recommendedDimensions: ["SIZE", "COLOR"],
-
   predefinedValues: {
     SIZE: ["XS", "S", "M", "L", "XL"],
   },
-
   customValueDimensions: ["COLOR"],
 }
 
-const CATEGORY_RULES: Partial<
-  Record<GarmentCategory, VariantRule>
-> = {
+const CATEGORY_RULES: Partial<Record<GarmentCategory, VariantRule>> = {
   TOP: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR"],
     predefinedValues: {
-      SIZE: [
-        "XS",
-        "S",
-        "M",
-        "L",
-        "XL",
-        "XXL",
-      ],
+      SIZE: ["XS", "S", "M", "L", "XL", "XXL"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-    ],
+    customValueDimensions: ["COLOR"],
   },
-
   BOTTOM: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR"],
     predefinedValues: {
-      SIZE: [
-        "28",
-        "30",
-        "32",
-        "34",
-        "36",
-        "38",
-      ],
+      SIZE: ["28", "30", "32", "34", "36", "38"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-    ],
+    customValueDimensions: ["COLOR"],
   },
-
   DRESS: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR"],
     predefinedValues: {
-      SIZE: [
-        "XS",
-        "S",
-        "M",
-        "L",
-        "XL",
-      ],
+      SIZE: ["XS", "S", "M", "L", "XL"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-    ],
+    customValueDimensions: ["COLOR"],
   },
-
   OUTERWEAR: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR"],
     predefinedValues: {
-      SIZE: [
-        "S",
-        "M",
-        "L",
-        "XL",
-        "XXL",
-      ],
+      SIZE: ["S", "M", "L", "XL", "XXL"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-    ],
+    customValueDimensions: ["COLOR"],
   },
-
   ETHNIC: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-      "MATERIAL",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR", "MATERIAL"],
     predefinedValues: {
-      SIZE: [
-        "XS",
-        "S",
-        "M",
-        "L",
-        "XL",
-        "XXL",
-      ],
+      SIZE: ["XS", "S", "M", "L", "XL", "XXL"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-      "MATERIAL",
-    ],
+    customValueDimensions: ["COLOR", "MATERIAL"],
   },
 }
 
-const SUBCATEGORY_RULES: Record<
-  GarmentSubcategory,
-  VariantRule
-> = {
+const SUBCATEGORY_RULES: Record<GarmentSubcategory, VariantRule> = {
   JEANS: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR"],
     predefinedValues: {
-      SIZE: [
-        "28",
-        "30",
-        "32",
-        "34",
-        "36",
-        "38",
-      ],
+      SIZE: ["28", "30", "32", "34", "36", "38"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-    ],
+    customValueDimensions: ["COLOR"],
   },
-
   LEGGINGS: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR"],
     predefinedValues: {
-      SIZE: [
-        "S",
-        "M",
-        "L",
-        "XL",
-      ],
+      SIZE: ["S", "M", "L", "XL"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-    ],
+    customValueDimensions: ["COLOR"],
   },
-
   KURTI: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-      "MATERIAL",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR", "MATERIAL"],
     predefinedValues: {
-      SIZE: [
-        "XS",
-        "S",
-        "M",
-        "L",
-        "XL",
-        "XXL",
-      ],
+      SIZE: ["XS", "S", "M", "L", "XL", "XXL"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-      "MATERIAL",
-    ],
+    customValueDimensions: ["COLOR", "MATERIAL"],
   },
-
   HOODIE: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR"],
     predefinedValues: {
-      SIZE: [
-        "S",
-        "M",
-        "L",
-        "XL",
-        "XXL",
-      ],
+      SIZE: ["S", "M", "L", "XL", "XXL"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-    ],
+    customValueDimensions: ["COLOR"],
   },
-
   PONCHO: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-      "MATERIAL",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR", "MATERIAL"],
     predefinedValues: {
       SIZE: ["FREE_SIZE"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-      "MATERIAL",
-    ],
+    customValueDimensions: ["COLOR", "MATERIAL"],
   },
-
   SAREE: {
-    recommendedDimensions: [
-      "SIZE",
-      "COLOR",
-      "MATERIAL",
-    ],
-
+    recommendedDimensions: ["SIZE", "COLOR", "MATERIAL"],
     predefinedValues: {
       SIZE: ["FREE_SIZE"],
     },
-
-    customValueDimensions: [
-      "COLOR",
-      "MATERIAL",
-    ],
+    customValueDimensions: ["COLOR", "MATERIAL"],
   },
 }
 
@@ -272,20 +109,12 @@ export function getVariantRule(
   category?: GarmentCategory,
   subcategory?: GarmentSubcategory
 ): VariantRule {
-  if (
-    subcategory &&
-    SUBCATEGORY_RULES[subcategory]
-  ) {
+  if (subcategory && SUBCATEGORY_RULES[subcategory]) {
     return SUBCATEGORY_RULES[subcategory]
   }
-
-  if (
-    category &&
-    CATEGORY_RULES[category]
-  ) {
+  if (category && CATEGORY_RULES[category]) {
     return CATEGORY_RULES[category]!
   }
-
   return DEFAULT_RULE
 }
 
@@ -293,10 +122,7 @@ export function getRecommendedDimensions(
   category?: GarmentCategory,
   subcategory?: GarmentSubcategory
 ): ApparelVariantDimension[] {
-  return getVariantRule(
-    category,
-    subcategory
-  ).recommendedDimensions
+  return getVariantRule(category, subcategory).recommendedDimensions
 }
 
 export function getPredefinedVariantValues(
@@ -304,14 +130,7 @@ export function getPredefinedVariantValues(
   category?: GarmentCategory,
   subcategory?: GarmentSubcategory
 ): string[] {
-  return (
-    getVariantRule(
-      category,
-      subcategory
-    ).predefinedValues?.[
-      dimension
-    ] ?? []
-  )
+  return getVariantRule(category, subcategory).predefinedValues?.[dimension] ?? []
 }
 
 export function supportsCustomValues(
@@ -319,12 +138,5 @@ export function supportsCustomValues(
   category?: GarmentCategory,
   subcategory?: GarmentSubcategory
 ): boolean {
-  return (
-    getVariantRule(
-      category,
-      subcategory
-    ).customValueDimensions?.includes(
-      dimension
-    ) ?? false
-  )
+  return getVariantRule(category, subcategory).customValueDimensions?.includes(dimension) ?? false
 }

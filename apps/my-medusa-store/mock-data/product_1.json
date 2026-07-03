@@ -1,154 +1,138 @@
 {
-  "title": "Coastline Organic Cotton Set",
-  "handle": "coastline-loungewear-set",
-  "subtitle": "Sustainable Comfort for Everyone",
-  "description": "A matching two-piece set including a crewneck sweatshirt and relaxed joggers.",
+  "title": "Classic Cotton T-Shirt",
+  "subtitle": "Everyday Essential",
+  "description": "A comfortable and versatile t-shirt for everyday wear.",
+  "handle": "classic-cotton-t-shirt",
   "status": "published",
+  "weight": 200,
+  "origin_country": "IN",
+  "material": "100% Cotton",
   "metadata": {
-    "brand": "EARTH&CO"
+    "vendor_id": "vendor_1776923080"
   },
   "options": [
     {
-      "title": "Color",
-      "values": ["Dune Beige", "Slate Gray", "Terracotta"]
+      "title": "SIZE",
+      "values": [
+        "S",
+        "M",
+        "L"
+      ]
     },
     {
-      "title": "Size",
-      "values": ["XS", "S", "M", "L", "XL"]
+      "title": "COLOR",
+      "values": [
+        "White",
+        "Black"
+      ]
     }
   ],
   "variants": [
     {
-      "title": "Dune Beige / XS",
-      "sku": "ERT-SET-DUN-XS",
+      "title": "S / White",
+      "sku": "CCT-S-WHT",
+      "inventory_quantity": 100,
       "manage_inventory": true,
-      "inventory_quantity": 8,
-      "options": { "Color": "Dune Beige", "Size": "XS" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
+      "prices": [
+        {
+          "amount": 1999,
+          "currency_code": "inr"
+        }
+      ],
+      "options": {
+        "SIZE": "S",
+        "COLOR": "White"
+      }
     },
     {
-      "title": "Dune Beige / S",
-      "sku": "ERT-SET-DUN-S",
+      "title": "M / White",
+      "sku": "CCT-M-WHT",
+      "inventory_quantity": 100,
       "manage_inventory": true,
-      "inventory_quantity": 15,
-      "options": { "Color": "Dune Beige", "Size": "S" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
+      "prices": [
+        {
+          "amount": 1999,
+          "currency_code": "inr"
+        }
+      ],
+      "options": {
+        "SIZE": "M",
+        "COLOR": "White"
+      }
     },
     {
-      "title": "Dune Beige / M",
-      "sku": "ERT-SET-DUN-M",
+      "title": "L / White",
+      "sku": "CCT-L-WHT",
+      "inventory_quantity": 100,
       "manage_inventory": true,
-      "inventory_quantity": 12,
-      "options": { "Color": "Dune Beige", "Size": "M" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
+      "prices": [
+        {
+          "amount": 1999,
+          "currency_code": "inr"
+        }
+      ],
+      "options": {
+        "SIZE": "L",
+        "COLOR": "White"
+      }
     },
     {
-      "title": "Dune Beige / L",
-      "sku": "ERT-SET-DUN-L",
+      "title": "S / Black",
+      "sku": "CCT-S-BLK",
+      "inventory_quantity": 100,
       "manage_inventory": true,
-      "inventory_quantity": 10,
-      "options": { "Color": "Dune Beige", "Size": "L" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
+      "prices": [
+        {
+          "amount": 1999,
+          "currency_code": "inr"
+        }
+      ],
+      "options": {
+        "SIZE": "S",
+        "COLOR": "Black"
+      }
     },
     {
-      "title": "Dune Beige / XL",
-      "sku": "ERT-SET-DUN-XL",
+      "title": "M / Black",
+      "sku": "CCT-M-BLK",
+      "inventory_quantity": 100,
       "manage_inventory": true,
-      "inventory_quantity": 5,
-      "options": { "Color": "Dune Beige", "Size": "XL" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
+      "prices": [
+        {
+          "amount": 1999,
+          "currency_code": "inr"
+        }
+      ],
+      "options": {
+        "SIZE": "M",
+        "COLOR": "Black"
+      }
     },
     {
-      "title": "Slate Gray / XS",
-      "sku": "ERT-SET-GRY-XS",
+      "title": "L / Black",
+      "sku": "CCT-L-BLK",
+      "inventory_quantity": 100,
       "manage_inventory": true,
-      "inventory_quantity": 6,
-      "options": { "Color": "Slate Gray", "Size": "XS" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Slate Gray / S",
-      "sku": "ERT-SET-GRY-S",
-      "manage_inventory": true,
-      "inventory_quantity": 14,
-      "options": { "Color": "Slate Gray", "Size": "S" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Slate Gray / M",
-      "sku": "ERT-SET-GRY-M",
-      "manage_inventory": true,
-      "inventory_quantity": 18,
-      "options": { "Color": "Slate Gray", "Size": "M" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Slate Gray / L",
-      "sku": "ERT-SET-GRY-L",
-      "manage_inventory": true,
-      "inventory_quantity": 11,
-      "options": { "Color": "Slate Gray", "Size": "L" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Slate Gray / XL",
-      "sku": "ERT-SET-GRY-XL",
-      "manage_inventory": true,
-      "inventory_quantity": 4,
-      "options": { "Color": "Slate Gray", "Size": "XL" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Terracotta / XS",
-      "sku": "ERT-SET-TER-XS",
-      "manage_inventory": true,
-      "inventory_quantity": 7,
-      "options": { "Color": "Terracotta", "Size": "XS" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Terracotta / S",
-      "sku": "ERT-SET-TER-S",
-      "manage_inventory": true,
-      "inventory_quantity": 12,
-      "options": { "Color": "Terracotta", "Size": "S" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Terracotta / M",
-      "sku": "ERT-SET-TER-M",
-      "manage_inventory": true,
-      "inventory_quantity": 16,
-      "options": { "Color": "Terracotta", "Size": "M" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Terracotta / L",
-      "sku": "ERT-SET-TER-L",
-      "manage_inventory": true,
-      "inventory_quantity": 9,
-      "options": { "Color": "Terracotta", "Size": "L" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
-    },
-    {
-      "title": "Terracotta / XL",
-      "sku": "ERT-SET-TER-XL",
-      "manage_inventory": true,
-      "inventory_quantity": 3,
-      "options": { "Color": "Terracotta", "Size": "XL" },
-      "prices": [{ "currency_code": "usd", "amount": 11900 }]
+      "prices": [
+        {
+          "amount": 1999,
+          "currency_code": "inr"
+        }
+      ],
+      "options": {
+        "SIZE": "L",
+        "COLOR": "Black"
+      }
     }
   ],
   "apparel_detail": {
-    "gender": "UNISEX",
-    "age_group": "TEEN",
-    "sizing_group": "REGULAR",
-    "garment_category": "SET",
-    "style_type": "LOUNGEWEAR",
-    "material_type": "NATURAL",
-    "material_composition": "100% Organic Cotton",
-    "care_instructions": "Machine wash warm, tumble dry low",
-    "season": "AUTUMN",
-    "condition": "NEW"
+    "garment_category": "TOP",
+    "garment_subcategory": "T_SHIRT",
+    "fit": "REGULAR",
+    "pattern": "SOLID",
+    "style_type": "CASUAL",
+    "sleeve_type": "SHORT",
+    "neck_type": "ROUND_NECK",
+    "material_type": "COTTON"
   }
 }

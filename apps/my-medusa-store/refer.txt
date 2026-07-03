@@ -3,7 +3,7 @@ psql -U medusa -d medusa -h localhost rm -rf .medusa/server dist .medusa
 psql "postgresql://medusa:medusa@localhost:5432/medusa"
 mkdir -p src/modules/vendor/{models,services}
 touch src/modules/vendor/index.ts
-touch src/modules/vendor/models/vendor.ts
+touch src/modules/vendor/models/vendor.ts*
 touch src/modules/vendor/services/vendor-service.ts
 
 AuthIdentity data model -=- app_metadata -- custom actor type = manger 
@@ -56,11 +56,11 @@ EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
 EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/*.medusa/*" -not -path "*/node_modules/*" -not -iname "*.tsx" -not -iname "*lock*" -not -iname "*.cjs"'
 
 INCL_UDES='-path "*//*" -o -iname "*tsconfig*"' 
-EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/src/components/vendor/products/apparel/*"  ' 
-eval find . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
+INCL_UDES='-path "*/api/*" ' 
+EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
+eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
  
 contents=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;)
@@ -156,3 +156,22 @@ tree -h > structure.txt  -f -a -L 2
 touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
 touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
  grep -r -n -E "^\s*(function|const|let|var)\s+\w+" ./src/components ./packages  ./src/app/vendor/dashboard/products/edit/[id]
+
+ You now have a powerful, clean, and flexible directory structure viewer that:
+
+Shows compact structure with directory/ [subdirs | files: ...] format
+
+Never duplicates file listings
+
+Truncates long lists by default for readability
+
+Shows ALL files with -a flag when you need full detail
+
+Controls depth with -L N
+
+Works from anywhere with absolute/relative paths
+
+Great job building this! 🚀🎉
+ 
+
+H42269114762

@@ -9,7 +9,7 @@ export type SelectOption = {
 
 type ApparelSelectProps = {
   label: string
-  value: string
+  value: string | null | undefined
   options: SelectOption[]
   onChange: (value: string) => void
   placeholder?: string
@@ -28,6 +28,9 @@ export default function ApparelSelect({
   disabled = false,
   className = "",
 }: ApparelSelectProps) {
+
+  const safeValue = value || ""
+
   return (
     <div>
       <label className="block text-sm font-medium mb-1">
@@ -35,7 +38,7 @@ export default function ApparelSelect({
       </label>
 
       <select
-        value={value}
+        value={safeValue}
         required={required}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}

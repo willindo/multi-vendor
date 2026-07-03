@@ -1,0 +1,32 @@
+# Dependency Clutter (Token Burners)
+node_modules/
+.yarn/
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build & Cache Enclaves
+dist/
+build/
+.next/
+.turbo/
+.cache/
+medusa-config.js.map
+tsconfig.tsbuildinfo
+
+# Hidden Next.js & System Caches
+.next/
+.vercel/
+.git/
+.idea/
+.vscode/
+
+# Local Medusa Application Noise
+.medusa/
+.medusa/server/
+*.log
+*.txt
+*.sh
+mock-data/
+integration-tests/

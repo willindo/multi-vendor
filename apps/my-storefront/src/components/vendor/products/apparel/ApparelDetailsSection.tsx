@@ -1,4 +1,5 @@
 "use client"
+import { useCallback } from "react"
 
 import type {
   ApparelDetails,
@@ -10,6 +11,8 @@ import ApparelStyling from "./ApparelStyling"
 import ApparelConstruction from "./ApparelConstruction"
 import ApparelMaterial from "./ApparelMaterial"
 import ApparelLifecycle from "./ApparelLifecycle"
+import ApparelSelect from "./ApparelSelect"
+import { DEFAULT_APPAREL_DETAILS } from "@shared/index"
 
 type Props = {
   value: ApparelDetails
@@ -22,6 +25,16 @@ export default function ApparelDetailsSection({
   value,
   onChange,
 }: Props) {
+
+  // In ApparelDetailsSection.tsx
+
+  const updateField = useCallback(
+    <K extends keyof ApparelDetails>(field: K, val: ApparelDetails[K]) => {
+      onChange({ ...value, [field]: val })
+    },
+    [value, onChange]
+  )
+
   return (
     <div className="space-y-8 rounded-lg border border-neutral-200 bg-white p-6">
       <div>
@@ -35,9 +48,22 @@ export default function ApparelDetailsSection({
           for apparel products.
         </p>
       </div>
-
+      <ApparelSelect
+        label="Garment Category"
+        value={value.garment_category}
+        options={[
+          { value: "TOP", label: "Top" },
+          { value: "BOTTOM", label: "Bottom" },
+          { value: "DRESS", label: "Dress" },
+          { value: "OUTERWEAR", label: "Outerwear" },
+          { value: "ETHNIC", label: "Ethnic" },
+        ]}
+        onChange={(val) => updateField("garment_category", val as any)}
+        placeholder="Select category"
+        required
+      />
       <ApparelClassification
-        value={value}
+        value={value || DEFAULT_APPAREL_DETAILS}
         onChange={onChange}
       />
 
@@ -66,5 +92,6 @@ export default function ApparelDetailsSection({
         onChange={onChange}
       />
     </div>
+
   )
 }

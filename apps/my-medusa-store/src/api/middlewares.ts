@@ -34,7 +34,7 @@ export default defineMiddlewares({
       middlewares: [
         (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) => {
           const configModule: ConfigModule = req.scope.resolve("configModule");
-          
+
           return cors({
             origin: parseCorsOrigins(configModule.projectConfig.http.adminCors),
             credentials: true,
@@ -69,6 +69,16 @@ export default defineMiddlewares({
       method: ["POST"],
       middlewares: [
         // validateAndTransformBody(AdminCreateProduct),
+      ],
+    },
+    {
+      matcher: "/store/products*",
+      middlewares: [
+        (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) => {
+          req.allowed ??= [];
+          req.allowed.push("apparel_detail");
+          next();
+        },
       ],
     },
   ],

@@ -9,13 +9,13 @@ import {
 } from "@medusajs/framework/workflows-sdk";
 import {
   createProductsWorkflow,
-  CreateProductsWorkflowInput,      
+  CreateProductsWorkflowInput,
   createRemoteLinkStep,
   useQueryGraphStep,
 } from "@medusajs/medusa/core-flows";
 import { Modules } from "@medusajs/framework/utils";
 import { MARKETPLACE_MODULE } from "../../../modules/marketplace";
-import type {ApparelDetails } from "@shared/index"
+import type { ApparelDetails } from "@shared/index"
 
 type Input = {
   vendor_admin_id: string;
@@ -30,7 +30,7 @@ const createApparelDetailStep = createStep(
   "create-apparel-detail-step",
   async (input: { product_id: string; apparel_detail: ApparelDetails }, { container }) => {
     const marketplaceService = container.resolve("marketplace");
-    
+
     const detail = await marketplaceService.createApparelDetails({
       product_id: input.product_id,
       ...input.apparel_detail
@@ -109,7 +109,7 @@ export const createVendorProductWorkflow = createWorkflow(
         }
       ];
     });
-    
+
     createRemoteLinkStep(links);
 
     // 7. Resolve compiled database elements
