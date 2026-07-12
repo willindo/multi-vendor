@@ -41,7 +41,9 @@ export const GET = async (
                 "variants.price_set.prices.id",
                 "variants.price_set.prices.amount",
                 "variants.price_set.prices.currency_code",
-                "variants.inventory_items.*",
+                // "variants.inventory_items.*",
+                "variants.price_set.prices.amount", "variants.price_set.prices.currency_code",
+                // "variants.inventory_items.inventory_item.inventory_levels.stocked_quantity",
                 "apparel_detail.id",
                 "apparel_detail.gender",
                 "apparel_detail.age_group",
@@ -70,16 +72,14 @@ export const GET = async (
 
         // 🔄 Enrich variants (Updated for Medusa v2 structural layout)
         const enrichedVariants = product.variants?.map((variant: any) => {
-            // Look deep inside price_set -> prices array
             const price = variant.price_set?.prices?.[0] || null;
 
-            let inventoryQuantity = 0;
-            if (variant.inventory_items?.length > 0) {
-                const inventoryItem = variant.inventory_items[0].inventory_item;
-                if (inventoryItem?.inventory_levels?.length > 0) {
-                    inventoryQuantity = inventoryItem.inventory_levels[0].stocked_quantity || 0;
-                }
-            }
+            // Compute total stock across inventory item variants
+            const inventoryQuantity = variant.inventory_items?.reduce((invAcc: number, inv: any) => {
+                const item = inv?.inventory_item;
+                const quantity = item?.inventory_levels?.[0]?.stocked_quantity ?? 0;
+                return invAcc + quantity;
+            }, 0) ?? 0;
 
             return {
                 ...variant,
@@ -139,7 +139,9 @@ export const PATCH = async (
                 variants: req.body.variants || [],
                 variants_to_delete: req.body.variants_to_delete || [],
                 options: req.body.options || [],
+                vendor_admin_id: actor_id,
                 apparel_detail: apparelData,
+                location_id: req.body.location_id || process.env.MEDUSA_STOCK_LOCATION_ID,
             },
         });
 

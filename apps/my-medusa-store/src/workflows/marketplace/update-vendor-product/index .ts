@@ -1,3 +1,4 @@
+// src/workflows/marketplace/update-vendor-product/index.ts
 import {
   createWorkflow,
   createStep,
@@ -10,6 +11,7 @@ import {
   updateProductVariantsWorkflow,
   deleteProductVariantsWorkflow,
   createRemoteLinkStep,
+  useQueryGraphStep,
 } from "@medusajs/medusa/core-flows";
 import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { MARKETPLACE_MODULE } from "../../../modules/marketplace";
@@ -23,22 +25,13 @@ type WorkflowInput = {
   variants_to_delete?: string[];
   options: any[];
   apparel_detail?: ApparelDetails;
+  location_id?: string;
+  vendor_admin_id: string;
 };
 
-interface InventoryUpdateInput {
-  inventory_item_id: string;
-  stocked_quantity: number;
-}
-
-interface StepOutput {
-  updatedCount: number;
-  createdCount: number;
-}
-
 // ============================================================
-// STEP DEFINITIONS
+// STEP: Update Product
 // ============================================================
-
 const updateProductStep = createStep(
   "update-product-step",
   async (input: { product_id: string; updateData: any }, { container }) => {
@@ -51,14 +44,15 @@ const updateProductStep = createStep(
   }
 );
 
+// ============================================================
+// STEP: Sync Apparel Detail
+// ============================================================
 const syncApparelDetailStep = createStep(
   "sync-apparel-detail-step",
   async (input: { product_id: string; apparel_detail: any }, { container }) => {
     const marketplaceService = container.resolve("marketplace");
     const query = container.resolve("query");
 
-    // Query the remote link layer safely using the global graph engine 
-    // to bypass the module isolation error
     const { data: products } = await query.graph({
       entity: "product",
       fields: ["id", "apparel_detail.id"],
@@ -76,8 +70,8 @@ const syncApparelDetailStep = createStep(
       ]);
       return new StepResponse({ apparel_detail_id: existingApparelId, isNew: false });
     } else {
-      // If it doesn't exist yet, create a clean standalone record
       const newDetail = await marketplaceService.createApparelDetails({
+        product_id: input.product_id,
         ...input.apparel_detail,
       });
       return new StepResponse({ apparel_detail_id: newDetail.id, isNew: true });
@@ -85,10 +79,13 @@ const syncApparelDetailStep = createStep(
   }
 );
 
+// ============================================================
+// STEP: Ensure Product Options
+// ============================================================
 const ensureProductOptionsStep = createStep(
   "ensure-product-options-step",
   async (input: { product_id: string; missingOptions: any[] }, { container }) => {
-    if (!input.missingOptions || input.missingOptions.length === 0) {
+    if (!input.missingOptions?.length) {
       return new StepResponse([]);
     }
     const productService = container.resolve(Modules.PRODUCT);
@@ -104,6 +101,9 @@ const ensureProductOptionsStep = createStep(
   }
 );
 
+// ============================================================
+// STEP: Ensure Product Option Values
+// ============================================================
 const ensureProductOptionValuesStep = createStep(
   "ensure-product-option-values-step",
   async (input: { product_id: string; missingOptionValues: Record<string, string[]> }, { container }) => {
@@ -122,7 +122,6 @@ const ensureProductOptionValuesStep = createStep(
     });
 
     const product = products[0];
-
     if (product && Array.isArray(product.options)) {
       for (const option of product.options) {
         const newValues = valuesMap[option.title];
@@ -141,25 +140,34 @@ const ensureProductOptionValuesStep = createStep(
   }
 );
 
-export const updateInventoryStep = createStep(
+// ============================================================
+// STEP: Update Inventory
+// ============================================================
+const updateInventoryStep = createStep(
   "update-inventory-step",
-  async (input: { inventoryUpdates: InventoryUpdateInput[] }, { container }): Promise<StepResponse<StepOutput>> => {
+  async (input: {
+    inventoryUpdates: { inventory_item_id: string; stocked_quantity: number }[];
+    location_id?: string;
+  }, { container }) => {
     const inventoryService = container.resolve(Modules.INVENTORY);
 
-    if (!input.inventoryUpdates || input.inventoryUpdates.length === 0) {
+    if (!input.inventoryUpdates?.length) {
       return new StepResponse({ updatedCount: 0, createdCount: 0 });
     }
 
+    const locationId = input.location_id ?? "default_location";
     const itemIds = input.inventoryUpdates.map((iu) => iu.inventory_item_id);
 
     const existingLevels = await inventoryService.listInventoryLevels({
       inventory_item_id: itemIds,
     });
 
-    const levelMap = new Map<string, any>();
-    for (const lvl of existingLevels) {
-      levelMap.set(lvl.inventory_item_id, lvl);
-    }
+    const levelMap = new Map(
+      existingLevels.map(level => [
+        level.inventory_item_id,
+        level,
+      ])
+    );
 
     const levelsToUpdate: any[] = [];
     const levelsToCreate: any[] = [];
@@ -177,26 +185,19 @@ export const updateInventoryStep = createStep(
       } else {
         levelsToCreate.push({
           inventory_item_id: update.inventory_item_id,
-          location_id: "default",
+          location_id: locationId,
           stocked_quantity: update.stocked_quantity,
         });
       }
     }
 
-    const executionPromises: Promise<any>[] = [];
-
     if (levelsToUpdate.length > 0) {
-      executionPromises.push(inventoryService.updateInventoryLevels(levelsToUpdate));
+      await inventoryService.updateInventoryLevels(levelsToUpdate);
     }
 
     if (levelsToCreate.length > 0) {
-      const creationPromises = levelsToCreate.map((lc) =>
-        inventoryService.createInventoryLevels(lc)
-      );
-      executionPromises.push(...creationPromises);
+      await inventoryService.createInventoryLevels(levelsToCreate);
     }
-
-    await Promise.all(executionPromises);
 
     return new StepResponse({
       updatedCount: levelsToUpdate.length,
@@ -205,13 +206,14 @@ export const updateInventoryStep = createStep(
   }
 );
 
-// FIX: Explicitly list nested properties instead of deeply chaining wildcards (.*)
+// ============================================================
+// STEP: Get Updated Product
+// ============================================================
 const getUpdatedProductStep = createStep(
   "get-updated-product-step",
   async (input: { product_id: string }, { container }) => {
     const query = container.resolve("query");
 
-    // Explicitly define fields just like your successful GET handler
     const { data: products } = await query.graph({
       entity: "product",
       fields: [
@@ -222,59 +224,83 @@ const getUpdatedProductStep = createStep(
         "variants.options.*",
         "variants.price_set.*",
         "variants.price_set.prices.*",
+        "variants.inventory_items.inventory_item.inventory_levels.*",
         "apparel_detail.*",
       ],
-      filters: {
-        id: [input.product_id],
-      },
+      filters: { id: [input.product_id] },
     });
 
     return new StepResponse(products[0]);
   }
 );
-// ============================================================
-// WORKFLOW DEFINITION
-// ============================================================
 
+// ============================================================
+// WORKFLOW
+// ============================================================
 export const updateVendorProductWorkflow = createWorkflow(
   "update-vendor-product",
   (input: WorkflowInput) => {
+    // ✅ Get vendor
+    const { data: vendorAdmins } = useQueryGraphStep({
+      entity: "vendor_admin",
+      fields: ["id", "vendor.id"],
+      filters: { id: input.vendor_admin_id },
+    }).config({ name: "get-update-vendor" });
+
+    // ✅ Normalize incoming variant SKUs only
+    const normalizedVariants = transform({ input, vendorAdmins }, (data) => {
+      const vendorId = data.vendorAdmins[0]?.vendor?.id;
+      if (!vendorId) throw new Error("Vendor context not found");
+
+      return (data.input.variants || []).map((v: any) => {
+        const merchantSku = v.sku?.trim().toUpperCase();
+        const cleanVendorId = vendorId.replace(/[^a-zA-Z0-9]/g, '');
+        const isAlreadyPrefixed = v.sku?.startsWith(`${cleanVendorId}-`);
+
+        return {
+          ...v,
+          sku: isAlreadyPrefixed ? v.sku : `${cleanVendorId}-${merchantSku}`,
+          metadata: {
+            ...(v.metadata ?? {}),
+            merchant_sku: merchantSku,
+          }
+        };
+      });
+    });
+
     // 1. Update core product fields
     updateProductStep({
       product_id: input.product_id,
       updateData: input.product,
     });
 
-    // 2. Sync apparel detail (only if provided)
+    // 2. Sync apparel detail
     const apparelResult = syncApparelDetailStep({
       product_id: input.product_id,
       apparel_detail: input.apparel_detail,
     });
 
-    // Create remote link if apparel is new
+    // 3. Create remote link if apparel is new
     const apparelLinkPayload = transform({ input, apparelResult }, (data) => {
-      if (!data.apparelResult || !data.apparelResult.isNew) {
+      if (!data.apparelResult?.isNew) {
         return [];
       }
-      return [
-        {
-          [Modules.PRODUCT]: { product_id: data.input.product_id },
-          [MARKETPLACE_MODULE]: { apparel_detail_id: data.apparelResult.apparel_detail_id },
-        },
-      ];
+      return [{
+        [Modules.PRODUCT]: { product_id: data.input.product_id },
+        [MARKETPLACE_MODULE]: { apparel_detail_id: data.apparelResult.apparel_detail_id },
+      }];
     });
-    // const createRemoteLinkStep = container.resolve("createRemoteLinkStep");
     createRemoteLinkStep(apparelLinkPayload);
 
-    // 3. Reconcile variants
+    // ✅ C. Reconcile variants with normalized SKUs
     const diffPlan = reconcileVariantsStep({
       product_id: input.product_id,
-      variants: input.variants || [],
+      variants: normalizedVariants,
       variants_to_delete: input.variants_to_delete || [],
       options: input.options || [],
     });
 
-    // 4. Ensure options and values
+    // 5. Ensure options and values
     const missingOptionsResult = transform({ diffPlan }, (data) => data.diffPlan.missingOptions || []);
     ensureProductOptionsStep({
       product_id: input.product_id,
@@ -287,7 +313,7 @@ export const updateVendorProductWorkflow = createWorkflow(
       missingOptionValues: missingValuesResult,
     });
 
-    // 5. Prepare payloads purely for orchestration execution
+    // 6. Prepare payloads
     const createsPayload = transform({ diffPlan, input }, (data) => {
       return (data.diffPlan.creates || []).map((v: any) => ({
         ...v,
@@ -299,8 +325,7 @@ export const updateVendorProductWorkflow = createWorkflow(
     const deletesPayload = transform({ diffPlan }, (data) => data.diffPlan.deletes || []);
     const inventoryPayload = transform({ diffPlan }, (data) => data.diffPlan.inventoryUpdates || []);
 
-    // 6. Execute variant operations safely outside transforms
-    // Core sub-flows safely bypass operations natively if array collections are empty
+    // 7. Execute operations
     createProductVariantsWorkflow.runAsStep({
       input: { product_variants: createsPayload },
     });
@@ -311,13 +336,19 @@ export const updateVendorProductWorkflow = createWorkflow(
 
     updateInventoryStep({
       inventoryUpdates: inventoryPayload,
+      location_id: input.location_id,
     });
+
+    const deletedVariantIds = transform(
+      { diffPlan },
+      (data) => data.diffPlan.deletes ?? []
+    );
 
     deleteProductVariantsWorkflow.runAsStep({
-      input: { ids: deletesPayload },
+      input: { ids: deletedVariantIds },
     });
 
-    // 7. Get final enriched item state
+    // 8. Get final product
     const product = getUpdatedProductStep({
       product_id: input.product_id,
     });

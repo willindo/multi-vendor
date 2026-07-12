@@ -1,127 +1,63 @@
 {
-  "title": "Classic Cotton T-Shirt",
+  "title": "Classic Linen T-Shirt White",
   "subtitle": "Everyday Essential",
-  "description": "A comfortable and versatile t-shirt for everyday wear.",
-  "handle": "classic-cotton-t-shirt",
+  "description": "A comfortable and versatile linen-shirt for daily wear.",
+  "handle": "classic-linen-t-shirt-white",
   "status": "published",
   "weight": 200,
   "origin_country": "IN",
-  "material": "100% Cotton",
+  "material": "50% Cotton",
   "metadata": {
     "vendor_id": "vendor_1776923080"
   },
   "options": [
     {
-      "title": "SIZE",
+      "title": "Size",
       "values": [
-        "S",
-        "M",
-        "L"
+        "L",
+        "XXL"
       ]
     },
     {
-      "title": "COLOR",
+      "title": "Color",
       "values": [
-        "White",
-        "Black"
+        "White"
       ]
     }
   ],
   "variants": [
     {
-      "title": "S / White",
-      "sku": "CCT-S-WHT",
-      "inventory_quantity": 100,
-      "manage_inventory": true,
-      "prices": [
-        {
-          "amount": 1999,
-          "currency_code": "inr"
-        }
-      ],
-      "options": {
-        "SIZE": "S",
-        "COLOR": "White"
-      }
-    },
-    {
-      "title": "M / White",
-      "sku": "CCT-M-WHT",
-      "inventory_quantity": 100,
-      "manage_inventory": true,
-      "prices": [
-        {
-          "amount": 1999,
-          "currency_code": "inr"
-        }
-      ],
-      "options": {
-        "SIZE": "M",
-        "COLOR": "White"
-      }
-    },
-    {
       "title": "L / White",
       "sku": "CCT-L-WHT",
-      "inventory_quantity": 100,
       "manage_inventory": true,
+      "allow_backorder": false,
+      "inventory_quantity": 40,
       "prices": [
         {
-          "amount": 1999,
+          "amount": 1600,
           "currency_code": "inr"
         }
       ],
       "options": {
-        "SIZE": "L",
-        "COLOR": "White"
+        "Size": "L",
+        "Color": "White"
       }
     },
     {
-      "title": "S / Black",
-      "sku": "CCT-S-BLK",
-      "inventory_quantity": 100,
+      "title": "XXL / White",
+      "sku": "CCT-XXL-WHT",
       "manage_inventory": true,
+      "allow_backorder": false,
+      "inventory_quantity": 70,
       "prices": [
         {
-          "amount": 1999,
+          "amount": 4300,
           "currency_code": "inr"
         }
       ],
       "options": {
-        "SIZE": "S",
-        "COLOR": "Black"
-      }
-    },
-    {
-      "title": "M / Black",
-      "sku": "CCT-M-BLK",
-      "inventory_quantity": 100,
-      "manage_inventory": true,
-      "prices": [
-        {
-          "amount": 1999,
-          "currency_code": "inr"
-        }
-      ],
-      "options": {
-        "SIZE": "M",
-        "COLOR": "Black"
-      }
-    },
-    {
-      "title": "L / Black",
-      "sku": "CCT-L-BLK",
-      "inventory_quantity": 100,
-      "manage_inventory": true,
-      "prices": [
-        {
-          "amount": 1999,
-          "currency_code": "inr"
-        }
-      ],
-      "options": {
-        "SIZE": "L",
-        "COLOR": "Black"
+        "Size": "XXL",
+        "Color": "White"
       }
     }
   ],

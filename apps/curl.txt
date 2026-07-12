@@ -1,11 +1,12 @@
 cd /home/badsha/medusa-dev/apps/my-medusa-store
  psql -U medusa -d medusa -h localhost 
  npx medusa exec ./src/scripts/master-product-purge.ts
-npx medusa exec src/scripts/create-product.ts trial@example.com supersecret product_1.json
+npx medusa exec src/scripts/create-product.ts jwala@example.com supersecret product_1.json
+tree -J ./src -I "migration*" > tree.json && npx tsx
 
 chmod +x create-vendor.sh
 ./create-vendor.sh
-./create-vendor.sh soman@example.com supersecret
+./create-vendor.sh nihal@example.com supersecret
 chmod +x create-product.sh
 ./create-product.sh
 ./create-product.sh soman@example.com supersecret
@@ -14,14 +15,17 @@ TOKEN=...
 curl -X POST .../vendors/products ... 
 export TOKEN=$(./create-product.sh | grep TOKEN | cut -d '=' -f2) 
 echo "$TOKEN" | cut -d '.' -f2 | base64 -d | jq 
+
+  APIKEY=pk_6ca3b2c0e56d8431bfba029f3d949bd4443c2357fed0843d1af76bc17715a468
 PLATFORM_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/user/emailpass' \
   -H 'Content-Type: application/json' \
   -d '{
     "email": "admin@test.com",
     "password": "supersecret"
-  }' | jq -r '.token')
+  }' | jq -r '.token') 
   
 EMAIL=soman@example.com
+EMAIL=jwala@example.com
 PASSWORD=supersecret
 YOUR_ADMIN_TOKEN=$(curl -s -X POST 'http://localhost:9000/auth/vendor/emailpass' \
   -H 'Content-Type: application/json' \
@@ -94,11 +98,10 @@ curl -X GET 'http://localhost:9000/store/products' \
     )'
   EMAIL=trial@example.com
   EMAIL=trial11@example.com
+  VARIANT_ID=variant_01KQFQ6686753ZTJVNCQSBB2X0
   PASSWORD=supersecret
   PRODUCT_ID=prod_01KQFQ665247KW4TCXZ030DWCK
   CART_ID=cart_01KQM3QJWYHD5E8EX1N3AJZ663
-  VARIANT_ID=variant_01KQFQ6686753ZTJVNCQSBB2X0
-  APIKEY=pk_6ca3b2c0e56d8431bfba029f3d949bd4443c2357fed0843d1af76bc17715a468
    echo $PRODUCT_ID <-> $EMAIL
 
  curl http://localhost:9000/store/carts/$NEW_CART_ID \
@@ -106,7 +109,7 @@ curl -X GET 'http://localhost:9000/store/products' \
 
  Auto SKU generation
 Bulk pricing
-Bulk inventory
+Bulk inventory 
 Variant images
 CSV import/export       
   --data-urlencode 'fields=id,title,handle,apparel_detail.*' \
@@ -115,13 +118,38 @@ curl -G 'http://localhost:9000/store/products' \
  | jq -r '.products[]
     | "\(.id) | \(.title) | \(.handle) | \(.apparel_detail)"'
     
-    curl -G 'http://localhost:9000/store/products' \
+  curl -G 'http://localhost:9000/store/products' \
   -H "x-publishable-api-key: $APIKEY" \
-  --data-urlencode 'fields=id,apparel_detail.*'
+  --data-urlencode 'fields=id,price_set.prices.*' \
+| jq '
+def strip_nulls:
+  walk(
+    if type == "object"
+    then with_entries(select(.value != null))
+    else .
+    end
+  );
 
- curl -G 'http://localhost:9000/store/products'  
-  -H "x-publishable-api-key: $APIKEY"  
-   --data-urlencode 'fields=id,apparel_detail.*,id,,variants.*,price_set.prices.*,id,inventory_items.*' \
+.products | map(strip_nulls)
+' 
+| jq '.products[] | {
+    id,
+    title,
+    apparel_detail,
+    variants: [.variants[] | {
+      id,
+      sku,
+      prices: .price_set.prices,
+      stock: .inventory_items[].inventory_item.location_levels
+    }]
+}'
+
+curl -G 'http://localhost:9000/store/products' \
+  -H "x-publishable-api-key: $APIKEY" \
+   --data-urlencode 'fields=id,apparel_detail.*,id,variants.*,price_set.prices.*,id,inventory_items.*' \
+    curl -X GET 'http://localhost:9000/vendors/products' \
+  -H "Authorization: Bearer $YOUR_ADMIN_TOKEN" \
+   --data-urlencode 'fields=id,apparel_detail.*,variants.*' \
 | jq '
 def strip_nulls:
   walk(
@@ -135,15 +163,18 @@ def strip_nulls:
 ' 
 curl -G 'http://localhost:9000/store/products' \
   -H "x-publishable-api-key: $APIKEY" \
-  --data-urlencode 'fields=id,title,handle,apparel_detail.*,variants.*,variants.price_set.prices.*,variants.inventory_items.inventory_item.location_levels.*' \
-| jq '.products[] | {
-    id,
-    title,
-    apparel_detail,
-    variants: [.variants[] | {
-      id,
-      sku,
-      prices: .price_set.prices,
-      stock: .inventory_items[].inventory_item.location_levels
-    }]
-}'
+  --data-urlencode 'fields=id,title,handle,apparel_detail.*,variants.*,variants.price_set.prices.*,variants.inventory_items.inventory_item.inventory_levels.*' \
+  --data-urlencode 'fields=id,variants.*,variants.inventory_items.*,variants.inventory_items.inventory_levels.*' \
+  curl -G http://localhost:9000/store/products \
+  -H "x-publishable-api-key: $APIKEY" \
+  | jq '
+def strip_nulls:
+  walk(
+    if type == "object"
+    then with_entries(select(.value != null))
+    else .
+    end
+  );
+
+.products | map(strip_nulls)
+' 

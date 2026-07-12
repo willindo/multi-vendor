@@ -14,6 +14,8 @@ export const POST = async (
   const actorId = req.auth_context.actor_id;
   console.log(`[API POST /vendors/products] Incoming request from Actor ID: ${actorId}`);
 
+  const locationId = req.body.location_id ||
+    process.env.MEDUSA_STOCK_LOCATION_ID;
   try {
     // 1. Run the guard check (Returns normalized object with database column names)
     console.log("[API POST] Validating and normalizing apparel metadata payload...");
@@ -30,6 +32,7 @@ export const POST = async (
         vendor_admin_id: actorId,
         product: coreProductData,    // 🟢 Clean: Standard Medusa fields only
         apparel_detail: apparelData, // 🟢 Clean: Custom database-ready representation
+        location_id: locationId,
       },
     });
 
@@ -51,6 +54,7 @@ export const GET = async (
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
   const remoteQuery = req.scope.resolve("remoteQuery");
 
+  // 1. Resolve vendor admin context
   const { data: [vendorAdmin] } = await query.graph({
     entity: "vendor_admin",
     fields: ["vendor.id"],
@@ -61,13 +65,11 @@ export const GET = async (
     throw new Error("Vendor admin context unresolved");
   }
 
-  const productId = req.params.id;
   const vendorId = vendorAdmin.vendor.id;
 
-  // 2. Safely capture the exact IDs linking your vendor to your products.
-  // This extracts raw records from the link module mapping table directly.
+  // 2. Fetch all product IDs linked to this vendor
   const linkQuery = {
-    entity: "vendor_product", // Matches your link definition name (e.g., [VendorModule, ProductModule])
+    entity: "vendor_product",
     fields: ["product_id"],
     filters: { vendor_id: [vendorId] },
   };
@@ -79,8 +81,8 @@ export const GET = async (
     return res.json({ products: [] });
   }
 
-  // 3. Query your products collection with their full nested relations safely using explicit IDs
-  const { data: [product] } = await query.graph({
+  // 3. Query the products using the array of productIds (Renamed variable to plural 'products')
+  const { data: products } = await query.graph({
     entity: "product",
     fields: [
       "id",
@@ -103,24 +105,25 @@ export const GET = async (
       "variants.options.*",
       "variants.price_set.*",
       "variants.price_set.prices.*",
+      "variants.price_set.prices.amount",
       "variants.inventory_items.*",
-      "variants.inventory_items.inventory_item.*",
-
-      // 1. Fetch the properties of the link entry itself
+      // "variants.inventory_items.invent?ory_item.inventory_levels.stocked_quantity",
       "apparel_detail.id",
-
-      // 2. Traversal: Instruct Medusa to reach through the link entry 
-      // directly into the nested apparel_detail table properties
       "apparel_detail.*",
-      // "apparel_detail.apparel_detail.*",
     ],
     filters: {
-      id: [productId]
+      id: productIds // 🌟 Pass the entire array of product IDs here
+      // id: product_id 
     }
   });
 
+  // Optional debugging log (safely checks if products exist before logging)
+  if (products.length > 0 && products[0].variants?.length > 0) {
+    console.dir(products[0].variants[0], { depth: null });
+  }
 
+  // 4. Return the plural array to match your endpoint's collection purpose
   return res.json({
-    product
+    products
   });
 };

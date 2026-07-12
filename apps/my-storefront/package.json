@@ -12,7 +12,8 @@
     "build": "next build",
     "start": "next start -p 8000",
     "lint": "next lint",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "format-tree": "tree -J ./src -I \"migration*\" > tree.json && npx ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' ./scripts/format-tree.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",

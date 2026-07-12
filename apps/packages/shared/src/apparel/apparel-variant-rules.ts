@@ -17,7 +17,7 @@ export interface VariantRule {
 const DEFAULT_RULE: VariantRule = {
   recommendedDimensions: ["SIZE", "COLOR"],
   predefinedValues: {
-    SIZE: ["XS", "S", "M", "L", "XL"],
+    SIZE: ["XS", "S", "M", "L", "XL", "XXL"],
   },
   customValueDimensions: ["COLOR"],
 }

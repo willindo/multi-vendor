@@ -53,13 +53,13 @@ EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
 EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
 -o -path "*//*" -o -path "*/*edit*/*" -o -iname "*product*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
 -not -path "*/*.medusa/*" -not -path "*/node_modules/*" 
-EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/*.medusa/*" -not -path "*/node_modules/*" -not -iname "*.tsx" -not -iname "*lock*" -not -iname "*.cjs"'
+EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
 
 INCL_UDES='-path "*//*" -o -iname "*tsconfig*"' 
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
 INCL_UDES='-path "*/api/*" ' 
-EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
+EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*" -not -iname "*lock*" -not -iname "*.cjs"'
 eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
  
@@ -175,3 +175,66 @@ Great job building this! 🚀🎉
  
 
 H42269114762
+
+src/
+├── admin/
+│   ├── README.md, tsconfig.json, vite-env.d.ts
+│   ├── i18n/ → README.md, index.ts
+│   └── vendor-settlements/ → route.ts
+│
+├── api/
+│   ├── README.md, middlewares.ts
+│   ├── admin/
+│   │   ├── custom/ → route.ts
+│   │   └── orders/[id]/vendor-items/ → route.ts
+│   ├── store/
+│   │   ├── carts/[id]/line-items/ → route.ts
+│   │   └── custom/ → route.ts
+│   └── vendors/
+│       ├── route.ts
+│       ├── products/ → route.ts, [id]/route.ts
+│       └── orders/[id]/items/[item_id]/ship/ → route.ts
+│
+├── jobs/
+│   └── README.md
+│
+├── lib/
+│   └── meilisearch.ts
+│
+├── links/
+│   └── README.md, product-apparel.ts, vendor-order.ts, vendor-products.ts
+│
+├── modules/
+│   ├── README.md
+│   └── marketplace/
+│       ├── index.ts, service.ts
+│       └── models/ → apparel-detail.ts, vendor-admin.ts, vendor.ts
+│
+├── scripts/
+│   └── README.md, create-product.ts, debug-search.ts, seed-search.ts, seed.ts,
+│      setup-meilisearch.ts, test-order-link.ts, test-search-query.ts,
+│      test-subscriber.ts
+│
+├── subscribers/
+│   └── README.md, inventory-updated.ts, order-payment-captured.ts,
+│      order-placed.ts, price-updated.ts, product-deleted.ts,
+│      product-upsert.ts
+│
+├── utils/
+│   └── apparel-guard.ts, normalize-variant-sku.ts,
+│      validate-vendor-ownership.ts
+│
+└── workflows/
+    ├── README.md
+    └── marketplace/
+        ├── create-vendor/
+        │   ├── index.ts
+        │   └── steps/ → create-vendor-admin.ts, create-vendor.ts
+        ├── create-vendor-product/ → index.ts
+        ├── delete-vendor-product/ → index.ts
+        ├── process-order-payment-splits/
+        │   ├── index.ts
+        │   └── steps/ → calculate-splits.ts, execute-transfers.ts
+        └── update-vendor-product/
+            ├── index.ts
+            └── reconcile.ts

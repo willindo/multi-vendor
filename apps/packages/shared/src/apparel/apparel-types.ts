@@ -40,6 +40,7 @@ export type Pattern =
   | "STRIPED"
   | "CHECKED"
   | "FLORAL"
+  | "OTHER"
 
 export type StyleType =
   | "CASUAL"

@@ -174,6 +174,7 @@ Product (Commerce Root) = decoupled database design schema tree
     │        ├── requires_shipping
     │        │
     │        ├── inventory_level
+    │        │    └── stocked_quantity
     │        └── reservation_item
     │
     └── Pricing Module Link
@@ -184,6 +185,9 @@ Product (Commerce Root) = decoupled database design schema tree
               │
               ▼
              price
+              ├── amount
+              └── currency_code
+            
 
     SELECT
     tc.table_name AS source_table,
@@ -215,7 +219,7 @@ JOIN information_schema.key_column_usage kcu
 JOIN information_schema.constraint_column_usage ccu
     ON ccu.constraint_name = tc.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
-AND ccu.table_name LIKE '%option%';
+AND ccu.table_name LIKE '%inventory%';
 
 
 SELECT
@@ -384,4 +388,13 @@ Standalone / Global Catalogs (Root records do NOT belong to any single product)
 ├── product_type (Global type directory)
 ├── product_tag (Global unique text string store)
 └── product_shipping_profile (Global fulfillment rule mappings)
+
+ SELECT                  
+    schemaname,
+    relname,
+    n_live_tup
+FROM pg_stat_user_tables
+WHERE n_live_tup > 0
+ORDER BY relname;
+(0 rows)
 
