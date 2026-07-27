@@ -1,65 +1,41 @@
 cd ~/medusa-dev/apps/my-medusa-store cd ~/medusa-dev/apps/my-storefront touch src/scripts/test-order-link.ts
-psql -U medusa -d medusa -h localhost rm -rf .medusa/server dist .medusa
+psql -U medusa -d medusa -h localhost rm -rf .medusa/server dist .medusa  | jq -R -s 'split("\n") | map(select(length > 0))' > tree.json && pnpm medusa exec ./scripts/format-tree.ts
 psql "postgresql://medusa:medusa@localhost:5432/medusa"
 mkdir -p src/modules/vendor/{models,services}
 touch src/modules/vendor/index.ts
 touch src/modules/vendor/models/vendor.ts*
 touch src/modules/vendor/services/vendor-service.ts
+find . -name ".env*" -exec cat {} \; \
+| grep -E '^[A-Z0-9_]+=' \
+| sort \
+| uniq
+You can use Find & Replace to clean them up right after pasting:
 
-AuthIdentity data model -=- app_metadata -- custom actor type = manger 
-Manage multiple vendors, each having vendor admins.
-Allow vendor admins to manage the vendor’s products and orders.
-Split orders placed by customers into multiple orders for each vendor.
-const VendorAdmin = model.define("vendor_admin", 
-const Vendor = model.define("vendor", {
-    src/modules/marketplace/service.ts
-import { MedusaService } from "@medusajs/framework/utils"
-import Vendor from "./models/vendor"
-import VendorAdmin from "./models/vendor-admin"
-
-class MarketplaceModuleService extends MedusaService({
-  Vendor,
-  VendorAdmin,
+Press Ctrl+H (Find & Replace)
+Click the .* (regex) button to enable regex
+Pattern	Removes
+^\s*\n	Lines with only whitespace
+^$\n	Strictly empty lines
+(\n\s*){2,}	Consecutive blank lines (collapse to one)
+In Replace: (leave blank)
+Click Replace All
+✅ To limit it to your selection only, check "Find in Selection" icon (the ≡ icon or Alt+L)
+The sed -i '/^\s*$/d' command is the fastest one-liner — it removes all blank/whitespace-only lines in-place.
 pnpm medusa db:generate marketplace
 pnpm medusa db:migrate 
-Understanding Authentication#
-Before proceeding further, you need to understand some concepts related to authenticating users, especially those of custom actor types.
-
-An actor type is a type of user that can send an authenticated requests. Medusa has two default actor types: customer for customers, and admin for admin users.
-
-You can also create custom actor types, allowing you to authenticate your custom users to specific routes. In this recipe, your custom actor type would be the vendor's admin.
-
-When you create a user of the actor type (for example, a vendor admin), you must:
-
-Retrieve a registration JWT token. Medusa has a /auth/{actor_type}/emailpass/register route to retrieve a registration JWT token for the specified actor type.
-Create the user. This requires creating the user in the database, and associate an auth identity with that user. An auth identity allows this user to later send authenticated requests.
-Retrieve an authenticated JWT token using Medusa's /auth/{actor_type}/emailpass route, which retrieves the token for the specified actor type if the credentials in the request body match a user in the database.
-In the next steps, you'll implement the logic to create a vendor and its admin around the above authentication flow. You can also refer to the following documentation pages to learn more about authentication in Medusa:
-
-
-he workflow accepts two parameters:
-
-vendor_admin_id: The ID of the vendor admin creating the product.
-product: The details of the product to create.
-In the workflow, you first retrieve the default sales channel in the store. This is necessary, as the product can only be purchased in the sales channels it's available in.
-
-Then, you prepare the product's data, combining what's
-All API Routes are prefixed with /admin. So, during development, the API Routes will be available under the path http://localhost:9000/admin. For production, replace http://localhost:9000 with your Medusa application URL. 
-The MarketplaceModuleService extends MedusaService from the Modules SDK which generates a class with data-management methods for your module's data models. This saves you time on implementing Create, Read, Update, and Delete (CRUD) methods.
-So, the MarketplaceModuleService class now has methods like createVendors and retrieveVendorAdmin.
-A module is a reusable package of functionalities related to a single domain or integration. Medusa comes with multiple pre-built modules for core commerce needs, such as the Cart Module that holds the data models and business logic for cart operations.
 
 EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
 EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
 -o -path "*//*" -o -path "*/*edit*/*" -o -iname "*product*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
 -not -path "*/*.medusa/*" -not -path "*/node_modules/*" 
 EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
+EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*" -not -iname "index*" -not -iname "*txt*" -not -iname "*apparel"'
 
 INCL_UDES='-path "*//*" -o -iname "*tsconfig*"' 
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/api/*" ' 
-EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*" -not -iname "*lock*" -not -iname "*.cjs"'
+INCL_UDES='-path "*/update-vendor-product*" ' 
+EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -iname "*txt*" -not -iname "*apparel*"'
 eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
  
@@ -76,10 +52,10 @@ echo "=== Files with process.env (excluding .next and config) ===" && \
   --exclude-dir=.next \
   --exclude="*.config.js" \
   --exclude="*.sitemap.js" 
-
+/home/badsha/medusa-dev/apps/my-storefront/src/app/vendor/dashboard/products/VendorProductsClientTable.tsx
 # Find all imports of SkeletonCartItem
 grep -r "import.*@modules/store/templates*" --include="*.tsx" --include="*.ts" .
-grep -r "import.*products/templates/index" --include="*.tsx" --include="*.ts" .
+grep -r "import.*VendorProduct*" --include="*.tsx" --include="*.ts" .
 
 # Find all imports from skeleton-cart-item path
 grep -r "skeleton-cart-item" --include="*.tsx" --include="*.ts" .
@@ -238,3 +214,39 @@ src/
         └── update-vendor-product/
             ├── index.ts
             └── reconcile.ts
+
+            
+The rule of thumb for standard TS/JS formatting:
+
+Blank line between import block → code
+Blank line between logically unrelated statements (resolves, guards, computed values)
+No blank line inside a single logical group (e.g., consecutive resolves or consecutive apparel fields)
+# Install in your project
+pnpm add -D prettier
+
+# Format a file
+npx prettier --write src/subscribers/product-upsert.ts
+npx prettier --write   →  fixes indentation, quotes, commas, line-length
+                           NEVER adds blank lines
+
+npx eslint --fix       →  can ADD/REMOVE blank lines via rules
+                           does NOT fix indentation
+
+Prettier + ESLint      →  complete auto-formatting ✅ # Run both together (one after the other)
+npx prettier --write src/lib/search/build-product-document.ts && npx eslint --fix src/lib/search/build-product-document.ts
+# STEP 1: Create config (one time only)
+echo '{"semi":true,"singleQuote":false,"printWidth":100}' > .prettierrc
+
+# STEP 2: Run whenever you want on any file
+npx prettier --write src/subscribers/product-upsert.ts && npx eslint --fix src/subscribers/product-upsert.ts
+// .vscode/settings.json  ← one-time setup
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  }
+}
+
+
+
+

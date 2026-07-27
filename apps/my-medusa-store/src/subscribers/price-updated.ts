@@ -1,4 +1,3 @@
-// src/subscribers/price-updated.ts
 import { SubscriberArgs, type SubscriberConfig } from "@medusajs/framework";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import productUpsertHandler from "./product-upsert";
@@ -16,23 +15,45 @@ export default async function priceUpdatedHandler({
             fields: ["product_id"],
             filters: {
                 price_set: { id: priceSetId }
-            } as any // 🟢 Cast as any to bypass Medusa's strict internal query types
+            } as any
         });
 
-        const productId = (variants as any[])?.[0]?.product_id;
+        const productIds = [
+            ...new Set(
+                (variants as any[])
+                    .map((v: any) => v.product_id)
+                    .filter(Boolean)
+            ),
+        ];
+        if (!productIds.length) {
+            return;
+        }
 
-        if (productId) {
-            console.log(`💰 Price shift detected for variant linked to product: ${productId}. Synchronizing...`);
+        for (const productId of productIds) {
+            console.log(
+                `💰 Price update detected for product: ${productId}. Re-indexing Meilisearch...`
+            );
+
             await productUpsertHandler({
-                event: { name: "product.updated", data: { id: productId }, metadata: {} },
-                container, pluginOptions: {}
+                event: {
+                    name: "product.updated",
+                    data: { id: productId },
+                    metadata: {},
+                },
+                container,
+                pluginOptions: {},
             } as any);
         }
     } catch (error: any) {
-        console.error(`❌ Price update sync intercept failed:`, error.message);
+        console.error(`❌ Price update subscriber failed:`, error.message);
     }
 }
 
 export const config: SubscriberConfig = {
-    event: ["price.updated", "price-set.updated"],
+    event: [
+        "price.updated",
+        "price.created",
+        "price-set.updated",
+        "price-list.updated"
+    ],
 };

@@ -3,7 +3,7 @@ cd /home/badsha/medusa-dev/apps/my-medusa-store
  npx medusa exec ./src/scripts/master-product-purge.ts
 npx medusa exec src/scripts/create-product.ts jwala@example.com supersecret product_1.json
 tree -J ./src -I "migration*" > tree.json && npx tsx
-
+> report-list.txt && npx tsx  pnpm medusa exec ./scripts/format-list.ts pnpm medusa exec ./scripts/format-tree.ts
 chmod +x create-vendor.sh
 ./create-vendor.sh
 ./create-vendor.sh nihal@example.com supersecret

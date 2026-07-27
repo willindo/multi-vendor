@@ -33,7 +33,7 @@ interface ProductOptionValue {
 }
 
 interface ProductVariant {
-    id: string
+
     title: string
     sku: string
     inventory_quantity: number
@@ -60,28 +60,35 @@ export function hydrateVariantRows(product: Product): VariantMatrixRow[] {
         return []
     }
 
-    return product.variants.map((variant) => {
+    return product.variants.map((variant: any) => {
         // Build options array from variant options
         // Note: Medusa doesn't return options in the variant by default
         // We need to build them from the product options and variant values
         const options = buildVariantOptions(product, variant)
 
         // Get price from variant
-        const price = variant.prices?.[0]?.amount
-            ? variant.prices[0].amount / 100
-            : 0
+        const rawAmount = variant.price_amount ?? variant.prices?.[0]?.amount ?? 0;
+        const price = rawAmount ? rawAmount / 100 : 0;
+
+        const currencyCode = (
+            variant.currency_code ??
+            variant.prices?.[0]?.currency_code ??
+            "USD"
+        ).toUpperCase();
+
+        const priceId = variant.price_id ?? variant.prices?.[0]?.id;
 
         return {
             id: variant.id,
             title: variant.title,
             sku: variant.sku,
             price: price,
-            currencyCode: variant.prices?.[0]?.currency_code?.toUpperCase() || "USD",
-            inventoryQuantity: variant.inventory_quantity || 0,
+            currencyCode: currencyCode,
+            inventoryQuantity: variant.stocked_quantity ?? variant.inventory_quantity ?? 0,
             manageInventory: variant.manage_inventory !== undefined ? variant.manage_inventory : true,
             options: options,
             enabled: true,
-            priceId: variant.prices?.[0]?.id,
+            priceId: priceId,
         }
     })
 }
@@ -201,12 +208,23 @@ export function hydrateCommerceFields(product: Product) {
         }
     }
 
-    const firstVariant = product.variants[0]
+    const firstVariant = product.variants[0] as any;
+
+    // 🟢 Apply identical mapping logic for the default base values
+    const rawAmount = firstVariant.price_amount ?? firstVariant.prices?.[0]?.amount ?? 0;
+    const priceAmount = rawAmount ? rawAmount / 100 : 0;
+
+    const currencyCode = (
+        firstVariant.currency_code ??
+        firstVariant.prices?.[0]?.currency_code ??
+        "USD"
+    ).toUpperCase();
+
     return {
         sku: firstVariant.sku || "",
-        inventoryQuantity: firstVariant.inventory_quantity || 10,
+        inventoryQuantity: firstVariant.stocked_quantity ?? firstVariant.inventory_quantity ?? 10,
         manageInventory: firstVariant.manage_inventory !== undefined ? firstVariant.manage_inventory : true,
-        priceAmount: firstVariant.prices?.[0]?.amount ? firstVariant.prices[0].amount / 100 : 0,
-        currencyCode: firstVariant.prices?.[0]?.currency_code?.toUpperCase() || "USD",
+        priceAmount: priceAmount,
+        currencyCode: currencyCode,
     }
 }

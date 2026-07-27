@@ -19,6 +19,10 @@ type Props = {
   className?: string
 }
 
+// Helper function to capitalize first letter (e.g. "SIZE" -> "Size", "COLOR" -> "Color")
+const toTitleCase = (str: string) =>
+  str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+
 export default function VariantMatrixBuilder({
   category,
   subcategory,
@@ -43,7 +47,7 @@ export default function VariantMatrixBuilder({
     const hydratedSelections: Record<string, string[]> = {}
 
     dimensions.forEach((dimension) => {
-      // Match case-insensitively so "Size" from old data hydrates into "SIZE" bucket
+      // Match case-insensitively so old data hydrates cleanly into the dimension bucket
       const match = initialOptions.find(
         (o) => o.name.toUpperCase() === dimension.toUpperCase()
       )
@@ -119,12 +123,12 @@ export default function VariantMatrixBuilder({
   }, [dimensions, selections, disabled])
 
   // Build variant options for generation.
-  // Dimension names are kept in UPPERCASE to match ApparelVariantDimension literals
-  // ("SIZE", "COLOR", "MATERIAL") and the product_option.title stored in the DB.
+  // Dimension names are transformed to Title Case ("Size", "Color", "Material")
+  // to match the exact casing of product_option.title stored in the Medusa database.
   const variantOptions = useMemo(() => {
     return dimensions.map(
       (dimension): VariantOption => ({
-        name: dimension.toUpperCase(),
+        name: toTitleCase(dimension),
         values: selections[dimension] ?? [],
       })
     )

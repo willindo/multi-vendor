@@ -1,74 +1,89 @@
 {
-  "title": "Classic Linen T-Shirt White",
-  "subtitle": "Everyday Essential",
-  "description": "A comfortable and versatile linen-shirt for daily wear.",
-  "handle": "classic-linen-t-shirt-white",
+  "title": "Wooleen Shorts Casual Wear",
+  "handle": "wooleen-shorts-casual-wear",
+  "description": "",
   "status": "published",
-  "weight": 200,
-  "origin_country": "IN",
-  "material": "50% Cotton",
+  "weight": "0",
+  "thumbnail": "",
+  "type_id": null,
+  "collection_id": null,
   "metadata": {
-    "vendor_id": "vendor_1776923080"
+    "vendor_id": "authenticated",
+    "updated_from": "vendor_dashboard",
+    "source": "edit_product_form",
+    "updated_at": "2026-07-26T16:24:03.029Z"
   },
   "options": [
     {
       "title": "Size",
       "values": [
-        "L",
-        "XXL"
+        "28",
+        "32"
       ]
     },
     {
       "title": "Color",
       "values": [
-        "White"
+        "teal"
       ]
     }
   ],
   "variants": [
     {
-      "title": "L / White",
-      "sku": "CCT-L-WHT",
+      "id": "variant_01KYF2M8C0NTCE35GJKHWDMEKM",
+      "title": "28 / teal",
+      "sku": "01kx3xb4-SKU-28-TEAL",
+      "inventory_quantity": 38,
       "manage_inventory": true,
-      "allow_backorder": false,
-      "inventory_quantity": 40,
+      "currency_code": "inr",
       "prices": [
         {
-          "amount": 1600,
+          "id": "price_01KYF2M8JSXWEG3JGGBXS8VH0G",
+          "amount": 10600,
           "currency_code": "inr"
         }
       ],
       "options": {
-        "Size": "L",
-        "Color": "White"
+        "Size": "28",
+        "Color": "teal"
       }
     },
     {
-      "title": "XXL / White",
-      "sku": "CCT-XXL-WHT",
+      "id": "variant_01KYF2M8C4CZCAHQ0CRAPNYKGM",
+      "title": "32 / teal",
+      "sku": "01kx3xb4-SKU-32-TEAL",
+      "inventory_quantity": 46,
       "manage_inventory": true,
-      "allow_backorder": false,
-      "inventory_quantity": 70,
+      "currency_code": "inr",
       "prices": [
         {
-          "amount": 4300,
+          "id": "price_01KYF2M8JVJYVZQAF5TM9J42VK",
+          "amount": 12500,
           "currency_code": "inr"
         }
       ],
       "options": {
-        "Size": "XXL",
-        "Color": "White"
+        "Size": "32",
+        "Color": "teal"
       }
     }
   ],
   "apparel_detail": {
-    "garment_category": "TOP",
-    "garment_subcategory": "T_SHIRT",
+    "gender": "UNISEX",
+    "age_group": "ADULT",
+    "sizing_group": "UNISEX",
+    "garment_category": "BOTTOM",
+    "garment_subcategory": "TROUSERS",
     "fit": "REGULAR",
-    "pattern": "SOLID",
+    "pattern": "PRINTED",
     "style_type": "CASUAL",
-    "sleeve_type": "SHORT",
-    "neck_type": "ROUND_NECK",
-    "material_type": "COTTON"
-  }
+    "occasion": "CASUAL",
+    "material_type": "WOOL",
+    "material_composition": "50% Woollen",
+    "care_instructions": "Machine wash cold",
+    "season": "ALL_SEASON",
+    "condition": "NEW",
+    "id": "01KYF2M8SGN2DQC74SX1BWC2Z5"
+  },
+  "deleted_variant_ids": []
 }

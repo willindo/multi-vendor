@@ -6,12 +6,12 @@ import productUpsertHandler from "./product-upsert";
 export default async function inventoryUpdatedHandler({
     event: { data },
     container,
-}: SubscriberArgs<{ id: string }>) {
-    const inventoryItemId = data.id;
+}: SubscriberArgs<{ id: string; inventory_item_id?: string }>) {
+    // If the event is inventory-level.updated, data.inventory_item_id is provided
+    const inventoryItemId = data.inventory_item_id || data.id;
     const query = container.resolve(ContainerRegistrationKeys.QUERY);
 
     try {
-        // Traverse up the graph: Inventory Item ID -> Product Variant -> Product ID
         const { data: variants } = await query.graph({
             entity: "product_variant",
             fields: ["product_id"],
@@ -20,22 +20,41 @@ export default async function inventoryUpdatedHandler({
             } as any
         });
 
-        const productId = variants[0]?.product_id;
+        const productIds = [
+            ...new Set(
+                (variants as any[])
+                    .map((v: any) => v.product_id)
+                    .filter(Boolean)
+            ),
+        ];
+        if (!productIds.length) {
+            return;
+        }
+        for (const productId of productIds) {
+            console.log(
+                `📦 Inventory update detected for product: ${productId}. Re-indexing Meilisearch...`
+            );
 
-        if (productId) {
-            console.log(`📦 Stock variation detected for item linked to product: ${productId}. Synchronizing...`);
-
-            // Forward the execution to your main search document builder
             await productUpsertHandler({
-                event: { name: "product.updated", data: { id: productId }, metadata: {} },
-                container, pluginOptions: {},
+                event: {
+                    name: "product.updated",
+                    data: { id: productId },
+                    metadata: {},
+                },
+                container,
+                pluginOptions: {},
             } as any);
         }
     } catch (error: any) {
-        console.error(`❌ Inventory updates sync tracking failed:`, error.message);
+        console.error(`❌ Inventory update subscriber failed:`, error.message);
     }
 }
 
 export const config: SubscriberConfig = {
-    event: ["inventory-item.updated"],
+    event: [
+        "inventory-item.updated",
+        "inventory-level.updated",
+        "inventory-level.created",
+        "inventory-level.deleted"
+    ],
 };

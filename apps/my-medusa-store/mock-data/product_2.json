@@ -1,0 +1,93 @@
+{
+    "title": "Premium Cotton Leggings",
+    "handle": "premium-cotton-Leggings",
+    "description": "High-quality premium cotton Leggings with modern fit.",
+    "subtitle": "Comfortable Everyday Wear",
+    "status": "published",
+    "options": [
+        {
+            "title": "Size",
+            "values": [
+                "S",
+                "M",
+                "L",
+                "XL"
+            ]
+        },
+        {
+            "title": "Color",
+            "values": [
+                "Khaki",
+                "Navy",
+                "White"
+            ]
+        }
+    ],
+    "variants": [
+        {
+            "title": "S / Khaki",
+            "options": {
+                "Size": "S",
+                "Color": "Khaki"
+            },
+            "inventory_quantity": 50,
+            "manage_inventory": true,
+            "allow_backorder": false,
+            "prices": [
+                {
+                    "amount": 2999,
+                    "currency_code": "usd"
+                }
+            ]
+        },
+        {
+            "title": "M / Khaki",
+            "options": {
+                "Size": "M",
+                "Color": "Khaki"
+            },
+            "inventory_quantity": 75,
+            "manage_inventory": true,
+            "allow_backorder": false,
+            "prices": [
+                {
+                    "amount": 2999,
+                    "currency_code": "usd"
+                }
+            ]
+        },
+        {
+            "title": "XL / White",
+            "options": {
+                "Size": "XL",
+                "Color": "White"
+            },
+            "inventory_quantity": 30,
+            "manage_inventory": true,
+            "allow_backorder": false,
+            "prices": [
+                {
+                    "amount": 2999,
+                    "currency_code": "usd"
+                }
+            ]
+        }
+    ],
+    "apparel_detail": {
+        "gender": "unisex",
+        "age_group": "adult",
+        "sizing_group": "standard",
+        "garment_category": "bottom",
+        "garment_subcategory": "Leggings",
+        "fit": "regular",
+        "pattern": "solid",
+        "style_type": "casual",
+        "occasion": "everyday",
+        "neck_type": "crew",
+        "material_type": "cotton",
+        "material_composition": "100% premium cotton",
+        "care_instructions": "Machine wash cold, tumble dry low",
+        "season": "all",
+        "condition": "new"
+    }
+}

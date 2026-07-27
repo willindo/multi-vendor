@@ -199,8 +199,10 @@ export default function CreateProductFormClient({
 
         return {
           ...combination,
+          id: undefined,
           sku: derivedSku,
-          price: combination.price ?? priceAmount,
+          // Use variant price, fall back to root price, fall back to 0
+          price: combination.price ?? (priceAmount > 0 ? priceAmount : 0),
           inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
           currencyCode: currencyCode.toLowerCase(),
           enabled: true,
@@ -258,10 +260,13 @@ export default function CreateProductFormClient({
         return
       }
 
-      if (priceAmount <= 0) {
-        setSubmitError("Please enter a valid price greater than 0.")
-        setIsSubmitting(false)
-        return
+      const hasValidPricing = priceAmount > 0 ||
+        (variantRows.length > 0 && variantRows.every(v => !v.enabled || (v.price && v.price > 0)));
+
+      if (!hasValidPricing) {
+        setSubmitError("Please configure a valid retail price or ensure all enabled variants have a price configured.");
+        setIsSubmitting(false);
+        return;
       }
 
       const validation = validateOptions()
@@ -598,7 +603,7 @@ export default function CreateProductFormClient({
         </button>
         <button
           type="submit"
-          disabled={isSubmitting || !title.trim() || !handle.trim() || priceAmount <= 0}
+          disabled={isSubmitting || !title.trim() || !handle.trim()}
           className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
         >
           {isSubmitting ? (

@@ -1,13 +1,14 @@
-// /src/api/vendors/products/[id]/route.ts
+// src/api/vendors/products/[id]/route.ts
+
 import {
     AuthenticatedMedusaRequest,
     MedusaResponse,
 } from "@medusajs/framework/http";
+import { Modules } from "@medusajs/framework/utils";
 import { validateAndCleanApparelInput } from "@/utils/apparel-guard";
 import { validateVendorProductOwnership } from "@/utils/validate-vendor-ownership";
 import deleteVendorProductWorkflow from "@/workflows/marketplace/delete-vendor-product";
-import updateVendorProductWorkflow from "@/workflows/marketplace/update-vendor-product/index ";
-// ✅ Make sure this import works
+import updateVendorProductWorkflow, { WorkflowInput } from "@/workflows/marketplace/update-vendor-product/index ";
 
 export const GET = async (
     req: AuthenticatedMedusaRequest,
@@ -20,13 +21,26 @@ export const GET = async (
         await validateVendorProductOwnership(req.scope, actor_id, product_id);
 
         const query = req.scope.resolve("query");
+        const inventoryService = req.scope.resolve(Modules.INVENTORY);
 
-        const { data: [product] } = await query.graph({
+        // 1. Fetch product with all fields (Default empty array avoids destructuring error)
+        const { data: [product] = [] } = await query.graph({
             entity: "product",
             fields: [
-                "id", "title", "handle", "subtitle", "description", "status",
-                "thumbnail", "weight", "length", "height", "width",
-                "origin_country", "material", "metadata",
+                "id",
+                "title",
+                "handle",
+                "subtitle",
+                "description",
+                "status",
+                "thumbnail",
+                "weight",
+                "length",
+                "height",
+                "width",
+                "origin_country",
+                "material",
+                "metadata",
                 "options.id",
                 "options.title",
                 "options.values.id",
@@ -35,15 +49,15 @@ export const GET = async (
                 "variants.title",
                 "variants.sku",
                 "variants.manage_inventory",
-                "variants.options.id",
+                "variants.allow_backorder",
+                "variants.inventory_quantity",
+                "variants.options.option_id",
                 "variants.options.value",
                 "variants.price_set.id",
                 "variants.price_set.prices.id",
                 "variants.price_set.prices.amount",
                 "variants.price_set.prices.currency_code",
-                // "variants.inventory_items.*",
-                "variants.price_set.prices.amount", "variants.price_set.prices.currency_code",
-                // "variants.inventory_items.inventory_item.inventory_levels.stocked_quantity",
+                "variants.inventory_items.inventory_item_id",
                 "apparel_detail.id",
                 "apparel_detail.gender",
                 "apparel_detail.age_group",
@@ -61,97 +75,204 @@ export const GET = async (
                 "apparel_detail.care_instructions",
                 "apparel_detail.season",
                 "apparel_detail.condition",
-
             ],
-            filters: { id: product_id }
+            filters: { id: product_id },
         });
 
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        // 🔄 Enrich variants (Updated for Medusa v2 structural layout)
-        const enrichedVariants = product.variants?.map((variant: any) => {
-            const price = variant.price_set?.prices?.[0] || null;
+        // 2. Collect inventory item IDs
+        const inventoryItemIds = (product.variants ?? []).flatMap((variant: any) =>
+            (variant.inventory_items ?? [])
+                .map((item: any) => item.inventory_item_id)
+                .filter(Boolean)
+        );
 
-            // Compute total stock across inventory item variants
-            const inventoryQuantity = variant.inventory_items?.reduce((invAcc: number, inv: any) => {
-                const item = inv?.inventory_item;
-                const quantity = item?.inventory_levels?.[0]?.stocked_quantity ?? 0;
-                return invAcc + quantity;
-            }, 0) ?? 0;
+        // 3. Fetch inventory levels
+        const inventoryLevels = inventoryItemIds.length
+            ? await inventoryService.listInventoryLevels({
+                inventory_item_id: inventoryItemIds,
+            })
+            : [];
+
+        // 4. Build inventory map
+        const inventoryMap = new Map(
+            inventoryLevels.map((level: any) => [
+                level.inventory_item_id,
+                level.stocked_quantity,
+            ])
+        );
+
+        // 5. Enrich variants with inventory and price data
+        const enrichedVariants = (product.variants ?? []).map((variant: any) => {
+            const prices = variant.price_set?.prices || [];
+            const primaryPrice = prices[0] || null;
+
+            const inventoryItemId = variant.inventory_items?.[0]?.inventory_item_id;
+            const stockedQuantity = inventoryMap.get(inventoryItemId) ?? 0;
+
+            const enrichedInventoryItems = (variant.inventory_items ?? []).map((item: any) => ({
+                ...item,
+                stocked_quantity: inventoryMap.get(item.inventory_item_id) ?? 0,
+            }));
 
             return {
                 ...variant,
-                price_amount: price?.amount || 0,
-                currency_code: price?.currency_code || "USD",
-                inventory_quantity: inventoryQuantity,
-                price_id: price?.id || null,
+                price_amount: primaryPrice?.amount ?? 0,
+                currency_code: primaryPrice?.currency_code ?? "USD",
+                price_id: primaryPrice?.id ?? null,
+                prices, // Keep raw prices array intact if vendor dashboard needs multi-currency
+                inventory_quantity: stockedQuantity,
+                stocked_quantity: stockedQuantity,
+                inventory_items: enrichedInventoryItems,
             };
-        }) || [];
+        });
 
+        // 6. Calculate total product inventory
+        const totalInventory = enrichedVariants.reduce(
+            (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
+            0
+        );
+
+        // 7. Return enriched product
         return res.json({
             product: {
                 ...product,
                 variants: enrichedVariants,
-            }
+                inventory_quantity: totalInventory,
+            },
         });
 
-    } catch (error) {
-        console.error("GET SINGLE PRODUCT ROUTE ERROR:", error);
-        throw error;
+    } catch (error: any) {
+        console.error("GET SINGLE PRODUCT ERROR:", error);
+        return res.status(500).json({
+            message: error.message || "Failed to fetch product",
+        });
     }
 };
 
+/**
+ * Helper to strip non-entity fields from variant update payloads
+ */
+function sanitizeVariantForUpdate(variant: Record<string, any>) {
+    const allowedFields = [
+        "id",
+        "title",
+        "sku",
+        "barcode",
+        "ean",
+        "upc",
+        "hs_code",
+        "mid_code",
+        "allow_backorder",
+        "manage_inventory",
+        "weight",
+        "length",
+        "height",
+        "width",
+        "origin_country",
+        "material",
+        "metadata",
+        "variant_rank",
+    ];
+
+    const cleanVariant: Record<string, any> = {};
+
+    for (const field of allowedFields) {
+        if (variant[field] !== undefined) {
+            cleanVariant[field] = variant[field];
+        }
+    }
+
+    return cleanVariant;
+}
+
+// Inside your PATCH route handler:
 export const PATCH = async (
     req: AuthenticatedMedusaRequest<any>,
     res: MedusaResponse,
 ) => {
     try {
-        console.log("================================");
-        console.log("PATCH PRODUCT");
-        console.log("params:", req.params);
-        console.log("body:", JSON.stringify(req.body, null, 2));
-        console.log("================================");
-
+        console.log("==========================================");
+        console.log("📝 PATCH PRODUCT");
+        console.log("Product ID:", req.params.id);
+        console.log("Body:", JSON.stringify(req.body, null, 2));
+        console.log("==========================================");
         const product_id = req.params.id;
         const actor_id = req.auth_context.actor_id;
 
         await validateVendorProductOwnership(req.scope, actor_id, product_id);
 
-        const apparelData = req.body.apparel_detail
-            ? validateAndCleanApparelInput(req.body)
-            : undefined;
+        const rawVariants = req.body.variants || req.body.variants_to_update || [];
 
-        const updateData: any = {};
+        // 1. Sanitize variants to ONLY contain core ProductVariant entity fields
+        const cleanVariantsToUpdate = rawVariants
+            .filter((v: any) => v.id) // Only existing variants
+            .map(sanitizeVariantForUpdate);
+
+        // 3. Extract Core Product Fields
+        const coreProductData: Record<string, any> = {};
         const coreFields = ["title", "handle", "description", "status", "subtitle", "weight"];
+
         for (const field of coreFields) {
             if (req.body[field] !== undefined) {
-                updateData[field] = req.body[field];
+                coreProductData[field] = req.body[field];
             }
         }
 
-        // ✅ Execute workflow
+        if (req.body.product_data) {
+            Object.assign(coreProductData, req.body.product_data);
+        }
+        const apparelData = validateAndCleanApparelInput(req.body);
+
+        // 2. Extract price updates for your pricing step workflow
+        const priceUpdates = rawVariants
+            .filter((v: any) => v.id && (v.prices?.length || v.currency_code))
+            .map((v: any) => ({
+                variant_id: v.id,
+                prices: v.prices || [
+                    {
+                        amount: v.price_amount,
+                        currency_code: v.currency_code,
+                    },
+                ],
+            }));
+
+        // 3. Extract inventory updates for your inventory step workflow
+        const inventoryUpdates = rawVariants
+            .filter((v: any) => v.id && v.inventory_quantity !== undefined)
+            .map((v: any) => ({
+                variant_id: v.id,
+                stocked_quantity: Number(v.inventory_quantity),
+            }));
+
+        // 4. Construct Workflow Input
+        const workflowInput: WorkflowInput = {
+            vendor_admin_id: actor_id,
+            product_id,
+            product_data: coreProductData,
+            sales_channel_ids: req.body.sales_channel_ids,
+            apparel_details: apparelData,
+            variants_to_create: req.body.variants_to_create || [],
+            variants_to_update: cleanVariantsToUpdate, // Pure variant entity updates
+            variants_to_delete: req.body.deleted_variant_ids || req.body.variants_to_delete || [],
+            inventory_updates: inventoryUpdates,      // Passed separately to Inventory step
+            price_updates: priceUpdates,              // Passed separately to Pricing step
+            location_id: req.body.location_id || process.env.MEDUSA_STOCK_LOCATION_ID,
+        };
+
         const { result } = await updateVendorProductWorkflow(req.scope).run({
-            input: {
-                product_id,
-                product: updateData,
-                variants: req.body.variants || [],
-                variants_to_delete: req.body.variants_to_delete || [],
-                options: req.body.options || [],
-                vendor_admin_id: actor_id,
-                apparel_detail: apparelData,
-                location_id: req.body.location_id || process.env.MEDUSA_STOCK_LOCATION_ID,
-            },
+            input: workflowInput,
         });
 
-        return res.json({
-            product: result.product
-        });
-
-    } catch (error) {
+        return res.json({ product: result });
+    } catch (error: any) {
         console.error("PATCH ROUTE ERROR:", error);
-        throw error;
+        return res.status(400).json({
+            message: error.message || "Failed to update product",
+        });
     }
 };
 
@@ -170,11 +291,14 @@ export const DELETE = async (
         });
 
         return res.json({
-            deleted: true
+            success: true,
+            message: "Product deleted successfully"
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("DELETE ROUTE ERROR:", error);
-        throw error;
+        return res.status(400).json({
+            message: error.message || "Failed to delete product"
+        });
     }
 };

@@ -86,7 +86,9 @@
     ]},
     {"type":"directory","name":"scripts","contents":[
       {"type":"file","name":"README.md"},
+      {"type":"file","name":"create-product-smart.ts"},
       {"type":"file","name":"create-product.ts"},
+      {"type":"file","name":"create-product1.ts"},
       {"type":"file","name":"debug-search.ts"},
       {"type":"file","name":"seed-search.ts"},
       {"type":"file","name":"seed.ts"},
@@ -136,11 +138,20 @@
         ]},
         {"type":"directory","name":"update-vendor-product","contents":[
           {"type":"file","name":"index .ts"},
-          {"type":"file","name":"reconcile.ts"}
+          {"type":"file","name":"option-resolver.ts"},
+          {"type":"file","name":"reconcile.ts"},
+          {"type":"directory","name":"steps","contents":[
+            {"type":"file","name":"get-product.ts"},
+            {"type":"file","name":"sync-apparel.ts"},
+            {"type":"file","name":"update-inventory.ts"},
+            {"type":"file","name":"update-prices.ts"},
+            {"type":"file","name":"update-product.ts"}
+          ]},
+          {"type":"file","name":"suggest.txt"}
         ]}
       ]}
     ]}
   ]}
 ,
-  {"type":"report","directories":41,"files":60}
+  {"type":"report","directories":42,"files":69}
 ]

@@ -1,0 +1,161 @@
+cd ~/medusa-dev/apps/my-medusa-store cd ~/medusa-dev/apps/my-storefront touch src/scripts/test-order-link.ts
+psql -U medusa -d medusa -h localhost rm -rf .medusa/server dist .medusa
+psql "postgresql://medusa:medusa@localhost:5432/medusa"
+mkdir -p src/modules/vendor/{models,services}
+touch src/modules/vendor/index.ts
+touch src/modules/vendor/models/vendor.ts
+touch src/modules/vendor/services/vendor-service.ts
+
+AuthIdentity data model -=- app_metadata -- custom actor type = manger 
+Manage multiple vendors, each having vendor admins.
+Allow vendor admins to manage the vendor’s products and orders.
+Split orders placed by customers into multiple orders for each vendor.
+const VendorAdmin = model.define("vendor_admin", 
+const Vendor = model.define("vendor", {
+    src/modules/marketplace/service.ts
+import { MedusaService } from "@medusajs/framework/utils"
+import Vendor from "./models/vendor"
+import VendorAdmin from "./models/vendor-admin"
+
+class MarketplaceModuleService extends MedusaService({
+  Vendor,
+  VendorAdmin,
+pnpm medusa db:generate marketplace
+pnpm medusa db:migrate 
+Understanding Authentication#
+Before proceeding further, you need to understand some concepts related to authenticating users, especially those of custom actor types.
+
+An actor type is a type of user that can send an authenticated requests. Medusa has two default actor types: customer for customers, and admin for admin users.
+
+You can also create custom actor types, allowing you to authenticate your custom users to specific routes. In this recipe, your custom actor type would be the vendor's admin.
+
+When you create a user of the actor type (for example, a vendor admin), you must:
+
+Retrieve a registration JWT token. Medusa has a /auth/{actor_type}/emailpass/register route to retrieve a registration JWT token for the specified actor type.
+Create the user. This requires creating the user in the database, and associate an auth identity with that user. An auth identity allows this user to later send authenticated requests.
+Retrieve an authenticated JWT token using Medusa's /auth/{actor_type}/emailpass route, which retrieves the token for the specified actor type if the credentials in the request body match a user in the database.
+In the next steps, you'll implement the logic to create a vendor and its admin around the above authentication flow. You can also refer to the following documentation pages to learn more about authentication in Medusa:
+
+
+he workflow accepts two parameters:
+
+vendor_admin_id: The ID of the vendor admin creating the product.
+product: The details of the product to create.
+In the workflow, you first retrieve the default sales channel in the store. This is necessary, as the product can only be purchased in the sales channels it's available in.
+
+Then, you prepare the product's data, combining what's
+All API Routes are prefixed with /admin. So, during development, the API Routes will be available under the path http://localhost:9000/admin. For production, replace http://localhost:9000 with your Medusa application URL. 
+The MarketplaceModuleService extends MedusaService from the Modules SDK which generates a class with data-management methods for your module's data models. This saves you time on implementing Create, Read, Update, and Delete (CRUD) methods.
+So, the MarketplaceModuleService class now has methods like createVendors and retrieveVendorAdmin.
+A module is a reusable package of functionalities related to a single domain or integration. Medusa comes with multiple pre-built modules for core commerce needs, such as the Cart Module that holds the data models and business logic for cart operations.
+
+EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
+EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
+-o -path "*//*" -o -path "*/*edit*/*" -o -iname "*product*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
+-not -path "*/*.medusa/*" -not -path "*/node_modules/*" 
+
+INCL_UDES='-path "*//*" -o -iname "*tsconfig*"' 
+EXCLUDE_PATHS=(-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*")
+EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
+ 
+cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
+INCL_UDES='-path "*/*product*/*" -o -iname "*apparel*" ' 
+EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/utils/*" -not -path "*/workflows/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
+eval find . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
+ $cont_ents
+ 
+contents=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;)
+INCLUDES=(-path "./packages/*"")
+EXCL_UDE_PATHS='-not -path "*/*.next/*"  -not -path "*/*.medusa/*" -not -path "*/node_modules/*" -not -iname "*.tsx" -not -iname "*lock*" -not -iname "*.cjs"'
+find . \( "${INCLUDES[@]}" \)  -type f \( "${EXCLUDE_PATHS[@]}" \) -print 
+   "${contents[@]}"  
+
+-exec grep -l "process\.env" {} \;  rl= list , rn= content with line numbers
+grep -r "import.*@shared/apparel*" --include="*.tsx" --include="*.ts" .
+echo "=== Files with process.env (excluding .next and config) ===" && \
+ grep -rl --include="*.ts" --include="*.js" --include="*.tsx" --include="*.jsx" "process\.env" . \
+  --exclude-dir=.next \
+  --exclude="*.config.js" \
+  --exclude="*.sitemap.js" 
+
+# Find all imports of SkeletonCartItem
+grep -r "import.*@modules/store/templates*" --include="*.tsx" --include="*.ts" .
+grep -r "import.*products/templates/index" --include="*.tsx" --include="*.ts" .
+
+# Find all imports from skeleton-cart-item path
+grep -r "skeleton-cart-item" --include="*.tsx" --include="*.ts" .
+
+# Or use ripgrep if installed (faster)
+rg "SkeletonCartItem" --type tsx --type ts
+
+# Find all usages (not just imports)
+grep -r "garment" --include="*.tsx" --include="*.ts" --exclude-dir=.next --exclude-dir=*node* .
+
+medusa=# SELECT
+    schemaname,
+    relname,
+    n_live_tup
+FROM pg_stat_user_tables
+WHERE n_live_tup > 0
+ORDER BY relname;
+
+TRUNCATE TABLE 
+  public.apparel_detail,
+  public.inventory_item,
+  public.marketplace_vendor_product_product,
+  public.price,
+  public.price_set,
+  public.product_product_marketplace_apparel_detail,
+  public.product_sales_channel,
+  public.product_variant_inventory_item,
+  public.product_variant_price_set
+RESTART IDENTITY CASCADE;
+
+SELECT
+    relname AS table_name,
+    n_live_tup AS estimated_rows
+FROM pg_stat_user_tables
+ORDER BY relname;
+
+medusa=# SELECT
+    v.id AS vendor_id,
+    v.name,
+    v.handle,
+    va.role,
+    u.email,
+    u.first_name,
+    u.last_name
+FROM vendor v
+LEFT JOIN vendor_admin va
+    ON va.vendor_id = v.id
+LEFT JOIN "user" u
+    ON u.id = va.user_id;
+
+    Navigation
+Press q → quit and return to medusa=#
+Press Space → next page
+Press b → previous page
+Press / → search
+pg_dump -U medusa -d medusa --data-only
+pg_dump -U medusa -d medusa > dump.sql
+rzp_live_RSdqJwUqBHuiYN = Live Key ID
+mwPTjkqRTtsPsTucNyNK75Lg =Live Key Secret
+  "Registered Name": "Razorpay Software Limited",
+  "CIN": "U72200KA2013PLC097389",
+  "PAN": "AAGCR4375J",
+  "TAN": "BLRR14773D"
+}
+# Razorpay (test sandbox)
+RAZORPAY_KEY_ID=Live Key ID
+RAZORPAY_KEY_SECRET=Live Key Secret
+
+Let's carefully analyze the exact architecture you provided, finalize the data schema contract, and then look at the absolute precise implementation code. ////
+
+please provide payload to fill  -=- guide the proper flow while fill and  generate any subsequent ? . . .
+
+tree -h > structure.txt  -f -a -L 2 
+touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
+touch src/components/search/{InstantSearch,SearchFilters,SearchResults,SearchPagination}.tsx
+ grep -r -n -E "^\s*(function|const|let|var)\s+\w+" ./src/components ./packages  ./src/app/vendor/dashboard/products/edit/[id]
+ # Single command for compact tree with files
+find ./src -type f | sed 's|./src/||' | awk -F/ '{if(NF>1){d=$1; for(i=2;i<NF;i++)d=d"/"$i; d=d"/";} else d="./"; g[d]=g[d]?g[d]","$NF:$NF; dirs[d]=1} END{for(d in dirs){printf "%s (%s)\n", d, g[d]}}' | sort

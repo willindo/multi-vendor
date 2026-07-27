@@ -1,4 +1,3 @@
-// src/workflows/marketplace/create-vendor-product/index.ts
 import { CreateProductWorkflowInputDTO } from "@medusajs/framework/types";
 import {
   createWorkflow,
@@ -13,13 +12,10 @@ import {
   createRemoteLinkStep,
   useQueryGraphStep,
 } from "@medusajs/medusa/core-flows";
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import { Modules } from "@medusajs/framework/utils";
 import { MARKETPLACE_MODULE } from "../../../modules/marketplace";
 import type { ApparelDetails } from "@shared/index";
-import { normalizeVariantSku } from "@/utils/normalize-variant-sku";
-import { normalizeProductHandle } from "@/utils/normalize-product-handle";
 import { normalizeProductForVendor } from "@/utils/normalize-product";
-
 
 type Input = {
   vendor_admin_id: string;
@@ -37,41 +33,48 @@ const createApparelDetailStep = createStep(
     const marketplaceService = container.resolve(MARKETPLACE_MODULE);
     const detail = await marketplaceService.createApparelDetails({
       product_id: input.product_id,
-      ...input.apparel_detail
+      ...input.apparel_detail,
     });
     return new StepResponse(detail, detail.id);
   },
   async (detailId, { container }) => {
-    const marketplaceService = container.resolve("marketplace");
-    if (detailId) {
-      await marketplaceService.deleteApparelDetails([detailId]);
-    }
+    if (!detailId) return;
+    const marketplaceService = container.resolve(MARKETPLACE_MODULE);
+    await marketplaceService.deleteApparelDetails([detailId]);
   }
 );
 
 // ============================================================
-// STEP: Initialize Inventory Levels
+// STEP: Initialize Inventory Levels with Rollback
 // ============================================================
 const initializeInventoryStep = createStep(
   "initialize-inventory-step",
-  async (input: {
-    levels: {
-      inventory_item_id: string;
-      location_id: string;
-      stocked_quantity: number;
-    }[];
-  }, { container }) => {
-    const inventoryService = container.resolve(Modules.INVENTORY);
-
+  async (
+    input: {
+      levels: {
+        inventory_item_id: string;
+        location_id: string;
+        stocked_quantity: number;
+      }[];
+    },
+    { container }
+  ) => {
     if (!input.levels || input.levels.length === 0) {
-      return new StepResponse({ initialized: 0 });
+      return new StepResponse({ initialized: 0 }, []);
     }
 
-    await inventoryService.createInventoryLevels(input.levels);
+    const inventoryService = container.resolve(Modules.INVENTORY);
+    const createdLevels = await inventoryService.createInventoryLevels(input.levels);
 
-    return new StepResponse({
-      initialized: input.levels.length
-    });
+    return new StepResponse(
+      { initialized: createdLevels.length },
+      createdLevels.map((l: any) => l.id)
+    );
+  },
+  async (createdLevelIds, { container }) => {
+    if (!createdLevelIds?.length) return;
+    const inventoryService = container.resolve(Modules.INVENTORY);
+    await inventoryService.deleteInventoryLevels(createdLevelIds);
   }
 );
 
@@ -88,7 +91,7 @@ export const createVendorProductWorkflow = createWorkflow(
       filters: { id: input.vendor_admin_id },
     }).config({ name: "get-vendor-admin" });
 
-    // ✅ 2. Normalize SKUs and Handle
+    // 2. Normalize SKUs and Handle
     const normalizedProduct = transform({ input, vendorAdmins }, (data) => {
       const vendor = data.vendorAdmins[0]?.vendor;
       if (!vendor) throw new Error("Vendor context not found");
@@ -116,49 +119,60 @@ export const createVendorProductWorkflow = createWorkflow(
       input: productData as CreateProductsWorkflowInput,
     });
 
-    // ──► NEW INVENTORY LOGIC RESOLUTION ◄──
-    // Fetch the auto-generated inventory links for the created variants
+    // 6. Fetch auto-generated inventory links for created variants
     const productGraphData = useQueryGraphStep({
       entity: "product",
       fields: [
         "variants.sku",
         "variants.manage_inventory",
-        "variants.inventory_items.inventory_item_id"
+        "variants.inventory_items.inventory_item_id",
       ],
-      filters: { id: productResult[0].id }
+      filters: { id: productResult[0].id },
     }).config({ name: "get-created-product-inventory-links" });
 
-    // Transform raw business intent + database item IDs into flat structures
-    const initialInventoryPayload = transform({ productGraphData, normalizedProduct, input }, (data) => {
-      const product = data.productGraphData?.data?.[0];
-      const locationId = data.input.location_id || process.env.MEDUSA_STOCK_LOCATION_ID || "default_location";
-      const levels: { inventory_item_id: string; location_id: string; stocked_quantity: number }[] = [];
+    // Build inventory initialization payload
+    const initialInventoryPayload = transform(
+      { productGraphData, normalizedProduct, input },
+      (data) => {
+        const product = data.productGraphData?.data?.[0];
+        const locationId =
+          data.input.location_id || process.env.MEDUSA_STOCK_LOCATION_ID;
 
-      if (!product) return { levels };
+        if (!locationId) {
+          throw new Error("Missing stock location ID for inventory initialization.");
+        }
 
-      for (const variant of product.variants || []) {
-        if (!variant.manage_inventory) continue;
+        const levels: {
+          inventory_item_id: string;
+          location_id: string;
+          stocked_quantity: number;
+        }[] = [];
 
-        // ✅ Get inventory_item_id from the query result
-        const inventoryItemId = variant.inventory_items?.[0]?.inventory_item_id;
+        if (!product) return { levels };
 
-        if (!inventoryItemId) continue;
+        for (const variant of product.variants || []) {
+          if (!variant.manage_inventory) continue;
 
-        // Match original variant input to capture intended stock density
-        const originalInput = data.normalizedProduct.variants.find((v: any) => v.sku === variant.sku);
-        const initialQuantity = originalInput?.inventory_quantity ?? 0;
+          const inventoryItemId = variant.inventory_items?.[0]?.inventory_item_id;
+          if (!inventoryItemId) continue;
 
-        levels.push({
-          inventory_item_id: inventoryItemId,
-          location_id: locationId,
-          stocked_quantity: Number(initialQuantity),
-        });
+          const originalInput = data.normalizedProduct.variants.find(
+            (v: any) => v.sku === variant.sku
+          );
+          const initialQuantity = originalInput?.inventory_quantity ?? 0;
+
+          levels.push({
+            inventory_item_id: inventoryItemId,
+            location_id: locationId,
+            stocked_quantity: Number(initialQuantity),
+          });
+        }
+
+        return { levels };
       }
+    );
 
-      return { levels };
-    });
-
-    // Run initialization step with clean flat arrays
+    // Run inventory initialization with rollback support
     initializeInventoryStep({
       levels: initialInventoryPayload.levels,
     });
@@ -166,7 +180,7 @@ export const createVendorProductWorkflow = createWorkflow(
     // 7. Create apparel detail
     const apparelDetail = createApparelDetailStep({
       product_id: productResult[0].id,
-      apparel_detail: input.apparel_detail
+      apparel_detail: input.apparel_detail,
     });
 
     // 8. Create remote links
@@ -182,14 +196,14 @@ export const createVendorProductWorkflow = createWorkflow(
         },
         {
           [Modules.PRODUCT]: { product_id: data.productResult[0].id },
-          [MARKETPLACE_MODULE]: { apparel_detail_id: data.apparelDetail.id }
-        }
+          [MARKETPLACE_MODULE]: { apparel_detail_id: data.apparelDetail.id },
+        },
       ];
     });
 
     createRemoteLinkStep(links);
 
-    // 9. Get final product
+    // 9. Fetch final product representation
     const { data: products } = useQueryGraphStep({
       entity: "product",
       fields: ["*", "variants.*"],
@@ -199,7 +213,7 @@ export const createVendorProductWorkflow = createWorkflow(
     return new WorkflowResponse({
       product: products[0] as any,
     });
-  },
+  }
 );
 
 export default createVendorProductWorkflow;

@@ -336,9 +336,10 @@ export default function EditProductFormClient({
 
         return {
           ...combination,
-          id: undefined, // New variants don't have IDs yet
+          id: undefined,
           sku: derivedSku,
-          price: combination.price ?? priceAmount,
+          // Use variant price, fall back to root price, fall back to 0
+          price: combination.price ?? (priceAmount > 0 ? priceAmount : 0),
           inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
           currencyCode: currencyCode.toLowerCase(),
           enabled: true,
@@ -437,10 +438,13 @@ export default function EditProductFormClient({
         return
       }
 
-      if (priceAmount <= 0) {
-        setSubmitError("Please enter a valid price greater than 0.")
-        setIsSubmitting(false)
-        return
+      const hasValidPricing = priceAmount > 0 ||
+        (variantRows.length > 0 && variantRows.every(v => !v.enabled || (v.price && v.price > 0)));
+
+      if (!hasValidPricing) {
+        setSubmitError("Please configure a valid retail price or ensure all enabled variants have a price configured.");
+        setIsSubmitting(false);
+        return;
       }
 
       const validation = validateOptions()
@@ -455,14 +459,50 @@ export default function EditProductFormClient({
 
       // --- BUILD PAYLOAD ---
       const options = buildProductOptionsPayload(variantRows)
-
-      // ✅ FIXED: Use correct property names
-      const variants = buildVariantPayload(variantRows, {
-        skuPrefix: handle?.trim() || "sku",  // ← Use skuPrefix
+      // 1. Title Case options before constructing payload
+      const normalizedOptions = options.map((option) => ({
+        title: option.title.charAt(0).toUpperCase() + option.title.slice(1).toLowerCase(), // "Size", "Color"
+        values: option.values,
+      }))
+      // Get base variants built by helper
+      const baseVariants = buildVariantPayload(variantRows, {
+        skuPrefix: handle?.trim() || "sku",
         defaultPrice: priceAmount,
         defaultCurrency: currencyCode,
         defaultInventory: inventoryQuantity,
         manageInventory,
+      })
+
+      // Convert variant options array into a Key-Value Map: { "Size": "L", "Color": "White" }
+      const formattedVariants = baseVariants.map((variant: any) => {
+        let optionsRecord: Record<string, string> = {}
+
+        if (Array.isArray(variant.options)) {
+          // If options came as an array of [{ option_name, value }] or [{ title, value }]
+          optionsRecord = variant.options.reduce(
+            (acc: Record<string, string>, opt: any) => {
+              const rawKey = opt.option_name || opt.title || opt.name
+              if (rawKey && opt.value) {
+                // Normalize key to Title Case ("Size", "Color")
+                const normalizedKey = rawKey.charAt(0).toUpperCase() + rawKey.slice(1).toLowerCase()
+                acc[normalizedKey] = opt.value
+              }
+              return acc
+            },
+            {}
+          )
+        } else if (typeof variant.options === "object" && variant.options !== null) {
+          // If already an object, normalize all keys to Title Case
+          Object.entries(variant.options).forEach(([key, val]) => {
+            const normalizedKey = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase()
+            optionsRecord[normalizedKey] = val as string
+          })
+        }
+
+        return {
+          ...variant,
+          options: optionsRecord,
+        }
       })
 
       const apparelDetail = buildApparelPayload(apparel)
@@ -482,11 +522,8 @@ export default function EditProductFormClient({
           source: "edit_product_form",
           updated_at: new Date().toISOString(),
         },
-        options: options.map((option) => ({
-          title: option.title,
-          values: option.values,
-        })),
-        variants,
+        // options: normalizedOptions,
+        variants: formattedVariants,
         apparel_detail: apparelDetail,
         deleted_variant_ids: deletedVariantIds,
       }
@@ -763,13 +800,20 @@ export default function EditProductFormClient({
           initialOptions={variantRows.reduce((acc, v) => {
             if (v.options) {
               v.options.forEach(opt => {
-                const existing = acc.find(o => o.name === opt.optionName)
+                const rawName = opt.optionName || ""
+                if (!rawName) return
+
+                // Match existing entry case-insensitively ("Size" === "SIZE")
+                const existing = acc.find(
+                  (o) => o.name.toUpperCase() === rawName.toUpperCase()
+                )
+
                 if (existing) {
                   if (!existing.values.includes(opt.value)) {
                     existing.values.push(opt.value)
                   }
                 } else {
-                  acc.push({ name: opt.optionName, values: [opt.value] })
+                  acc.push({ name: rawName, values: [opt.value] })
                 }
               })
             }
@@ -842,7 +886,7 @@ export default function EditProductFormClient({
         </button>
         <button
           type="submit"
-          disabled={isSubmitting || !title.trim() || !handle.trim() || priceAmount <= 0}
+          disabled={isSubmitting || !title.trim() || !handle.trim()}
           className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
         >
           {isSubmitting ? (

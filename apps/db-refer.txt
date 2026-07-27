@@ -167,15 +167,16 @@ Product (Commerce Root) = decoupled database design schema tree
     │        │
     │        ▼
     │     inventory_item
-    │        ├── sku
-    │        ├── title
-    │        ├── dimensions
-    │        ├── material
-    │        ├── requires_shipping
-    │        │
-    │        ├── inventory_level
-    │        │    └── stocked_quantity
-    │        └── reservation_item
+    |       ▲
+    |       │ FK
+    |       │
+    |      inventory_level
+    |       │
+    |       ├── stocked_quantity
+    |       ├── location_id
+    |       └── reserved_quantity
+    │      
+    │        
     │
     └── Pricing Module Link
          └── product_variant_price_set
@@ -201,14 +202,14 @@ JOIN information_schema.constraint_column_usage ccu
     ON tc.constraint_name = ccu.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
 AND (
-    tc.table_name LIKE '%inventory%'
-    OR ccu.table_name LIKE '%inventory%'
+    tc.table_name LIKE '%price%'
+    OR ccu.table_name LIKE '%price%'
 );    
 
 SELECT table_name, column_name
 FROM information_schema.columns
 WHERE table_schema = 'public'
-AND column_name LIKE '%inventory%';
+AND column_name LIKE '%price%';
 
 SELECT
     tc.table_name,
@@ -296,6 +297,19 @@ AND table_name LIKE '%option%'
 AND column_name LIKE '%_id'
 GROUP BY table_name
 ORDER BY table_name;
+SELECT
+    v.id AS vendor_id,
+    v.name,                          
+    v.handle,                      
+    va.role,                        
+    u.email,                                
+    u.first_name,
+    u.last_name                                
+FROM vendor v                                      
+LEFT JOIN vendor_admin va
+    ON va.vendor_id = v.id
+LEFT JOIN "user" u
+    ON u.id = va.user_id;
 
 SELECT pv.id AS variant_id, pv.sku, il.stocked_quantity, il.location_id
 FROM product_variant pv
@@ -327,6 +341,76 @@ JOIN price pr
     ON pvps.price_set_id = pr.price_set_id
 ORDER BY pv.sku, pr.currency_code;
 
+SELECT
+    pv.id AS variant_id,
+    pv.sku,
+    po.title AS option_name,
+    pov.value AS option_value,
+    il.stocked_quantity,
+    il.location_id
+FROM product_variant pv
+JOIN product_variant_option pvo
+    ON pvo.variant_id = pv.id
+JOIN product_option_value pov
+    ON pov.id = pvo.option_value_id
+JOIN product_option po
+    ON po.id = pov.option_id
+JOIN product_variant_inventory_item pvii
+    ON pvii.variant_id = pv.id
+JOIN inventory_level il
+    ON il.inventory_item_id = pvii.inventory_item_id
+ORDER BY
+    pv.sku,
+    po.title;
+
+ SELECT                  
+    schemaname,
+    relname,
+    n_live_tup
+FROM pg_stat_user_tables
+WHERE n_live_tup > 0
+ORDER BY relname;
+(0 rows)
+
+SELECT
+    column_name,
+    data_type
+FROM information_schema.columns
+WHERE table_name = 'product_variant_inventory_item'
+ORDER BY ordinal_position;
+
+SELECT
+    po.id AS option_id,
+    po.title AS option_name,
+    pov.id AS option_value_id,
+    pov.value AS option_value
+FROM product_option_value pov
+JOIN product_option po
+    ON po.id = pov.option_id
+WHERE
+    po.product_id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
+    AND po.deleted_at IS NULL
+    AND pov.deleted_at IS NULL
+ORDER BY
+    po.title,
+    pov.value;
+
+    SELECT
+  pv.id            AS variant_id,
+  pv.sku,
+  MIN(p.amount)    AS min_price,
+  p.currency_code,
+  il.stocked_quantity,
+  il.location_id
+FROM product_variant pv
+JOIN product_variant_inventory_item pvii ON pvii.variant_id = pv.id
+JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
+JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
+JOIN price p ON p.price_set_id = pvps.price_set_id
+WHERE pv.product_id = 'prod_01KYFP67QJYCVMAFJSY3947Z8Q'
+GROUP BY pv.id, pv.sku, p.currency_code, il.stocked_quantity, il.location_id
+ORDER BY pv.sku;
+
 [ public.product ]
                           │
          ┌────────────────┴────────────────┬────────────────┐
@@ -357,13 +441,13 @@ ORDER BY pv.sku, pr.currency_code;
  │  └─ variant_id   │         │  ├─ sku, title     │       │  └─ id (isolated)│
  └─────────┬────────┘         │  └─ id             │       └────────┬─────────┘
            │                  └─────────┬──────────┘                │
-           │                            │                           │  ┌──────────────┐
-           ▼                            ▼                           ▼  │ price        │
- ┌──────────────────────────────────────────────────────────────────┐  │ └─price_set_id
- │                       REMOTE LINK ENGINE                         │◄─┴──────────────┘
- │  ├─ product_variant_inventory_item (variant_id ◄─► inventory_id) │
- │  └─ product_variant_price_set      (variant_id ◄─► price_set_id) │
- └──────────────────────────────────────────────────────────────────┘
+           │                            │                           │       ┌──────────────┐
+           ▼                            ▼                           ▼       │ price        │
+ ┌───────────────────────────────────────────────────────────────────────┐  │ └─price_set_id
+ │                       REMOTE LINK ENGINE                              │◄─┴──────────────┘
+ │  ├─ product_variant_inventory_item (variant_id ◄─► inventory_item_id) │
+ │  └─ product_variant_price_set      (variant_id ◄─► price_set_id)      │
+ └───────────────────────────────────────────────────────────────────────┘
 
  product (The Root Shell)
 ├── product_sales_channel (Link table -> product_id)
@@ -389,12 +473,74 @@ Standalone / Global Catalogs (Root records do NOT belong to any single product)
 ├── product_tag (Global unique text string store)
 └── product_shipping_profile (Global fulfillment rule mappings)
 
- SELECT                  
-    schemaname,
-    relname,
-    n_live_tup
-FROM pg_stat_user_tables
-WHERE n_live_tup > 0
-ORDER BY relname;
-(0 rows)
+
+product
+(id)
+
+    │ product.id
+    ▼
+
+product_option
+(id, product_id, title)
+
+    │ product_option.id
+    ▼
+
+product_option_value
+(id, option_id, value)
+
+          ▲
+          │ option_value_id
+          │
+product_variant_option
+(variant_id, option_value_id)
+          │
+          ▼ variant_id
+
+product_variant
+(id, product_id, sku, title, ...)
+
+Variant
+    │
+    ▼
+product_variant_option
+    │
+    ▼
+product_option_value
+    │
+    ▼
+product_option
+
+TS-GREEN-M
+      │
+      ├── Green
+      │      └── Color
+      │
+      └── M
+             └── Size
+             
+OPTION STRATEGY -=> Always collect and register the super-set (union) of all option values in the root options array, even if only a subset of variants are enabled or generated initially.
+options Defines the Master Permutations
+The root options array acts as the master taxonomy for the product. It declares all available option values that could exist across any current or future variant.
+Variants Pick Specific Coordinates From That Pool
+Individual variants don't create new values—they simply select one concrete coordinate from the option pool defined above.
+"options": [
+  {
+    "title": "Size",
+    "values": ["S", "M", "L", "XL", "XXL"]
+  },
+  {
+    "title": "Color",
+    "values": ["White", "Black", "Navy"]
+  }
+] -=- 
+| Table                            | Filter by                                 |
+| -------------------------------- | ----------------------------------------- |
+| `product`                        | `id`                                      |
+| `product_option`                 | `product_id`                              |
+| `product_option_value`           | `option_id` (or join to `product_option`) |
+| `product_variant`                | `product_id`                              |
+| `product_variant_option`         | `variant_id` / `option_value_id`          |
+| `product_variant_inventory_item` | `variant_id` / `inventory_item_id`        |
+
 
