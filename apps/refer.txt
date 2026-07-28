@@ -34,8 +34,8 @@ EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*" -not -inam
 INCL_UDES='-path "*//*" -o -iname "*tsconfig*"' 
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/update-vendor-product*" ' 
-EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -iname "*txt*" -not -iname "*apparel*"'
+INCL_UDES='-path "*/update-vendor-product/*" ' 
+EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -iname "*suggest*" -not -iname "*index*"  -not -iname "readme*"'
 eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
  

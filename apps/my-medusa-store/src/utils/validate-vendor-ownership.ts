@@ -1,3 +1,4 @@
+// /src/utils/validate-vendor-ownership.ts
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
 export async function validateVendorProductOwnership(

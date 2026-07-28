@@ -407,7 +407,7 @@ JOIN product_variant_inventory_item pvii ON pvii.variant_id = pv.id
 JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
-WHERE pv.product_id = 'prod_01KYFP67QJYCVMAFJSY3947Z8Q'
+WHERE pv.product_id = 'prod_01KYKG710C8Y01FDT3RR8H34A6'
 GROUP BY pv.id, pv.sku, p.currency_code, il.stocked_quantity, il.location_id
 ORDER BY pv.sku;
 

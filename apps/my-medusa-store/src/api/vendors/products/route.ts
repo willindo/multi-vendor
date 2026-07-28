@@ -1,5 +1,3 @@
-// src/api/vendors/products/route.ts
-
 import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
@@ -33,42 +31,49 @@ export const POST = async (
   req: AuthenticatedMedusaRequest<any>,
   res: MedusaResponse,
 ) => {
-  const actorId = req.auth_context.actor_id;
-  console.log(`[API POST /vendors/products] Incoming request from Actor ID: ${actorId}`);
+  const actorId = req.auth_context?.actor_id;
 
-  const locationId = req.body.location_id ||
-    process.env.MEDUSA_STOCK_LOCATION_ID;
+  if (!actorId) {
+    return res.status(401).json({ message: "Unauthorized: Missing authentication context." });
+  }
+
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+  const locationId = req.body.location_id || process.env.MEDUSA_STOCK_LOCATION_ID;
+
   try {
-    console.log("==========================================");
-    console.log("📝 POST PRODUCT");
-    console.log("Body:", JSON.stringify(req.body, null, 2));
-    console.log("==========================================");
-    // 1. Run the guard check (Returns normalized object with database column names)
-    console.log("[API POST] Validating and normalizing apparel metadata payload...");
+    // 0. Ensure Actor is attached to a Vendor before processing payload
+    const { data: [vendorAdmin] } = await query.graph({
+      entity: "vendor_admin",
+      fields: ["vendor.id"],
+      filters: { id: [actorId] },
+    });
+
+    if (!vendorAdmin?.vendor?.id) {
+      return res.status(403).json({ message: "Forbidden: No vendor context linked to this user." });
+    }
+
+    // 1. Run the guard check
     const apparelData = validateAndCleanApparelInput(req.body);
 
-    // 2. Destructure and slice req.body to strip apparel_detail from core product data
+    // 2. Destructure and slice req.body
     const { apparel_detail, ...coreProductData } = req.body;
-    console.log(`[API POST] Payload successfully segregated. Core fields count: ${Object.keys(coreProductData).length}`);
 
-    // 3. Trigger the workflow pipeline with perfectly split payloads
-    console.log(`[API POST] Invoking createVendorProductWorkflow pipeline for actor: ${actorId}`);
+    // 3. Trigger the workflow pipeline
     const { result } = await createVendorProductWorkflow(req.scope).run({
       input: {
         vendor_admin_id: actorId,
-        product: coreProductData,    // 🟢 Clean: Standard Medusa fields only
-        apparel_detail: apparelData, // 🟢 Clean: Custom database-ready representation
+        product: coreProductData,
+        apparel_detail: apparelData,
         location_id: locationId,
       },
     });
 
-    console.log(`[API POST] Workflow completed successfully. Returning created product ID: ${result?.product?.id}`);
-    return res.json({
+    return res.status(201).json({
       product: result.product,
     });
   } catch (error: any) {
     console.error(`[API POST ERROR] Product creation engine halted: ${error.message}`, error);
-    throw error; // Let Medusa's global error handler format the error response
+    return res.status(500).json({ message: error.message || "Failed to create product" });
   }
 };
 
@@ -76,7 +81,12 @@ export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse,
 ) => {
-  const actorId = req.auth_context.actor_id;
+  const actorId = req.auth_context?.actor_id;
+
+  if (!actorId) {
+    return res.status(401).json({ message: "Unauthorized: Missing authentication context." });
+  }
+
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
   const remoteQuery = req.scope.resolve("remoteQuery");
 
@@ -89,12 +99,12 @@ export const GET = async (
     });
 
     if (!vendorAdmin || !vendorAdmin.vendor?.id) {
-      throw new Error("Vendor admin context unresolved");
+      return res.status(403).json({ message: "Forbidden: Vendor admin context unresolved." });
     }
 
     const vendorId = vendorAdmin.vendor.id;
 
-    // 2. Fetch all product IDs linked to this vendor
+    // 2. Fetch product IDs linked strictly to this vendor (Ownership guard)
     const linkQuery = {
       entity: "vendor_product",
       fields: ["product_id"],
@@ -162,14 +172,13 @@ export const GET = async (
         "apparel_detail.condition",
       ],
       filters: {
-        id: productIds
-      }
+        id: productIds,
+      },
     });
 
     // 4. Hydrate inventory quantities
     const inventoryService = req.scope.resolve(Modules.INVENTORY);
 
-    // Collect all inventory item IDs
     const inventoryItemIds = products.flatMap((product: any) =>
       (product.variants ?? []).flatMap((variant: any) =>
         (variant.inventory_items ?? [])
@@ -178,14 +187,12 @@ export const GET = async (
       )
     );
 
-    // Fetch inventory levels
     const inventoryLevels = inventoryItemIds.length
       ? await inventoryService.listInventoryLevels({
         inventory_item_id: inventoryItemIds,
       })
       : [];
 
-    // Build inventory map
     const inventoryMap = new Map(
       inventoryLevels.map((level: any) => [
         level.inventory_item_id,
@@ -193,21 +200,18 @@ export const GET = async (
       ])
     );
 
-    // Enrich products with inventory data
     for (const product of products as ExtendedProduct[]) {
       for (const variant of (product.variants ?? []) as ExtendedVariant[]) {
         const inventoryItemId = variant.inventory_items?.[0]?.inventory_item_id;
         variant.inventory_quantity = inventoryMap.get(inventoryItemId) ?? 0;
         variant.stocked_quantity = variant.inventory_quantity;
 
-        // Enrich inventory items
         variant.inventory_items = (variant.inventory_items ?? []).map((item: any) => ({
           ...item,
           stocked_quantity: inventoryMap.get(item.inventory_item_id) ?? 0,
         }));
       }
 
-      // Calculate total product inventory
       product.inventory_quantity = (product.variants ?? []).reduce(
         (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
         0
@@ -218,7 +222,7 @@ export const GET = async (
   } catch (error: any) {
     console.error("[API GET ERROR]", error);
     return res.status(500).json({
-      message: error.message || "Failed to fetch products"
+      message: error.message || "Failed to fetch products",
     });
   }
 };
