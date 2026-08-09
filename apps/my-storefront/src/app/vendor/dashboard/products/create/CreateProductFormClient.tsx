@@ -6,7 +6,6 @@ import type {
   VariantCombination,
 } from "@shared/index"
 
-import { generateVariantCombinations } from "@shared/variants/variant-generator"
 import { DEFAULT_APPAREL_DETAILS } from "@shared/apparel/apparel-defaults"
 import type { ApparelDetails } from "@shared/apparel/apparel-types"
 import ApparelDetailsSection from "@/components/vendor/products/apparel/ApparelDetailsSection"
@@ -14,29 +13,12 @@ import VariantMatrixBuilder from "@/components/vendor/products/VariantMatrixBuil
 import VariantMatrixTable, {
   VariantMatrixRow,
 } from "@/components/vendor/products/VariantMatrixTable"
-import {
-  resolveVendorToken,
-  sanitizeSku,
-  buildApparelPayload,
-  buildProductOptionsPayload,
-  buildVariantPayload,
-  enrichVariantCombinations,
-  validateVariantOptions,
-  validateProductForm,
-  getBackendUrl,
-  getErrorMessage,
-  ERROR_MESSAGES,
-} from "@/lib/vendor/product-utils"
-
-// Import from hydration
-import {
-  hydrateVariantRows,
-  hydrateApparelDetails,
-  hydrateFormState,
-  hydrateCommerceFields,
-  detectDeletedVariants,
-  extractOriginalVariantIds,
-} from "@/lib/vendor/product-hydration"
+import { getBackendUrl, } from "@/lib/data/vendor/session"
+import { buildApparelPayload } from "@/lib/util/vendor/apparel"
+import { buildProductOptionsPayload, buildVariantPayload } from "@/lib/util/vendor/product"
+import { ERROR_MESSAGES, sanitizeSku } from "@/lib/util/vendor/validation"
+import { getVendorAuthHeaders } from "@/lib/data/cookies"
+import { createVendorProduct } from "@/lib/data/vendor/products"
 
 // ============================================================================
 // TYPES
@@ -98,20 +80,6 @@ export default function CreateProductFormClient({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [formTouched, setFormTouched] = useState(false)
-
-  // --- TOKEN MANAGEMENT ---
-  const [resolvedToken, setResolvedToken] = useState<string>(() =>
-    resolveVendorToken(serverToken)
-  )
-
-  useEffect(() => {
-    if (!resolvedToken) {
-      const token = resolveVendorToken()
-      if (token) setResolvedToken(token)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // --- CORE FORM STATE ---
   const [title, setTitle] = useState(initialProduct?.title || "")
   const [handle, setHandle] = useState(initialProduct?.handle || "")
@@ -183,60 +151,95 @@ export default function CreateProductFormClient({
     }
   }, [handle, title])
 
+  // Non-destructive append variant generator
   const handleGenerateVariants = useCallback(
     (combinations: VariantCombination[]) => {
-      if (!combinations || combinations.length === 0) {
-        setVariantRows([])
-        return
-      }
+      if (!combinations || combinations.length === 0) return
 
       const skuPrefix = handle?.trim() || "sku"
 
-      const enrichedCombinations = combinations.map((combination) => {
-        const derivedSku = combination.sku
-          ? sanitizeSku(combination.sku)
-          : sanitizeSku(`${skuPrefix}-${combination.title}`)
+      setVariantRows((prevRows) => {
+        const existingSkus = new Set(prevRows.map((r) => r.sku))
 
-        return {
-          ...combination,
-          id: undefined,
-          sku: derivedSku,
-          // Use variant price, fall back to root price, fall back to 0
-          price: combination.price ?? (priceAmount > 0 ? priceAmount : 0),
-          inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
-          currencyCode: currencyCode.toLowerCase(),
-          enabled: true,
-        }
+        const newlyAppended = combinations
+          .map((combination) => {
+            const derivedSku = combination.sku
+              ? sanitizeSku(combination.sku)
+              : sanitizeSku(`${skuPrefix}-${combination.title}`)
+
+            return {
+              ...combination,
+              id: undefined,
+              sku: derivedSku,
+              price: combination.price ?? (priceAmount > 0 ? priceAmount : 0),
+              inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
+              currencyCode: currencyCode.toLowerCase(),
+              enabled: true,
+            }
+          })
+          .filter((row) => !existingSkus.has(row.sku))
+
+        return [...prevRows, ...newlyAppended]
       })
 
-      setVariantRows(enrichedCombinations)
       setFormTouched(true)
     },
     [handle, priceAmount, inventoryQuantity, currencyCode]
   )
 
-  const validateOptions = useCallback((): { valid: boolean; errors: string[] } => {
+  const validateOptions = useCallback((): {
+    valid: boolean
+    errors: string[]
+  } => {
     const errors: string[] = []
+
+    if (!variantRows.length) {
+      errors.push("At least one variant is required.")
+      return {
+        valid: false,
+        errors,
+      }
+    }
+
+    for (const [index, variant] of variantRows.entries()) {
+      if (!variant.options || variant.options.length === 0) {
+        errors.push(`Variant ${index + 1} has no options.`)
+        continue
+      }
+
+      for (const option of variant.options) {
+        if (!option.optionName?.trim()) {
+          errors.push(`Variant ${index + 1} has an option without a name.`)
+        }
+
+        if (!option.value?.trim()) {
+          errors.push(
+            `Variant ${index + 1} has an option without a value.`
+          )
+        }
+      }
+    }
+
     const options = buildProductOptionsPayload(variantRows)
 
     if (options.length === 0) {
       errors.push("Please generate at least one variant option.")
     }
 
-    options.forEach((option) => {
-      if (option.values.length === 0) {
-        errors.push(`Option "${option.title}" has no values selected.`)
+    for (const option of options) {
+      if (!option.title.trim()) {
+        errors.push("An option is missing its name.")
       }
-    })
 
-    const invalidVariants = variantRows.filter(
-      (v) => !v.options || v.options.length === 0
-    )
-    if (invalidVariants.length > 0) {
-      errors.push(`${invalidVariants.length} variant(s) have no options.`)
+      if (option.values.length === 0) {
+        errors.push(`Option "${option.title}" has no values.`)
+      }
     }
 
-    return { valid: errors.length === 0, errors }
+    return {
+      valid: errors.length === 0,
+      errors,
+    }
   }, [variantRows])
 
   // ✅ FIXED: Submit handler with correct config
@@ -279,15 +282,9 @@ export default function CreateProductFormClient({
       // --- BUILD PAYLOAD ---
       const options = buildProductOptionsPayload(variantRows)
 
-      // ✅ FIXED: Use correct property names
       const variants = buildVariantPayload(variantRows, {
-        skuPrefix: handle?.trim() || "sku",  // ← Use skuPrefix
-        defaultPrice: priceAmount,
         defaultCurrency: currencyCode,
-        defaultInventory: inventoryQuantity,
-        manageInventory,
       })
-
       const apparelDetail = buildApparelPayload(apparel)
 
       const payload = {
@@ -300,60 +297,70 @@ export default function CreateProductFormClient({
         type_id: typeId,
         collection_id: collectionId,
         metadata: {
-          vendor_id: resolvedToken ? "authenticated" : "pending",
+          // vendor_id: resolvedToken ? "authenticated" : "pending",
           created_from: "vendor_dashboard",
           source: "create_product_form",
           timestamp: new Date().toISOString(),
           ...(initialProduct?.metadata || {}),
         },
-        options: options.map((option) => ({
-          title: option.title,
-          values: option.values,
-        })),
+        options,
         variants,
         apparel_detail: apparelDetail,
       }
 
+      console.log(
+        "[Client] Submitting Product Payload:\n",
+        JSON.stringify(payload, null, 2)
+      );
       // --- SUBMIT ---
       try {
-        const backendUrl = getBackendUrl()
 
-        const response = await fetch(`${backendUrl}/vendors/products`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resolvedToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        })
+        // const headers = await getVendorHeaders()
 
-        if (!response.ok) {
-          let errorData = {}
-          try {
-            errorData = await response.json()
-          } catch {
-            // Ignore JSON parse errors
-          }
+        // await fetch(`${getBackendUrl()}/vendors/products`, {
+        //   method: "POST",
+        //   headers,
+        //   body: JSON.stringify(payload),
+        // })
 
-          const errorCode = (errorData as any)?.code || response.status.toString()
-          const message = ERROR_MESSAGES[errorCode] || ERROR_MESSAGES.default
+        // if (!response.ok) {
+        //   let errorData = {}
+        //   try {
+        //     errorData = await response.json()
+        //   } catch {
+        //     // Ignore JSON parse errors
+        //   }
 
-          if (response.status === 409) {
-            throw new Error(`A product with the handle "${handle}" already exists. Please choose a different handle.`)
-          }
+        //   type ErrorCode = keyof typeof ERROR_MESSAGES
 
-          throw new Error(message)
+        //   const errorCode = (errorData as any)?.code as ErrorCode | undefined
+
+        //   const message =
+        //     errorCode && errorCode in ERROR_MESSAGES
+        //       ? ERROR_MESSAGES[errorCode]
+        //       : ERROR_MESSAGES.UNKNOWN
+        //   if (response.status === 409) {
+        //     throw new Error(`A product with the handle "${handle}" already exists. Please choose a different handle.`)
+        //   }
+
+        //   throw new Error(message)
+        // }
+
+        // const result = await response.json()
+        const result = await createVendorProduct(payload)
+
+        if (!result.success) {
+          console.error("[Client] Product Creation Failed with error:", result.error);
+          throw new Error(result.error)
         }
-
-        const result = await response.json()
-
+        console.log("[Client] Product Creation Success:", result.product);
         if (onSuccess) {
           onSuccess(result.product)
         }
-
         router.push("/vendor/dashboard/products")
         router.refresh()
       } catch (error) {
+        console.error("[Client] Form Submission Catch:", error);
         const message =
           error instanceof Error
             ? error.message
@@ -380,7 +387,6 @@ export default function CreateProductFormClient({
       collectionId,
       apparel,
       variantRows,
-      resolvedToken,
       router,
       onSuccess,
       onError,

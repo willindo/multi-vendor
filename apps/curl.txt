@@ -2,7 +2,7 @@ cd /home/badsha/medusa-dev/apps/my-medusa-store
  psql -U medusa -d medusa -h localhost 
  npx medusa exec ./src/scripts/master-product-purge.ts
 npx medusa exec src/scripts/create-product.ts jwala@example.com supersecret product_1.json
-tree -J ./src -I "migration*" > tree.json && npx tsx
+tree -J ./src -I "migration*" > tree.json && npx tsx   tree -J ./src -I "migrations" > tree.json && npx tsx ./scripts/format-tree.ts
 > report-list.txt && npx tsx  pnpm medusa exec ./scripts/format-list.ts pnpm medusa exec ./scripts/format-tree.ts
 chmod +x create-vendor.sh
 ./create-vendor.sh
@@ -176,5 +176,6 @@ def strip_nulls:
     end
   );
 
-.products | map(strip_nulls)
-' 
+.products | map(strip_nulls)' 
+curl http://localhost:9000/store/regions \
+  -H "x-publishable-api-key: $APIKEY"

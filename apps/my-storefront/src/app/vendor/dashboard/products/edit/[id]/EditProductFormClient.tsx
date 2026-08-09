@@ -6,7 +6,6 @@ import type {
   VariantCombination,
 } from "@shared/index"
 
-import { generateVariantCombinations } from "@shared/variants/variant-generator"
 import { DEFAULT_APPAREL_DETAILS } from "@shared/apparel/apparel-defaults"
 import type { ApparelDetails } from "@shared/apparel/apparel-types"
 import ApparelDetailsSection from "@/components/vendor/products/apparel/ApparelDetailsSection"
@@ -14,29 +13,22 @@ import VariantMatrixBuilder from "@/components/vendor/products/VariantMatrixBuil
 import VariantMatrixTable, {
   VariantMatrixRow,
 } from "@/components/vendor/products/VariantMatrixTable"
+import { buildApparelPayload } from "@/lib/util/vendor/apparel"
+import { buildProductOptionsPayload, buildVariantPayload } from "@/lib/util/vendor/product"
+import { ERROR_MESSAGES, sanitizeSku } from "@/lib/util/vendor/validation"
 import {
-  resolveVendorToken,
-  sanitizeSku,
-  buildApparelPayload,
-  buildProductOptionsPayload,
-  buildVariantPayload,
-  enrichVariantCombinations,
-  validateVariantOptions,
-  validateProductForm,
-  getBackendUrl,
-  getErrorMessage,
-  ERROR_MESSAGES,
-} from "@/lib/vendor/product-utils"
-
-// Import from hydration
+  getVendorProduct,
+  updateVendorProduct,
+  deleteVendorProduct,
+} from "@/lib/data/vendor/products"
 import {
   hydrateVariantRows,
   hydrateApparelDetails,
   hydrateFormState,
   hydrateCommerceFields,
-  detectDeletedVariants,
   extractOriginalVariantIds,
-} from "@/lib/vendor/product-hydration"
+  detectDeletedVariants,
+} from "@/lib/util/vendor/hydration"
 
 // ============================================================================
 // TYPES
@@ -137,17 +129,6 @@ export default function EditProductFormClient({
   const [loadError, setLoadError] = useState<string | null>(null)
 
   // --- TOKEN MANAGEMENT ---
-  const [resolvedToken, setResolvedToken] = useState<string>(() =>
-    resolveVendorToken(serverToken)
-  )
-
-  useEffect(() => {
-    if (!resolvedToken) {
-      const token = resolveVendorToken()
-      if (token) setResolvedToken(token)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // --- FORM STATE ---
   const [title, setTitle] = useState("")
@@ -182,8 +163,7 @@ export default function EditProductFormClient({
   useEffect(() => {
     console.log("📋 Starting product load...")
     console.log("📌 Product ID:", productId)
-    console.log("🔑 Token present:", !!resolvedToken)
-    if (!productId || !resolvedToken) return
+    if (!productId) return
 
     // ✅ FIXED: Add proper error handling for empty product
     const loadProduct = async () => {
@@ -191,39 +171,10 @@ export default function EditProductFormClient({
       setLoadError(null)
 
       try {
-        const backendUrl = getBackendUrl()
-        const endpoint = `${backendUrl}/vendors/products/${productId}`
-
-        console.log(`🔍 Fetching product from: ${endpoint}`)
-
-        const response = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${resolvedToken}`,
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!response.ok) {
-          let errorMessage = `Failed to load product (${response.status})`
-          try {
-            const errorData = await response.json()
-            errorMessage = errorData.message || errorMessage
-          } catch (e) {
-            // Ignore
-          }
-
-          if (response.status === 404) {
-            throw new Error(`Product with ID "${productId}" not found.`)
-          }
-
-          throw new Error(errorMessage)
+        const product = await getVendorProduct(productId)
+        if (!product) {
+          throw new Error(`Product with ID "${productId}" not found.`)
         }
-
-        const data = await response.json()
-        console.log("📦 Product data received:", data)
-
-        // ✅ The product is directly in the response
-        const product = data.product || data
 
         if (!product || !product.id) {
           throw new Error("Invalid product data received")
@@ -276,7 +227,7 @@ export default function EditProductFormClient({
     }
 
     loadProduct()
-  }, [productId, resolvedToken, onError])
+  }, [productId, onError])
 
   // --- MEMOIZED VALUES ---
   const apparelCategory = useMemo(() => apparel.garment_category, [apparel.garment_category])
@@ -322,31 +273,42 @@ export default function EditProductFormClient({
 
   const handleGenerateVariants = useCallback(
     (combinations: VariantCombination[]) => {
-      if (!combinations || combinations.length === 0) {
-        setVariantRows([])
-        return
-      }
+      // 1. DO NOT wipe variantRows if combinations is empty—just exit
+      if (!combinations || combinations.length === 0) return
 
       const skuPrefix = handle?.trim() || "sku"
 
-      const enrichedCombinations = combinations.map((combination) => {
-        const derivedSku = combination.sku
-          ? sanitizeSku(combination.sku)
-          : sanitizeSku(`${skuPrefix}-${combination.title}`)
+      setVariantRows((prevRows) => {
+        // Build lookup sets for existing SKUs and titles to prevent duplicates
+        const existingSkus = new Set(prevRows.map((r) => r.sku?.toLowerCase()))
+        const existingTitles = new Set(prevRows.map((r) => r.title?.toLowerCase()))
 
-        return {
-          ...combination,
-          id: undefined,
-          sku: derivedSku,
-          // Use variant price, fall back to root price, fall back to 0
-          price: combination.price ?? (priceAmount > 0 ? priceAmount : 0),
-          inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
-          currencyCode: currencyCode.toLowerCase(),
-          enabled: true,
-        }
+        const newlyAppended = combinations
+          .map((combination) => {
+            const derivedSku = combination.sku
+              ? sanitizeSku(combination.sku)
+              : sanitizeSku(`${skuPrefix}-${combination.title}`)
+
+            return {
+              ...combination,
+              id: undefined, // New variants start without an existing DB ID
+              sku: derivedSku,
+              price: combination.price ?? (priceAmount > 0 ? priceAmount : 0),
+              inventoryQuantity: combination.inventoryQuantity ?? inventoryQuantity,
+              currencyCode: currencyCode.toLowerCase(),
+              enabled: true,
+            }
+          })
+          .filter(
+            (row) =>
+              !existingSkus.has(row.sku?.toLowerCase()) &&
+              !existingTitles.has(row.title?.toLowerCase())
+          )
+
+        // 2. Append new unique combinations to existing variant rows
+        return [...prevRows, ...newlyAppended]
       })
 
-      setVariantRows(enrichedCombinations)
       setFormTouched(true)
     },
     [handle, priceAmount, inventoryQuantity, currencyCode]
@@ -390,20 +352,11 @@ export default function EditProductFormClient({
     setSubmitError(null)
 
     try {
-      const backendUrl = getBackendUrl()
+      const result = await deleteVendorProduct(productId)
 
-      const response = await fetch(`${backendUrl}/vendors/products/${productId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${resolvedToken}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete product (${response.status})`)
+      if (!result.success) {
+        throw new Error(result.error)
       }
-
       router.push("/vendor/dashboard/products")
       router.refresh()
     } catch (error) {
@@ -415,7 +368,7 @@ export default function EditProductFormClient({
     } finally {
       setIsSubmitting(false)
     }
-  }, [productId, title, resolvedToken, router, onError])
+  }, [productId, title, router, onError])
 
   // --- SUBMIT HANDLER ---
   const handleSubmit = useCallback(
@@ -466,11 +419,11 @@ export default function EditProductFormClient({
       }))
       // Get base variants built by helper
       const baseVariants = buildVariantPayload(variantRows, {
-        skuPrefix: handle?.trim() || "sku",
-        defaultPrice: priceAmount,
+        // skuPrefix: handle?.trim() || "sku",
+        // defaultPrice: priceAmount,
         defaultCurrency: currencyCode,
-        defaultInventory: inventoryQuantity,
-        manageInventory,
+        // defaultInventory: inventoryQuantity,
+        // manageInventory,
       })
 
       // Convert variant options array into a Key-Value Map: { "Size": "L", "Color": "White" }
@@ -517,7 +470,6 @@ export default function EditProductFormClient({
         type_id: typeId,
         collection_id: collectionId,
         metadata: {
-          vendor_id: resolvedToken ? "authenticated" : "pending",
           updated_from: "vendor_dashboard",
           source: "edit_product_form",
           updated_at: new Date().toISOString(),
@@ -530,39 +482,22 @@ export default function EditProductFormClient({
 
       // --- SUBMIT ---
       try {
-        const backendUrl = getBackendUrl()
 
-        const response = await fetch(`${backendUrl}/vendors/products/${productId}`, {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${resolvedToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        })
+        const result = await updateVendorProduct(
+          productId,
+          payload
+        )
 
-        if (!response.ok) {
-          let errorData = {}
-          try {
-            errorData = await response.json()
-          } catch {
-            // Ignore JSON parse errors
-          }
-
-          const errorCode = (errorData as any)?.code || response.status.toString()
-          const message = getErrorMessage(errorCode)
-
-          if (response.status === 409) {
-            throw new Error(`A product with the handle "${handle}" already exists. Please choose a different handle.`)
-          }
-
-          throw new Error(message)
+        if (!result.success) {
+          throw new Error(result.error)
         }
 
-        const result = await response.json()
-
         if (onSuccess) {
-          onSuccess(result.product)
+          onSuccess({
+            ...(initialProduct ?? {}),
+            ...payload,
+            id: productId,
+          } as Product)
         }
 
         router.push("/vendor/dashboard/products")
@@ -574,9 +509,7 @@ export default function EditProductFormClient({
             : "Unexpected error while updating product."
         setSubmitError(message)
 
-        if (onError) {
-          onError(error instanceof Error ? error : new Error(message))
-        }
+        onError?.(error instanceof Error ? error : new Error(message))
       } finally {
         setIsSubmitting(false)
       }
@@ -596,7 +529,6 @@ export default function EditProductFormClient({
       apparel,
       variantRows,
       originalVariantIds,
-      resolvedToken,
       productId,
       router,
       onSuccess,

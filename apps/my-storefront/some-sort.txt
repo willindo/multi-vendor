@@ -1,0 +1,304 @@
+Earlier I suggested one because we hadn't seen order-placed.ts.
+ tree -J ./src > tree.json && npx tsx ./scripts/format-tree.ts pnpm medusa exec ./scripts/format-tree.ts
+
+./src/ middleware.ts, middleware1.ts.back
+    app/ layout.tsx, not-found.tsx, opengraph-image.jpg, twitter-image.jpg
+        [countryCode]/
+            (checkout)/ layout.tsx, not-found.tsx
+                checkout/ page.tsx
+            (main)/ layout.tsx, not-found.tsx, page.tsx
+                account/ layout.tsx, loading.tsx
+                    @dashboard/ loading.tsx, page.tsx
+                        addresses/ page.tsx
+                        orders/ page.tsx
+                            details/[id]/ page.tsx
+                        profile/ page.tsx
+                    @login/ page.tsx
+                cart/ loading.tsx, not-found.tsx, page.tsx
+                categories/[...category]/ page.tsx
+                collections/[handle]/ page.tsx
+                order/[id]/
+                    confirmed/ loading.tsx, page.tsx
+                    transfer/[token]/ page.tsx
+                        accept/ page.tsx
+                        decline/ page.tsx
+                products/[handle]/ page.tsx
+                search/ page.tsx
+                shops/[handle]/ page.tsx
+                store/ page.tsx
+                vendors/[id]/ page.tsx
+        api/search/suggestions/ route.ts
+        search/ page.tsx
+        vendor/ layout.tsx
+            dashboard/ page.tsx
+                orders/ page.tsx
+                    [id]/ page.tsx
+                products/ VendorProductsClientTable.tsx, page.tsx
+                    create/ CreateProductFormClient.tsx, page.tsx
+                    edit/[id]/ EditProductFormClient.tsx, page.tsx
+        vendors/[id]/
+    components/
+        search/ InstantSearch.tsx
+        vendor/products/ VariantMatrixBuilder.tsx, VariantMatrixTable.tsx
+            apparel/ ApparelClassification.tsx, ApparelConstruction.tsx, ApparelDetailsSection.tsx, ApparelGarment.tsx, ApparelLifecycle.tsx, ApparelMaterial.tsx, ApparelSelect.tsx, ApparelStyling.tsx, ApparelTextInput.tsx, ApparelTextarea.tsx
+    lib/ config.ts, constants.tsx, meilisearch-client.ts, search-server.ts
+        context/ modal-context.tsx
+        data/ cart.ts, categories.ts, collections.ts, cookies.ts, cookies1.ts, customer.ts, customer.ts.back, fulfillment.ts, locale-actions.ts, locales.ts, onboarding.ts, orders.ts, payment.ts, products.ts, regions.ts, variants.ts
+            vendor/ auth.ts, index.ts, orders.ts, products.ts, profile.ts, session.ts
+        hooks/ use-in-view.tsx, use-toggle-state.tsx
+        util/ compare-addresses.ts, env.ts, get-locale-header.ts, get-percentage-diff.ts, get-product-price.ts, isEmpty.ts, medusa-error.ts, money.ts, product.ts, repeat.ts, sort-products.ts
+            vendor/ apparel.ts, hydration.ts, inventory.ts, pricing.ts, product.ts, validation.ts
+    modules/
+        account/
+            components/
+                account-info/ index.tsx
+                account-nav/ index.tsx
+                address-book/ index.tsx
+                address-card/ add-address.tsx, edit-address-modal.tsx
+                login/ index.tsx, index.tsx.back
+                order-card/ index.tsx
+                order-overview/ index.tsx
+                overview/ index.tsx
+                profile-billing-address/ index.tsx
+                profile-email/ index.tsx
+                profile-name/ index.tsx
+                profile-password/ index.tsx
+                profile-phone/ index.tsx
+                register/ index.tsx
+                transfer-request-form/ index.tsx
+                vendor-signout/ index.tsx
+            templates/ account-layout.tsx, login-template.tsx, login-template.tsx.back
+        cart/
+            components/
+                cart-item-select/ index.tsx
+                empty-cart-message/ index.tsx
+                item/ index.tsx
+                sign-in-prompt/ index.tsx
+            templates/ index.tsx, items.tsx, preview.tsx, summary.tsx
+        categories/templates/ index.tsx
+        checkout/
+            components/
+                address-select/ index.tsx
+                addresses/ index.tsx
+                billing_address/ index.tsx
+                country-select/ index.tsx
+                discount-code/ index.tsx
+                error-message/ index.tsx
+                payment/ index.tsx
+                payment-button/ index.tsx
+                payment-container/ index.tsx
+                payment-test/ index.tsx
+                payment-wrapper/ index.tsx, stripe-wrapper.tsx
+                review/ index.tsx
+                shipping/ index.tsx
+                shipping-address/ index.tsx
+                submit-button/ index.tsx
+                vendor-split-summary/ index.tsx
+            templates/
+                checkout-form/ index.tsx
+                checkout-summary/ index.tsx
+        collections/templates/ index.tsx
+        common/
+            components/
+                cart-totals/ index.tsx
+                checkbox/ index.tsx
+                delete-button/ index.tsx
+                divider/ index.tsx
+                filter-radio-group/ index.tsx
+                input/ index.tsx
+                interactive-link/ index.tsx
+                line-item-options/ index.tsx
+                line-item-price/ index.tsx
+                line-item-unit-price/ index.tsx
+                localized-client-link/ index.tsx
+                modal/ index.tsx
+                native-select/ index.tsx
+                radio/ index.tsx
+            icons/ back.tsx, bancontact.tsx, chevron-down.tsx, eye-off.tsx, eye.tsx, fast-delivery.tsx, ideal.tsx, map-pin.tsx, medusa.tsx, nextjs.tsx, package.tsx, paypal.tsx, placeholder-image.tsx, refresh.tsx, spinner.tsx, trash.tsx, user.tsx, x.tsx
+        home/components/
+            featured-products/ index.tsx
+                product-rail/ index.tsx
+            hero/ index.tsx
+        layout/
+            components/
+                cart-button/ index.tsx
+                cart-dropdown/ index.tsx
+                cart-mismatch-banner/ index.tsx
+                country-select/ index.tsx
+                language-select/ index.tsx
+                medusa-cta/ index.tsx
+                side-menu/ index.tsx
+            templates/
+                footer/ index.tsx
+                nav/ index.tsx
+        order/
+            components/
+                help/ index.tsx
+                item/ index.tsx
+                items/ index.tsx
+                onboarding-cta/ index.tsx
+                order-details/ index.tsx
+                order-summary/ index.tsx
+                payment-details/ index.tsx
+                shipping-details/ index.tsx
+                transfer-actions/ index.tsx
+                transfer-image/ index.tsx
+            templates/ order-completed-template.tsx, order-details-template.tsx
+        products/
+            components/
+                image-gallery/ index.tsx
+                product-actions/ index.tsx, mobile-actions.tsx, option-select.tsx
+                product-onboarding-cta/ index.tsx
+                product-preview/ index.tsx, price.tsx
+                product-price/ index.tsx
+                product-tabs/ accordion.tsx, index.tsx
+                related-products/ index.tsx
+                thumbnail/ index.tsx
+                vendor/ vendor-spotlight.tsx
+            templates/ index.tsx, index.tsx.back
+                product-actions-wrapper/ index.tsx
+                product-info/ index.tsx
+        shipping/components/free-shipping-price-nudge/ index.tsx
+        skeletons/
+            components/
+                skeleton-button/ index.tsx
+                skeleton-card-details/ index.tsx
+                skeleton-cart-item/ index.tsx
+                skeleton-cart-totals/ index.tsx
+                skeleton-code-form/ index.tsx
+                skeleton-line-item/ index.tsx
+                skeleton-order-confirmed-header/ index.tsx
+                skeleton-order-information/ index.tsx
+                skeleton-order-items/ index.tsx
+                skeleton-order-summary/ index.tsx
+                skeleton-product-preview/ index.tsx
+            templates/
+                skeleton-cart-page/ index.tsx
+                skeleton-order-confirmed/ index.tsx
+                skeleton-product-grid/ index.tsx
+                skeleton-related-products/ index.tsx
+        store/
+            components/
+                pagination/ index.tsx
+                refinement-list/ index.tsx
+                    sort-products/ index.tsx
+            templates/ index.tsx, paginated-products.tsx
+    packages/shared/src/
+    styles/ globals.css
+    types/ css.d.ts, global.ts, icon.ts, marketplace.ts
+badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-storefront$ 
+  table_name     |  column_name  
+--------------------+---------------
+ provider_identity  | user_metadata
+ user_preference    | user_id
+ view_configuration | user_id
+ vendor_admin       | user_id
+ user_rbac_role     | user_id
+          table_name             | column_name 
+------------------------------------+-------------
+ marketplace_vendor_order_order     | vendor_id
+ vendor_admin                       | vendor_id
+ marketplace_vendor_product_product | vendor_id
+(3 rows)
+ source_table | source_column | target_table | target_column 
+--------------+---------------+--------------+---------------
+ vendor_admin | vendor_id     | vendor       | id
+                         Table "public.vendor_admin"
+   Column   |           Type           | Collation | Nullable |    Default    
+------------+--------------------------+-----------+----------+---------------
+ id         | text                     |           | not null | 
+ user_id    | text                     |           | not null | 
+ role       | text                     |           | not null | 'admin'::text
+ vendor_id  | text                     |           | not null | 
+                          Table "public.user"
+   Column   |           Type           | Collation | Nullable | Default 
+------------+--------------------------+-----------+----------+---------
+ id         | text                     |           | not null | 
+ first_name | text                     |           |          | 
+ last_name  | text                     |           |          | 
+ email      | text                     |           | not null | 
+ avatar_url | text                     |           |          | 
+ metadata   | jsonb                    |           |          | 
+                         Table "public.user_rbac_role"
+    Column    |           Type           | Collation | Nullable |      Default      
+--------------+--------------------------+-----------+----------+-------------------
+ user_id      | character varying(255)   |           | not null | 
+ rbac_role_id | character varying(255)   |           | not null | 
+ id           | character varying(255)   |           | not null | 
+                       Table "public.vendor"
+   Column   |           Type           | Collation | Nullable | Default 
+------------+--------------------------+-----------+----------+---------
+ id         | text                     |           | not null | 
+ name       | text                     |           | not null | 
+ handle     | text                     |           | not null | 
+ logo       | text                     |           |          | 
+ is_active  | boolean                  |           | not null | true
+ metadata   | jsonb                    |           |          | 
+ Ship endpoint const { vendorId } =   await validateVendorOrderOwnership(...) Later you no longer use vendorId except returning it in the response. I'd remove it from the response.The frontend doesn't need the vendor id.
+ Overall, this is a solid Medusa v2 marketplace architecture. The remaining work is less about restructuring and more about polishing: using MedusaError, making the order.placed subscriber idempotent, and fixing the field selection in the vendor order read endpoints (the likely source of the created_at error).
+ http:    GET /vendors/products ← - (200) - 720.400 ms
+🔍 actorId: 01KX3XB4QS2W5GA2DYW7MBEC54
+🔍 auth_context: {
+  "actor_id": "01KX3XB4QS2W5GA2DYW7MBEC54",
+  "actor_type": "vendor",
+  "auth_identity_id": "authid_01KX3XB4GXMGADSPH28G0NM6S6",
+  "app_metadata": {
+    "vendor_id": "01KX3XB4QS2W5GA2DYW7MBEC54"
+  },
+  "user_metadata": {},
+  "iat": 1785399862,
+  "exp": 1785486262
+}
+http:    GET /vendors/orders ← - (200) - 81.233 ms
+You don't need to build:
+
+vendor/cart
+vendor/checkout
+vendor/products-engine
+vendor/inventory-engine
+vendor/order-engine
+                    CUSTOMER STOREFRONT
+                    ===================
+                           │
+                    Medusa storefront
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+       Cart             Checkout           Orders
+        │                  │                  │
+        └──────────────────┼──────────────────┘
+                           │
+                    Marketplace layer
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+     Vendor              Product            Order
+     Admin              Ownership          Ownership
+        │                  │                  │
+        └──────────────────┼──────────────────┘
+                           │
+                    Vendor Dashboard
+vendor_admin
+     │
+     ▼
+   Vendor
+     │
+     ├──────── marketplace_vendor_product_product
+     │                       │
+     │                       ▼
+     │                    Product
+     │                       │
+     │                       ▼
+     │                    Variant
+     │                       │
+     │                       ▼
+     │                  Inventory
+     │
+     └──────── marketplace_vendor_order_order
+                             │
+                             ▼
+                      Customer Order
+                             │
+                             ▼
+                        Order Items
+                        Do not make the storefront vendor-aware everywhere. Make the marketplace ownership layer vendor-aware, and let the storefront consume the result.

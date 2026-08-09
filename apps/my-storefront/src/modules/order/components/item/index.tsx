@@ -12,10 +12,6 @@ type ItemProps = {
 }
 
 const Item = ({ item, currencyCode }: ItemProps) => {
-  // Extract vendor metadata safely (checking line item or the nested variant product if applicable)
-  const vendorId = (item.metadata as any)?.vendor_id
-  const vendorName = (item.metadata as any)?.vendor_name || (vendorId ? `Vendor (${vendorId.slice(0, 8)})` : null)
-
   return (
     <Table.Row className="w-full" data-testid="product-row">
       <Table.Cell className="!pl-0 p-4 w-24">
@@ -31,14 +27,6 @@ const Item = ({ item, currencyCode }: ItemProps) => {
         >
           {item.product_title}
         </Text>
-        
-        {/* SURFACING MARKETPLACE VENDOR CODES ON THE RECEIPT */}
-        {vendorName && (
-          <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mt-0.5">
-            Seller: {vendorName}
-          </div>
-        )}
-
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
       </Table.Cell>
 

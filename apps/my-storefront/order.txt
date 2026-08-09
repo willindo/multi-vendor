@@ -1,0 +1,174 @@
+src/api/vendors/orders/
+├── route.ts              <-- GET vendor order list
+└── [id]
+    └── route.ts          <-- GET vendor order details
+    src/api/vendors/orders/
+│
+├── route.ts          ← list vendor orders
+│
+└── [id]
+     ├── route.ts     ← vendor order details
+     └── items
+           └── [item_id]
+                └── ship
+ Endpoint 1: GET /vendors/orders
+ Authenticate Vendor
+        │
+        ▼
+Verify actor_id
+        │
+        ▼
+Find linked orders
+(marketplace_vendor_order_order)
+        │
+        ▼
+query.graph(order)
+        │
+        ▼
+Filter line items
+(item.metadata.vendor_id)
+        │
+        ▼
+Compute vendor totals
+        │
+        ▼
+Return summaries
+
+edusa=# \dt *order*
+                     List of relations
+ Schema |               Name               | Type  | Owner  
+--------+----------------------------------+-------+--------
+ public | marketplace_vendor_order_order   | table | medusa
+ public | order                            | table | medusa
+ public | order_address                    | table | medusa
+ public | order_cart                       | table | medusa
+ public | order_change                     | table | medusa
+ public | order_change_action              | table | medusa
+ public | order_claim                      | table | medusa
+ public | order_claim_item                 | table | medusa
+ public | order_claim_item_image           | table | medusa
+ public | order_credit_line                | table | medusa
+ public | order_exchange                   | table | medusa
+ public | order_exchange_item              | table | medusa
+ public | order_fulfillment                | table | medusa
+ public | order_item                       | table | medusa
+ public | order_line_item                  | table | medusa
+ public | order_line_item_adjustment       | table | medusa
+ public | order_line_item_tax_line         | table | medusa
+ public | order_payment_collection         | table | medusa
+ public | order_promotion                  | table | medusa
+ public | order_shipping                   | table | medusa
+ public | order_shipping_method            | table | medusa
+ public | order_shipping_method_adjustment | table | medusa
+ public | order_shipping_method_tax_line   | table | medusa
+ public | order_summary                    | table | medusa
+ public | order_transaction                | table | medusa
+(25 rows)
+                                              Table "public.order"
+       Column        |           Type           | Collation | Nullable |                  Default                  
+---------------------+--------------------------+-----------+----------+-------------------------------------------
+ id                  | text                     |           | not null | 
+ region_id           | text                     |           |          | 
+ display_id          | integer                  |           |          | nextval('order_display_id_seq'::regclass)
+ customer_id         | text                     |           |          | 
+ version             | integer                  |           | not null | 1
+ sales_channel_id    | text                     |           |          | 
+ status              | order_status_enum        |           | not null | 'pending'::order_status_enum
+ is_draft_order      | boolean                  |           | not null | false
+ email               | text                     |           |          | 
+ currency_code       | text                     |           | not null | 
+ shipping_address_id | text                     |           |          | 
+ billing_address_id  | text                     |           |          | 
+ no_notification     | boolean                  |           |          | 
+ metadata            | jsonb                    |           |          | 
+ custom_display_id   | text                     |           |          | 
+ locale              | text                     |           |          | 
+                            Table "public.order_cart"
+   Column   |           Type           | Collation | Nullable |      Default      
+------------+--------------------------+-----------+----------+-------------------
+ order_id   | character varying(255)   |           | not null | 
+ cart_id    | character varying(255)   |           | not null | 
+ id         | character varying(255)   |           | not null |  
+                                                 Table "public.order_item"
+            Column             |           Type           | Collation | Nullable |                 Default                  
+-------------------------------+--------------------------+-----------+----------+------------------------------------------
+ id                            | text                     |           | not null | 
+ order_id                      | text                     |           | not null | 
+ version                       | integer                  |           | not null | 
+ item_id                       | text                     |           | not null | 
+ quantity                      | numeric                  |           | not null | 
+ raw_quantity                  | jsonb                    |           | not null | 
+ fulfilled_quantity            | numeric                  |           | not null | 
+ raw_fulfilled_quantity        | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ shipped_quantity              | numeric                  |           | not null | 
+ raw_shipped_quantity          | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ return_requested_quantity     | numeric                  |           | not null | 
+ raw_return_requested_quantity | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ return_received_quantity      | numeric                  |           | not null | 
+ raw_return_received_quantity  | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ return_dismissed_quantity     | numeric                  |           | not null | 
+ raw_return_dismissed_quantity | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ written_off_quantity          | numeric                  |           | not null | 
+ raw_written_off_quantity      | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ metadata                      | jsonb                    |           |          | 
+ delivered_quantity            | numeric                  |           | not null | 0
+ raw_delivered_quantity        | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ unit_price                    | numeric                  |           |          | 
+ raw_unit_price                | jsonb                    |           |          | 
+ compare_at_unit_price         | numeric                  |           |          | 
+ raw_compare_at_unit_price     | jsonb                    |           |     
+                           Table "public.order_line_item"
+          Column           |           Type           | Collation | Nullable | Default 
+---------------------------+--------------------------+-----------+----------+---------
+ id                        | text                     |           | not null | 
+ totals_id                 | text                     |           |          | 
+ title                     | text                     |           | not null | 
+ subtitle                  | text                     |           |          | 
+ thumbnail                 | text                     |           |          | 
+ variant_id                | text                     |           |          | 
+ product_id                | text                     |           |          | 
+ product_title             | text                     |           |          | 
+ product_description       | text                     |           |          | 
+ product_subtitle          | text                     |           |          | 
+ product_type              | text                     |           |          | 
+ product_collection        | text                     |           |          | 
+ product_handle            | text                     |           |          | 
+ variant_sku               | text                     |           |          | 
+ variant_barcode           | text                     |           |          | 
+ variant_title             | text                     |           |          | 
+ variant_option_values     | jsonb                    |           |          | 
+ requires_shipping         | boolean                  |           | not null | true
+ is_discountable           | boolean                  |           | not null | true
+ is_tax_inclusive          | boolean                  |           | not null | false
+ compare_at_unit_price     | numeric                  |           |          | 
+ raw_compare_at_unit_price | jsonb                    |           |          | 
+ unit_price                | numeric                  |           | not null | 
+ raw_unit_price            | jsonb                    |           | not null | 
+ metadata                  | jsonb                    |           |          | 
+ created_at                | timestamp with time zone |           | not null | now()
+ updated_at                | timestamp with time zone |           | not null | now()
+ deleted_at                | timestamp with time zone |           |          | 
+ is_custom_price           | boolean                  |           | not null | false
+ product_type_id           | text                     |           |          | 
+ is_giftcard               | boolean                  |           | not null | false     | 
+                      Table "public.order_summary"
+   Column   |           Type           | Collation | Nullable | Default 
+------------+--------------------------+-----------+----------+---------
+ id         | text                     |           | not null | 
+ order_id   | text                     |           | not null | 
+ version    | integer                  |           | not null | 1
+ totals     | jsonb                    |           |          | 
+                    Table "public.order_transaction"
+    Column     |           Type           | Collation | Nullable | Default 
+---------------+--------------------------+-----------+----------+---------
+ id            | text                     |           | not null | 
+ order_id      | text                     |           | not null | 
+ version       | integer                  |           | not null | 1
+ amount        | numeric                  |           | not null | 
+ raw_amount    | jsonb                    |           | not null | 
+ currency_code | text                     |           | not null | 
+ reference     | text                     |           |          | 
+ reference_id  | text                     |           |          | 
+ return_id     | text                     |           |          | 
+ claim_id      | text                     |           |          | 
+ exchange_id   | text                     |           |          | 

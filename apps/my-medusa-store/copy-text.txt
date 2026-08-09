@@ -1,0 +1,269 @@
+./src/lib
+├── config.ts
+├── constants.tsx
+├── context
+│   └── modal-context.tsx
+├── data
+│   ├── variants.ts
+│   └── vendor
+│       ├── auth.ts
+│       ├── index.ts
+│       ├── orders.ts
+│       ├── products.ts
+│       ├── profile.ts
+│       └── session.ts
+├── hooks
+│   ├── use-in-view.tsx
+│   └── use-toggle-state.tsx
+├── meilisearch-client.ts
+├── search-server.ts
+└── util
+    └── vendor
+        ├── apparel.ts
+        ├── hydration.ts
+        ├── inventory.ts
+        ├── pricing.ts
+        ├── product.ts
+        └── validation.ts
+
+7 directories, 46 files
+Product (Commerce Root) = decoupled database design schema tree
+│
+├── Product Information
+│   ├── id
+│   ├── title
+│   ├── subtitle
+│   ├── description
+│   ├── handle
+│   └── type_id  <=-- not yet use 
+│
+├── Categories       <=-- not yet use    
+│   ├── product_category_product
+│   └── product_category                
+│       └── parent_category_id
+│
+├── Product Type     <=-- not yet use 
+│   └── product_type
+├── Apparel Detail (1:1)
+│   ├── gender
+│   ├── age_group
+│   ├── sizing_group
+│   │
+│   ├── garment_category
+│   ├── garment_subcategory
+│   │
+│   ├── fit
+│   ├── pattern
+│   ├── style_type
+│   ├── occasion
+│   ├── sleeve_type
+│   ├── neck_type
+│   │
+│   ├── material_type
+│   ├── material_composition
+│   ├── care_instructions
+│   │
+│   ├── season
+│   └── condition
+│
+├── Product Options
+│   ├── product_option
+│   │   ├── Size
+│   │   ├── Color
+│   │   ├── Length
+│   │   ├── Width
+│   │   └── Pack Size
+│   │
+│   └── product_option_value
+│
+└── Product Variants
+    │
+    ├── product_variant   <=-- actual sellable 
+    │   ├── sku
+    │   ├── barcode
+    │   ├── ean
+    │   ├── upc
+    │   ├── thumbnail
+    │   ├── weight
+    │   ├── dimensions
+    │   ├── material
+    │   ├── manage_inventory
+    │   ├── allow_backorder
+    │   └── metadata
+    │
+    ├── Variant Option Values
+    │   └── product_variant_option
+    │
+    ├── Variant Images
+    │   └── product_variant_product_image
+    │
+    ├── Inventory Module Link
+    │   └── product_variant_inventory_item
+    │        │
+    │        ▼
+    │     inventory_item
+    |       ▲
+    |       │ FK
+    |       │
+    |      inventory_level
+    |       │
+    |       ├── stocked_quantity
+    |       ├── location_id
+    |       └── reserved_quantity
+    │      
+    │        
+    │
+    └── Pricing Module Link
+         └── product_variant_price_set
+              │
+              ▼
+           price_set
+              │
+              ▼
+             price
+              ├── amount
+              └── currency_code
+./src/
+ app/
+[countryCode]/
+(main)/
+ products/[handle]/ page.tsx
+ vendor/dashboard/
+        products/ VendorProductsClientTable.tsx, page.tsx
+                    create/ CreateProductFormClient.tsx, page.tsx
+                    edit/[id]/ EditProductFormClient.tsx, page.tsx
+components/
+vendor/products/ VariantMatrixBuilder.tsx, VariantMatrixTable.tsx
+lib/data/
+  vendor/
+    products.ts,
+  util/
+    get-product-price.ts
+,   product.ts,
+    sort-products.ts
+       vendor/
+         product.ts
+modules/
+    home/components/
+            featured-products/ index.tsx
+                product-rail/ index.tsx
+    products/
+        components/
+                image-gallery/ index.tsx
+                product-actions/ index.tsx, mobile-actions.tsx, option-select.tsx
+                product-onboarding-cta/ index.tsx
+                product-preview/ index.tsx, price.tsx
+                product-price/ index.tsx
+                product-tabs/ accordion.tsx, index.tsx
+                related-products/ index.tsx
+            templates/ 
+                product-actions-wrapper/ index.tsx
+                product-info/ index.tsx
+    skeletons/
+        components/
+                skeleton-product-preview/ index.tsx
+        templates/
+            skeleton-product-grid/ index.tsx
+            skeleton-related-products/ index.tsx
+    store/
+     components/
+         refinement-list/
+              sort-products/ index.tsx
+     templates/
+        paginated-products.tsx              
+           variant_id             |           product_id            |                        sku                         | min_price | currency_code | stocked_quantity |   location_id    
+------------------------------------+---------------------------------+----------------------------------------------------+-----------+---------------+------------------+------------------
+ variant_01KYFP67V0SXKKS3KF8FFY7SZZ | prod_01KYFP67QJYCVMAFJSY3947Z8Q | 01kwya7c-PREMIUM-COTTON-LEGGINGS-M-KHAKI           |      2100 | usd           |               75 | default_location
+ variant_01KYFP67TZ4Q8N1BKB63ZK38WM | prod_01KYFP67QJYCVMAFJSY3947Z8Q | 01kwya7c-PREMIUM-COTTON-LEGGINGS-S-KHAKI           |      4500 | usd           |               62 | default_location
+ variant_01KYFP67V05ZCWWHW64SNZCKGC | prod_01KYFP67QJYCVMAFJSY3947Z8Q | 01kwya7c-PREMIUM-COTTON-LEGGINGS-XL-WHITE          |      2600 | usd           |               34 | default_location
+ variant_01KYQJW4B1BTACSDHDK9ASZ1VN | prod_01KYQJW402V32TRT34JQJ9V1J0 | 01kwya7c-SKU-30-SKY-BLUE                           |     11500 | usd           |               14 | default_location
+ variant_01KYQJW4B640H1M1Q9W9T1XN38 | prod_01KYQJW402V32TRT34JQJ9V1J0 | 01kwya7c-SKU-36-SKY-BLUE                           |     12700 | usd           |               23 | default_location
+ variant_01KYAA0Y7GKSTQ8MDH7Z7CQPMD | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-KHAKI-L                                |      2500 | usd           |               34 | default_location
+ variant_01KYAA0Y7FTENWSPERQ614ZNVY | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-KHAKI-M                                |      1600 | usd           |               61 | default_location
+ variant_01KYAA0Y7FN3C518VDQ7CSSAS1 | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-KHAKI-S                                |      2999 | usd           |               28 | default_location
+ variant_01KYAA0Y7HGR4JMS370Y5ZQBY4 | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-KHAKI-XL                               |      2999 | usd           |               33 | default_location
+ variant_01KYAA0Y7J8ZB20XW55YDJK7A5 | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-NAVY-L                                 |      2999 | usd           |               55 | default_location
+ variant_01KYAA0Y7JF1H0H9SK7B6RWJ0G | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-NAVY-M                                 |      2999 | usd           |               80 | default_location
+ variant_01KYAA0Y7JJR2PBX6MN6MFY06M | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-NAVY-S                                 |      2999 | usd           |               45 | default_location
+ variant_01KYAA0Y7KDG1R976RRAAN0J00 | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-NAVY-XL                                |      2999 | usd           |               35 | default_location
+ variant_01KYAA0Y7PSB5TN5J33V05CWPR | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-WHITE-L                                |      2300 | usd           |               49 | default_location
+ variant_01KYAA0Y7MC7ESFEVMQ3VF4R82 | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-WHITE-M                                |      2999 | usd           |               70 | default_location
+ variant_01KYAA0Y7MCWJS1K659DJ8FTAJ | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-WHITE-S                                |      1900 | usd           |               43 | default_location
+ variant_01KYAA0Y7PXFNN7ZQRVNBSJ0P9 | prod_01KYAA0Y11VTP4E68ZT3XVMZKQ | 01kwya7c-TS-WHITE-XL                               |      2999 | usd           |               32 | default_location
+ variant_01KZE7WAPQXDB6S6FY1QTAF74N | prod_01KZE7WAEQ0VC34N3RT9DG22JF | 01kx3xb4-POLYESTER-SHIRT-CONVENIENT-STYLE-L--BROWN |     40000 | inr           |               10 | default_location
+ variant_01KZE7WAPPH6TTH2MBHM3J8VMD | prod_01KZE7WAEQ0VC34N3RT9DG22JF | 01kx3xb4-POLYESTER-SHIRT-CONVENIENT-STYLE-M--TEAL  |     37500 | inr           |               10 | default_location
+ variant_01KZE7WAPQVQJ7G99BE2K557ME | prod_01KZE7WAEQ0VC34N3RT9DG22JF | 01kx3xb4-POLYESTER-SHIRT-CONVENIENT-STYLE-S--BROWN |     35000 | inr           |               15 | default_location
+ variant_01KYKG7156717VXT1GDG7VXTZQ | prod_01KYKG710C8Y01FDT3RR8H34A6 | 01kx3xb4-SILK-PARTY-WEAR-L-MAGANDA                 |     31500 | inr           |                8 | default_location
+ variant_01KYKG7155E8H5AAEN79PFMC7T | prod_01KYKG710C8Y01FDT3RR8H34A6 | 01kx3xb4-SILK-PARTY-WEAR-M-MAGANDA                 |     34800 | inr           |               11 | default_location
+ variant_01KYF3F4KKYDGPZ8HTTKT7650N | prod_01KYF3F4BW307ZCSE39CR7C9E2 | 01KX3XB4-SKU-L-PINK                                |     15000 | usd           |               20 | default_location
+ variant_01KYF3F4KMG2J8B4GNG8X67K6D | prod_01KYF3F4BW307ZCSE39CR7C9E2 | 01KX3XB4-SKU-XL-PINK                               |     15000 | usd           |               15 | default_location
+(24 rows)
+ grep -r "import.*@lib/data/products*" --exclude-dir=.next --exclude-dir=node_modules
+src/modules/home/components/featured-products/product-rail/index.tsx:import { listProducts } from "@lib/data/products"
+src/modules/products/components/product-preview/index.tsx:import { listProducts } from "@lib/data/products"
+src/modules/products/components/related-products/index.tsx:import { listProducts } from "@lib/data/products"
+src/modules/products/templates/product-actions-wrapper/index.tsx:import { listProducts } from "@lib/data/products"
+src/modules/store/templates/paginated-products.tsx:import { listProductsWithSort } from "@lib/data/products"
+src/app/[countryCode]/(main)/products/[handle]/page.tsx:import { listProducts } from "@lib/data/products"
+badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-storefront$ 
+./src/lib
+├── config.ts
+├── constants.tsx
+├── context
+│   └── modal-context.tsx
+├── data
+│   ├── categories.ts
+│   ├── collections.ts
+│   ├── fulfillment.ts
+│   ├── locale-actions.ts
+│   ├── locales.ts
+│   ├── onboarding.ts
+│   ├── products.ts
+│   ├── variants.ts
+├── search-server.ts
+└── util
+    ├── compare-addresses.ts
+    ├── env.ts
+    ├── get-locale-header.ts
+    ├── get-percentage-diff.ts
+    ├── get-product-price.ts
+    ├── isEmpty.ts
+    ├── medusa-error.ts
+    ├── money.ts
+    ├── product.ts
+    ├── repeat.ts
+    ├── sort-products.ts
+ 
+import { getProductPrice } from "@lib/util/get-product-price"
+import PreviewPrice from "./price"
+export default async function ProductPreview({
+  product,
+  isFeatured,
+  region,
+}: {
+  product: HttpTypes.StoreProduct
+  isFeatured?: boolean
+  region: HttpTypes.StoreRegion
+}) {
+  const { cheapestPrice } = getProductPrice({
+    product,
+  })
+  return (
+    <LocalizedClientLink href={`/products/${product.handle}`} className="group">
+      <div data-testid="product-wrapper">
+        <Thumbnail
+          thumbnail={product.thumbnail}
+          images={product.images}
+          size="full"
+          isFeatured={isFeatured}
+        />
+        <div className="flex txt-compact-medium mt-4 justify-between">
+          <Text className="text-ui-fg-subtle" data-testid="product-title">
+            {product.title}
+          </Text>
+          <div className="flex items-center gap-x-2">
+            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
+          </div>
+        </div>
+      </div>
+    </LocalizedClientLink>

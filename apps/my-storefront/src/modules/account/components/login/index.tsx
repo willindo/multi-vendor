@@ -2,7 +2,7 @@
 "use client"
 
 import { login } from "@lib/data/customer"
-import { loginVendor } from "@lib/data/vendor" // 🚀 Imported your new merchant verification action
+import { loginVendor } from "@lib/data/vendor/auth" // 🚀 Imported your new merchant verification action
 import { LOGIN_VIEW, USER_ROLE } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
@@ -20,7 +20,7 @@ const Login = ({ setCurrentView, activeRole }: Props) => {
   const currentAction = activeRole === "vendor" ? loginVendor : login
   const [message, formAction] = useActionState(currentAction, null)
   const params = useParams()
-  
+
   const countryCode = (params?.countryCode as string) || "in"
 
   return (
@@ -29,8 +29,8 @@ const Login = ({ setCurrentView, activeRole }: Props) => {
         {activeRole === "vendor" ? "Vendor Portal" : "Welcome back"}
       </h1>
       <p className="text-center text-base-regular text-ui-fg-base mb-8">
-        {activeRole === "vendor" 
-          ? "Sign in to manage your inventory, orders, and storefront payouts." 
+        {activeRole === "vendor"
+          ? "Sign in to manage your inventory, orders, and storefront payouts."
           : "Sign in to access an enhanced shopping experience."}
       </p>
 
@@ -58,7 +58,7 @@ const Login = ({ setCurrentView, activeRole }: Props) => {
           />
         </div>
         <ErrorMessage error={message} data-testid="login-error-message" />
-        
+
         <SubmitButton data-testid="sign-in-button" className="w-full mt-6">
           {activeRole === "vendor" ? "Access Dashboard" : "Sign in"}
         </SubmitButton>

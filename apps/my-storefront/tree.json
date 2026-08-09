@@ -173,6 +173,7 @@
         {"type":"file","name":"categories.ts"},
         {"type":"file","name":"collections.ts"},
         {"type":"file","name":"cookies.ts"},
+        {"type":"file","name":"cookies1.ts"},
         {"type":"file","name":"customer.ts"},
         {"type":"file","name":"customer.ts.back"},
         {"type":"file","name":"fulfillment.ts"},
@@ -184,7 +185,14 @@
         {"type":"file","name":"products.ts"},
         {"type":"file","name":"regions.ts"},
         {"type":"file","name":"variants.ts"},
-        {"type":"file","name":"vendor.ts"}
+        {"type":"directory","name":"vendor","contents":[
+          {"type":"file","name":"auth.ts"},
+          {"type":"file","name":"index.ts"},
+          {"type":"file","name":"orders.ts"},
+          {"type":"file","name":"products.ts"},
+          {"type":"file","name":"profile.ts"},
+          {"type":"file","name":"session.ts"}
+        ]}
       ]},
       {"type":"directory","name":"hooks","contents":[
         {"type":"file","name":"use-in-view.tsx"},
@@ -203,12 +211,15 @@
         {"type":"file","name":"money.ts"},
         {"type":"file","name":"product.ts"},
         {"type":"file","name":"repeat.ts"},
-        {"type":"file","name":"sort-products.ts"}
-      ]},
-      {"type":"directory","name":"vendor","contents":[
-        {"type":"file","name":"product-hydration.ts"},
-        {"type":"file","name":"product-utils.ts"},
-        {"type":"file","name":"product-validation.ts"}
+        {"type":"file","name":"sort-products.ts"},
+        {"type":"directory","name":"vendor","contents":[
+          {"type":"file","name":"apparel.ts"},
+          {"type":"file","name":"hydration.ts"},
+          {"type":"file","name":"inventory.ts"},
+          {"type":"file","name":"pricing.ts"},
+          {"type":"file","name":"product.ts"},
+          {"type":"file","name":"validation.ts"}
+        ]}
       ]}
     ]},
     {"type":"file","name":"middleware.ts"},
@@ -653,5 +664,5 @@
     ]}
   ]}
 ,
-  {"type":"report","directories":204,"files":247}
+  {"type":"report","directories":205,"files":256}
 ]

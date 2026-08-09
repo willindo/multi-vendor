@@ -176,11 +176,11 @@ export default function ProductActions({
           isLoading={isAdding}
           data-testid="add-product-button"
         >
-          {!selectedVariant && !options
+          {!selectedVariant
             ? "Select variant"
-            : !inStock || !isValidVariant
-            ? "Out of stock"
-            : "Add to cart"}
+            : !inStock
+              ? "Out of stock"
+              : "Add to cart"}
         </Button>
         <MobileActions
           product={product}

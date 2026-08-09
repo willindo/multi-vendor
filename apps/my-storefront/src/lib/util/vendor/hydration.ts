@@ -1,9 +1,28 @@
-// ./src/lib/vendor/product-hydration.ts
+// src/lib/util/vendor/hydration.ts
 
-import type { VariantMatrixRow } from "@/components/vendor/products/VariantMatrixTable"
 import type { ApparelDetails } from "@shared/apparel/apparel-types"
 import { DEFAULT_APPAREL_DETAILS } from "@shared/apparel/apparel-defaults"
 
+import type { VariantMatrixRow } from "@/components/vendor/products/VariantMatrixTable"
+
+export interface VendorProduct {
+    id: string
+    title: string
+    handle: string
+    description?: string
+    status: string
+
+    weight?: number
+    thumbnail?: string
+
+    type_id?: string | null
+    collection_id?: string | null
+
+    apparel_detail?: ApparelDetails
+
+    variants?: any[]
+    options?: any[]
+}
 export interface Product {
     id: string
     title: string
@@ -52,50 +71,7 @@ interface ProductVariant {
     }>
 }
 
-/**
- * ✅ FIXED: Hydrate variant rows from product data
- */
-export function hydrateVariantRows(product: Product): VariantMatrixRow[] {
-    if (!product.variants || product.variants.length === 0) {
-        return []
-    }
-
-    return product.variants.map((variant: any) => {
-        // Build options array from variant options
-        // Note: Medusa doesn't return options in the variant by default
-        // We need to build them from the product options and variant values
-        const options = buildVariantOptions(product, variant)
-
-        // Get price from variant
-        const rawAmount = variant.price_amount ?? variant.prices?.[0]?.amount ?? 0;
-        const price = rawAmount ? rawAmount / 100 : 0;
-
-        const currencyCode = (
-            variant.currency_code ??
-            variant.prices?.[0]?.currency_code ??
-            "USD"
-        ).toUpperCase();
-
-        const priceId = variant.price_id ?? variant.prices?.[0]?.id;
-
-        return {
-            id: variant.id,
-            title: variant.title,
-            sku: variant.sku,
-            price: price,
-            currencyCode: currencyCode,
-            inventoryQuantity: variant.stocked_quantity ?? variant.inventory_quantity ?? 0,
-            manageInventory: variant.manage_inventory !== undefined ? variant.manage_inventory : true,
-            options: options,
-            enabled: true,
-            priceId: priceId,
-        }
-    })
-}
-
-/**
- * ✅ NEW: Build variant options from product options and variant
- */
+// Build variant options from product options and variant
 function buildVariantOptions(
     product: Product,
     variant: ProductVariant
@@ -136,9 +112,45 @@ function buildVariantOptions(
     return options
 }
 
-/**
- * ✅ FIXED: Hydrate apparel details
- */
+// Hydrate variant rows from product data
+export function hydrateVariantRows(product: Product): VariantMatrixRow[] {
+    if (!product.variants || product.variants.length === 0) {
+        return []
+    }
+
+    return product.variants.map((variant: any) => {
+        // Build options array from variant options
+        // Note: Medusa doesn't return options in the variant by default
+        // We need to build them from the product options and variant values
+        const options = buildVariantOptions(product, variant)
+
+        // Get price from variant
+        const rawAmount = variant.price_amount ?? variant.prices?.[0]?.amount ?? 0;
+        const price = rawAmount ? rawAmount / 100 : 0;
+
+        const currencyCode = (
+            variant.currency_code ??
+            variant.prices?.[0]?.currency_code ??
+            "USD"
+        ).toUpperCase();
+
+        const priceId = variant.price_id ?? variant.prices?.[0]?.id;
+
+        return {
+            id: variant.id,
+            title: variant.title,
+            sku: variant.sku,
+            price: price,
+            currencyCode: currencyCode,
+            inventoryQuantity: variant.stocked_quantity ?? variant.inventory_quantity ?? 0,
+            manageInventory: variant.manage_inventory !== undefined ? variant.manage_inventory : true,
+            options: options,
+            enabled: true,
+            priceId: priceId,
+        }
+    })
+}
+// Hydrate apparel details
 export function hydrateApparelDetails(product: Product): ApparelDetails {
     if (!product.apparel_detail) {
         return { ...DEFAULT_APPAREL_DETAILS }
@@ -151,9 +163,7 @@ export function hydrateApparelDetails(product: Product): ApparelDetails {
     }
 }
 
-/**
- * ✅ FIXED: Extract original variant IDs
- */
+//  Extract original variant IDs
 export function extractOriginalVariantIds(variantRows: VariantMatrixRow[]): Set<string> {
     return new Set(
         variantRows
@@ -162,9 +172,7 @@ export function extractOriginalVariantIds(variantRows: VariantMatrixRow[]): Set<
     )
 }
 
-/**
- * ✅ FIXED: Detect deleted variants
- */
+// Detect deleted variants
 export function detectDeletedVariants(
     originalIds: Set<string>,
     currentRows: VariantMatrixRow[]
@@ -176,10 +184,7 @@ export function detectDeletedVariants(
     )
     return Array.from(originalIds).filter(id => !currentIds.has(id))
 }
-
-/**
- * ✅ FIXED: Hydrate form state
- */
+// Hydrate form state
 export function hydrateFormState(product: Product) {
     return {
         title: product.title || "",
@@ -193,10 +198,7 @@ export function hydrateFormState(product: Product) {
         variants: hydrateVariantRows(product) || [],
     }
 }
-
-/**
- * ✅ FIXED: Hydrate commerce fields from first variant
- */
+// Hydrate commerce fields from first variant
 export function hydrateCommerceFields(product: Product) {
     if (!product.variants || product.variants.length === 0) {
         return {

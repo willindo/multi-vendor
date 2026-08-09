@@ -1,0 +1,176 @@
+DO NOT carry over
+/store/products
+       │
+       ▼
+StoreProduct
+       │
+       ├── product.title
+       ├── product.description
+       ├── product.images
+       ├── product.options
+       └── product.variants[]
+                    │
+                    ├── sku
+                    ├── price
+                    ├── inventory
+                    ├── options
+                    └── images
+                    src/types/marketplace.ts
+src/lib/data/products.ts
+src/app/[countryCode]/(main)/products/[handle]/page.tsx
+src/modules/products/templates/index.tsx
+src/modules/products/templates/product-info/index.tsx
+src/modules/products/components/product-tabs/index.tsx
+src/modules/products/components/product-price/index.tsx
+src/modules/products/components/product-actions/index.tsx
+src/modules/products/components/product-actions/mobile-actions.tsx
+src/modules/products/components/product-actions/option-select.tsx
+
+src/modules/products/components/image-gallery/index.tsx
+The important architectural decision is:
+
+Keep Medusa's Product as the commerce/catalog container, but make the storefront presentation variant-aware.
+
+A variant is the actual sellable SKU, while the product remains the grouping/container for options, images, apparel information, etc.
+lib/data/products.ts → storefront product retrieval
+lib/data/variants.ts → individual variant retrieval
+lib/data/vendor/products.ts → vendor CRUD
+lib/util/vendor/* → vendor payload construction
+ExtendedMarketplaceProduct → storefront projection
+packages/shared/* → shared domain rules
+default Medusa product UI → existing storefront behavior
+Commerce Product
+│
+├── Product identity
+│   ├── title
+│   ├── description
+│   ├── handle
+│   └── vendor
+│
+├── Apparel information
+│   └── apparel_detail
+│
+├── Option definitions
+│   ├── Size
+│   ├── Color
+│   └── ...
+│
+└── Sellable variants
+    │
+    ├── Variant A
+    │   ├── SKU
+    │   ├── options
+    │   ├── price
+    │   ├── inventory
+    │   └── images
+    │
+    ├── Variant B
+    │   ├── SKU
+    │   ├── options
+    │   ├── price
+    │   ├── inventory
+    │   └── images
+    │
+    └── Variant C
+    product-actions/   Variant selling surface
+├── index.tsx
+├── option-select.tsx
+└── mobile-actions.tsx
+Option selection
+      │
+      ▼
+selectedVariant
+      │
+      ├── price
+      ├── inventory
+      ├── SKU
+      └── images
+      │
+      ▼
+Add to cart
+Product Details   product information
+├── Apparel
+│   ├── gender
+│   ├── age group
+│   ├── garment category
+│   ├── garment subcategory
+│   ├── fit
+│   ├── pattern
+│   ├── style
+│   ├── occasion
+│   ├── sleeve
+│   └── neck
+│
+├── Material & Care
+│   ├── material type
+│   ├── composition
+│   └── care instructions
+│
+├── Product condition
+│   ├── season
+│   └── condition
+│
+└── Shipping P
+
+src/modules/products/components/product-preview/index.tsx
+src/modules/products/components/product-preview/price.tsx
+src/modules/products/components/product-price/index.tsx
+src/modules/store/templates/paginated-products.tsx
+src/modules/home/components/featured-products/product-rail/index.tsx
+src/modules/home/components/featured-products/index.tsx
+src/modules/products/components/related-products/index.tsx
+src/modules/skeletons/components/skeleton-product-preview/index.tsx
+src/modules/skeletons/templates/skeleton-product-grid/index.tsx
+src/modules/skeletons/templates/skeleton-related-products/index.tsx
+Product detail / sellable variant  = One product page correctly represents a product container + its actual sellable variants + apparel information.
+1. src/types/marketplace.ts
+        ↓
+2. src/lib/data/products.ts
+        ↓
+3. products/[handle]/page.tsx
+        ↓
+4. products/templates/index.tsx
+        ↓
+5. product-info
+        ↓
+6. product-tabs
+        ↓
+7. product-actions
+        ├── option-select
+        └── mobile-actions
+        ↓
+8. product-price
+        ↓
+9. image-gallery
+Catalog / discovery = Every place where a customer sees a product gets the same marketplace-aware projection.
+1. product-preview
+        ↓
+2. preview price
+        ↓
+3. product-price
+        ↓
+4. paginated-products
+        ↓
+5. product-rail
+        ↓
+6. related-products
+        ↓
+7. skeletons
+                     ┌─────────────────────┐
+                     │ Commerce Product    │
+                     │ + variants          │
+                     │ + apparel           │
+                     │ + vendor            │
+                     └──────────┬──────────┘
+                                │
+               ┌────────────────┼────────────────┐
+               │                │                │
+               ▼                ▼                ▼
+        Product Page       Store Catalog      Vendor Shop
+               │                │                │
+               └────────────────┼────────────────┘
+                                ▼
+                         ProductPreview /
+                         ProductProjection
+
+      

@@ -38,9 +38,8 @@ const OrderCard = ({ order }: OrderCardProps) => {
             currency_code: order.currency_code,
           })}
         </span>
-        <span className="pl-2">{`${numberOfLines} ${
-          numberOfLines > 1 ? "items" : "item"
-        }`}</span>
+        <span className="pl-2">{`${numberOfLines} ${numberOfLines > 1 ? "items" : "item"
+          }`}</span>
       </div>
       <div className="grid grid-cols-2 small:grid-cols-4 gap-4 my-4">
         {order.items?.slice(0, 3).map((i) => {

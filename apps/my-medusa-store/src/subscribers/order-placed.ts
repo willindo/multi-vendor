@@ -1,50 +1,107 @@
 // src/subscribers/order-placed.ts
-import { SubscriberArgs, type SubscriberConfig } from "@medusajs/framework";
-import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils";
-import { MARKETPLACE_MODULE } from "../modules/marketplace";
+import {
+  SubscriberArgs,
+  type SubscriberConfig,
+} from "@medusajs/framework"
+import {
+  Modules,
+  ContainerRegistrationKeys,
+} from "@medusajs/framework/utils"
+import { MARKETPLACE_MODULE } from "../modules/marketplace"
 
 export default async function orderPlacedHandler({
   event: { data },
   container,
 }: SubscriberArgs<{ id: string }>) {
-  const orderModuleService = container.resolve(Modules.ORDER);
-  const link = container.resolve(ContainerRegistrationKeys.REMOTE_LINK);
-  const orderId = data.id;
-
-  const order = await orderModuleService.retrieveOrder(orderId, {
+  const orderModule = container.resolve(Modules.ORDER)
+  const link = container.resolve(
+    ContainerRegistrationKeys.LINK
+  )
+  const pg = container.resolve(
+    ContainerRegistrationKeys.PG_CONNECTION
+  )
+  const orderId = data.id
+  console.log(
+    `📦 Processing marketplace links for Order ${orderId}`
+  )
+  const order = await orderModule.retrieveOrder(orderId, {
     relations: ["items"],
-  });
-  console.log(`🔔 Subscriber received Order: ${orderId}`);
-
+  })
   if (!order?.items?.length) {
-    console.log("⚠️ No items found in order. Relation might be missing.");
-    return;
+    console.log(
+      `⚠️ Order ${orderId} contains no items.`
+    )
+    return
   }
-
-  const vendorIds = new Set<string>();
+  /*
+  ------------------------------------------------------------------
+  Collect vendor ids from immutable item metadata
+  ------------------------------------------------------------------
+  */
+  const vendorIds = new Set<string>()
   for (const item of order.items) {
-    const vendorId = item.metadata?.vendor_id as string | undefined;
-    if (vendorId) vendorIds.add(vendorId);
-  }
-
-  const links: any[] = [];
-  for (const vendorId of vendorIds) {
-    links.push({
-      [MARKETPLACE_MODULE]: { vendor_id: vendorId },
-      [Modules.ORDER]: { order_id: orderId },
-    });
-  }
-
-  if (links.length > 0) {
-    try {
-      await link.create(links);
-      console.log(`✅ Linked Order ${orderId} to Vendors: ${Array.from(vendorIds).join(", ")}`);
-    } catch (error: any) {
-      console.error(`❌ Failed to link order to marketplace vendors: ${error.message}`);
+    const vendorId = item.metadata?.vendor_id as string | undefined
+    if (!vendorId) {
+      console.warn(
+        `⚠️ Order ${orderId}, item ${item.id} has no vendor_id metadata.`
+      )
+      continue
     }
+    vendorIds.add(vendorId)
+  }
+  if (!vendorIds.size) {
+    console.warn(
+      `⚠️ Order ${orderId} contains no vendor-owned items.`
+    )
+    return
+  }
+  /*
+  ------------------------------------------------------------------
+  Prevent duplicate links
+  ------------------------------------------------------------------
+  */
+  const newLinks: any[] = []
+  const existing = await pg("marketplace_vendor_order_order")
+    .select("vendor_id")
+    .where({
+      order_id: orderId,
+    })
+    .whereNull("deleted_at")
+  const existingVendorIds = new Set(
+    existing.map(x => x.vendor_id)
+  )
+  for (const vendorId of vendorIds) {
+    if (existingVendorIds.has(vendorId)) {
+      continue
+    }
+    newLinks.push({
+      [MARKETPLACE_MODULE]: {
+        vendor_id: vendorId,
+      },
+      [Modules.ORDER]: {
+        order_id: orderId,
+      },
+    })
+  }
+  if (!newLinks.length) {
+    console.log(
+      `✓ Vendor links already exist for Order ${orderId}`
+    )
+    return
+  }
+  try {
+    await link.create(newLinks)
+    console.log(
+      `✅ Linked Order ${orderId} to ${newLinks.length} vendor(s).`
+    )
+  } catch (error: any) {
+    console.error(
+      `❌ Failed creating vendor links for Order ${orderId}:`,
+      error.message
+    )
+    throw error
   }
 }
-
 export const config: SubscriberConfig = {
   event: "order.placed",
-};
+}

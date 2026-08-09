@@ -1,0 +1,36 @@
+                    ┌─────────────────────┐
+                    │   PLATFORM ADMIN    │
+                    │  all vendors/data   │
+                    └──────────┬──────────┘
+                               │
+                               │ manages
+                               ▼
+                    ┌─────────────────────┐
+                    │      VENDORS        │
+                    │ vendor A / B / C... │
+                    └──────────┬──────────┘
+                               │ owns/listed by
+                               ▼
+                    ┌─────────────────────┐
+                    │      PRODUCTS       │
+                    │ apparel/catalog data │
+                    └──────────┬──────────┘
+                               │
+                               │ contains
+                               ▼
+                    ┌─────────────────────┐
+                    │      VARIANTS       │
+                    │ SKU / price / stock │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │       ORDERS        │
+                    │ customer purchase   │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │ VENDOR ORDER ITEMS  │
+                    │ shipping / status   │
+                    └─────────────────────┘

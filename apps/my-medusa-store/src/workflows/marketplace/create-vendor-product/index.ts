@@ -1,3 +1,4 @@
+// src/workflows/marketplace/create-vendor-product/index.ts
 import { CreateProductWorkflowInputDTO } from "@medusajs/framework/types";
 import {
   createWorkflow,
@@ -114,6 +115,29 @@ export const createVendorProductWorkflow = createWorkflow(
       ],
     }));
 
+    // console.log(
+    //   "[WORKFLOW] normalizedProduct:",
+    //   JSON.stringify(data.normalizedProduct, null, 2)
+    // )
+    // console.log(
+    //   "[WORKFLOW] productData:",
+    //   JSON.stringify(
+    //     {
+    //       products: [
+    //         {
+    //           ...data.normalizedProduct,
+    //           sales_channels: [
+    //             {
+    //               id: data.stores[0].default_sales_channel_id,
+    //             },
+    //           ],
+    //         },
+    //       ],
+    //     },
+    //     null,
+    //     2
+    //   )
+    // )
     // 5. Create product
     const productResult = createProductsWorkflow.runAsStep({
       input: productData as CreateProductsWorkflowInput,

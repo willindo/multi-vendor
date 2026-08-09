@@ -10,6 +10,26 @@ type ProductTabsProps = {
   product: ExtendedMarketplaceProduct
 }
 
+const InfoRow = ({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) => {
+  return (
+    <div className="flex flex-col gap-y-1">
+      <span className="text-xs text-ui-fg-muted uppercase tracking-wide">
+        {label}
+      </span>
+
+      <span className="text-sm text-ui-fg-base">
+        {value}
+      </span>
+    </div>
+  )
+}
+
 const ProductTabs = ({ product }: ProductTabsProps) => {
   const tabs = [
     {
@@ -19,11 +39,11 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
     // Dynamically insert the Custom Apparel Specification tab only if data exists
     ...(product.apparel_detail
       ? [
-          {
-            label: "Specifications & Material",
-            component: <ApparelInfoTab apparelDetail={product.apparel_detail} />,
-          },
-        ]
+        {
+          label: "Specifications & Material",
+          component: <ApparelInfoTab apparelDetail={product.apparel_detail} />,
+        },
+      ]
       : []),
     {
       label: "Shipping & Returns",
@@ -34,9 +54,11 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
   return (
     <div className="w-full">
       <Accordion type="multiple">
+        {/* {tabs.map((tab, i) => ( */}
         {tabs.map((tab, i) => (
           <Accordion.Item
-            key={i}
+            // key={i}
+            key={tab.label}
             title={tab.label}
             headingSize="medium"
             value={tab.label}
@@ -49,85 +71,41 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
   )
 }
 
-const ProductInfoTab = ({ product }: ProductTabsProps) => {
+const ProductInfoTab = ({
+  product,
+}: ProductTabsProps) => {
   return (
-    <div className="text-small-regular py-8">
-      <div className="grid grid-cols-2 gap-x-8">
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Material</span>
-            <p>{product.material ? product.material : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Country of origin</span>
-            <p>{product.origin_country ? product.origin_country : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Type</span>
-            <p>{product.type ? product.type.value : "-"}</p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Weight</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Dimensions</span>
-            <p>
-              {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
-                : "-"}
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="grid grid-cols-1 small:grid-cols-2 gap-y-4 gap-x-8 py-2">
+      <InfoRow label="Product Information" value={product.description || "-"} />
+      <InfoRow label="Material" value={product.material || "-"} />
+      <InfoRow label="Country of origin" value={product.origin_country || "-"} />
+      <InfoRow label="Type" value={product.type?.value || "-"} />
+      <InfoRow label="Weight" value={product.weight ? `${product.weight} g` : "-"} />
+      <InfoRow label="Dimensions" value={product.length && product.width && product.height ? `${product.length}L x ${product.width}W x ${product.height}H` : "-"} />
     </div>
   )
 }
-
 // Custom Isolated Sub-Component for your extended database engine mappings
 const ApparelInfoTab = ({ apparelDetail }: { apparelDetail: NonNullable<ExtendedMarketplaceProduct["apparel_detail"]> }) => {
   return (
-    <div className="text-small-regular py-8">
-      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-        {apparelDetail.material_composition && (
-          <div>
-            <span className="font-semibold">Composition</span>
-            <p className="text-ui-fg-subtle">{apparelDetail.material_composition}</p>
-          </div>
-        )}
-        {apparelDetail.fit && (
-          <div>
-            <span className="font-semibold">Fit Style</span>
-            <p className="text-ui-fg-subtle uppercase">{apparelDetail.fit}</p>
-          </div>
-        )}
-        {apparelDetail.gender && (
-          <div>
-            <span className="font-semibold">Gender</span>
-            <p className="text-ui-fg-subtle uppercase">{apparelDetail.gender}</p>
-          </div>
-        )}
-        {apparelDetail.sizing_group && (
-          <div>
-            <span className="font-semibold">Sizing Scale</span>
-            <p className="text-ui-fg-subtle uppercase">{apparelDetail.sizing_group.replace(/_/g, " ")}</p>
-          </div>
-        )}
-        {apparelDetail.season && (
-          <div>
-            <span className="font-semibold">Season</span>
-            <p className="text-ui-fg-subtle uppercase">{apparelDetail.season}</p>
-          </div>
-        )}
-        {apparelDetail.care_instructions && (
-          <div className="col-span-2 mt-2">
-            <span className="font-semibold">Care Instructions</span>
-            <p className="text-ui-fg-subtle mt-1 text-xs leading-relaxed">{apparelDetail.care_instructions}</p>
-          </div>
-        )}
-      </div>
+    <div className="grid grid-cols-1 small:grid-cols-2 gap-y-4 gap-x-8 py-2">
+      <InfoRow label="Material Composition" value={apparelDetail.material_composition || "-"} />
+      <InfoRow label="Care Instructions" value={apparelDetail.care_instructions || "-"} />
+      {/* <InfoRow label="Country of Origin" value={apparelDetail.origin_country || "-"} /> */}
+      <InfoRow label="Gender" value={apparelDetail.gender || "-"} />
+      <InfoRow label="Age Group" value={apparelDetail.age_group || "-"} />
+      <InfoRow label="Sizing Group" value={apparelDetail.sizing_group || "-"} />
+      <InfoRow label="Garment Category" value={apparelDetail.garment_category || "-"} />
+      <InfoRow label="Garment Subcategory" value={apparelDetail.garment_subcategory || "-"} />
+      <InfoRow label="Fit" value={apparelDetail.fit || "-"} />
+      <InfoRow label="Pattern" value={apparelDetail.pattern || "-"} />
+      <InfoRow label="Style" value={apparelDetail.style_type || "-"} />
+      <InfoRow label="Sleeve" value={apparelDetail.sleeve_type || "-"} />
+      <InfoRow label="Neck" value={apparelDetail.neck_type || "-"} />
+      <InfoRow label="Material Type" value={apparelDetail.material_type || "-"} />
+      <InfoRow label="Occasion" value={apparelDetail.occasion || "-"} />
+      <InfoRow label="Season" value={apparelDetail.season || "-"} />
+      <InfoRow label="Condition" value={apparelDetail.condition || "-"} />
     </div>
   )
 }

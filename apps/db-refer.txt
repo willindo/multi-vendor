@@ -9,26 +9,25 @@ const [apparelState, setApparelState] = useState(
 {variants.map((variant, index) => {
   return <tr key={index}>...</tr> 
 })}
-If a vendor has generated a large matrix (e.g., 4 sizes × 5 colors × 3 fabrics = 60 variants), typing a single character into an input field updates the top-level state block. This causes all 60 rows to re-evaluate and re-render concurrently, degrading performance.
-
-how -=> Recommendation: Generate a predictable unique string id for your rows during matrix creation (e.g., combining the variant labels, like id: "top-s-blue") and use key={variant.id} instead of the raw loop index.
-const parsed = parseInt(e.target.value, 10);
-inventoryQuantity: isNaN(parsed) ? undefined : parsed  <<=- how integrate
-
-
-Failsafe Sequence: It unlinks downstream foreign keys (variants, price sets, channel links) before dropping parent option rows, completely eliminating PostgreSQL constraint errors.
-
+SELECT [DISTINCT] column1, column2, ...
+FROM table_name
+[JOIN other_table ON condition]
+WHERE filter_condition
+[GROUP BY group_column]
+[HAVING aggregate_condition]
+[ORDER BY sort_column ASC|DESC]
+[LIMIT number];
+FROM / JOIN $\rightarrow$ Identifies and merges the source tables.WHERE $\rightarrow$ Filters individual rows before grouping.GROUP BY $\rightarrow$ Groups rows into aggregated sets.HAVING $\rightarrow$ Filters the grouped aggregate results.SELECT $\rightarrow$ Extracts the requested columns/expressions.ORDER BY $\rightarrow$ Sorts the final result set.LIMIT $\rightarrow$ Restricts the number of returned rows.
+Product owns identity and descriptive information. Variant owns the actual sellable configuration.
 Preserves Store Defaults: It completely leaves global catalogs (product_category, product_shipping_profile, sales_channel) and your migration tables untouched. Your foundational store setup stays completely intact!
 
 Soft-Deleted Tables (Has deleted_at column): product, product_variant, product_variant_price_set, product_variant_inventory_item. When you delete a product via standard workflows, Medusa updates their timestamps to keep historical links alive.
-
 Hard-Deleted Tables (No deleted_at column): product_sales_channel, price, price_set, inventory_item, product_option_value. These tables do not track history. If an active product uses them, deleted_at won't even exist as a column. If they are left behind with active records after a product is gone, they are pure, unlinked orphans.
 exactly how Medusa was designed to behave. 
-
 This layout cleanly handles the deep-cascading soft-delete strategy, ensuring every associated record—from pivot links to isolated module entries—receives a matching timestamp uniformly while avoiding loose database updates.
+Soft Deletes vs. Hard Deletes: Medusa Core uses soft deletes (deleted_at timestamps) for complex entities like Products, Orders, and Links to avoid accidental orphan states. However, join tables or calculation adjustments (like line item discounts or tax lines) apply hard deletes (ON DELETE CASCADE) to instantly wipe the slate clean if a parent item leaves the cart.
 
-
- TRUNCATE TABLE 
+TRUNCATE TABLE 
   public.product_product_marketplace_apparel_detail,
   public.product_sales_channel,
   public.inventory_item,
@@ -59,7 +58,6 @@ successfully performed a hybrid data purge.
 Unique violation / Duplicate key value
 
 FOREIGN KEY (totals_id) REFERENCES order_item(id) ON UPDATE CASCADE ON DELETE CASCADE = This means if an order_item entity drops or updates its primary ID, it ripples right through to the line item configurations. 
-Soft Deletes vs. Hard Deletes: Medusa Core uses soft deletes (deleted_at timestamps) for complex entities like Products, Orders, and Links to avoid accidental orphan states. However, join tables or calculation adjustments (like line item discounts or tax lines) apply hard deletes (ON DELETE CASCADE) to instantly wipe the slate clean if a parent item leaves the cart.
 Product (Commerce Root) = decoupled database design schema tree
 │
 ├── Product Information
@@ -202,14 +200,14 @@ JOIN information_schema.constraint_column_usage ccu
     ON tc.constraint_name = ccu.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
 AND (
-    tc.table_name LIKE '%price%'
-    OR ccu.table_name LIKE '%price%'
+    tc.table_name LIKE '%pay%'
+    OR ccu.table_name LIKE '%pay%'
 );    
 
 SELECT table_name, column_name
 FROM information_schema.columns
 WHERE table_schema = 'public'
-AND column_name LIKE '%price%';
+AND column_name LIKE '%pay%';
 
 SELECT
     tc.table_name,
@@ -359,10 +357,12 @@ JOIN product_variant_inventory_item pvii
     ON pvii.variant_id = pv.id
 JOIN inventory_level il
     ON il.inventory_item_id = pvii.inventory_item_id
+WHERE
+    pv.deleted_at IS NULL
 ORDER BY
     pv.sku,
     po.title;
-
+ 
  SELECT                  
     schemaname,
     relname,
@@ -388,7 +388,7 @@ FROM product_option_value pov
 JOIN product_option po
     ON po.id = pov.option_id
 WHERE
-    po.product_id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
+    po.product_id = 'prod_01KYQJW402V32TRT34JQJ9V1J0'
     AND po.deleted_at IS NULL
     AND pov.deleted_at IS NULL
 ORDER BY
@@ -397,18 +397,21 @@ ORDER BY
 
     SELECT
   pv.id            AS variant_id,
+  pr.id            AS product_id,
   pv.sku,
   MIN(p.amount)    AS min_price,
   p.currency_code,
   il.stocked_quantity,
   il.location_id
 FROM product_variant pv
+JOIN product pr ON pv.product_id = pr.id
 JOIN product_variant_inventory_item pvii ON pvii.variant_id = pv.id
 JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
-WHERE pv.product_id = 'prod_01KYKG710C8Y01FDT3RR8H34A6'
-GROUP BY pv.id, pv.sku, p.currency_code, il.stocked_quantity, il.location_id
+WHERE 
+     pv.deleted_at IS NULL
+GROUP BY pv.id, pv.sku, p.currency_code, il.stocked_quantity, il.location_id, pr.id 
 ORDER BY pv.sku;
 
 [ public.product ]

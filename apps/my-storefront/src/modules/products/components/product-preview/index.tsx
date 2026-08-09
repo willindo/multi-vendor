@@ -1,5 +1,4 @@
 import { Text } from "@medusajs/ui"
-import { listProducts } from "@lib/data/products"
 import { getProductPrice } from "@lib/util/get-product-price"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -20,6 +19,9 @@ export default async function ProductPreview({
     product,
   })
 
+  const hasMultipleVariants =
+    (product.variants?.length ?? 0) > 1
+
   return (
     <LocalizedClientLink href={`/products/${product.handle}`} className="group">
       <div data-testid="product-wrapper">
@@ -34,7 +36,7 @@ export default async function ProductPreview({
             {product.title}
           </Text>
           <div className="flex items-center gap-x-2">
-            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
+            {cheapestPrice && <PreviewPrice price={cheapestPrice} showFrom={hasMultipleVariants} />}
           </div>
         </div>
       </div>

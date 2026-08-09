@@ -32,7 +32,7 @@ export default function OrderCompletedTemplate({ order }: OrderCompletedTemplate
   return (
     <div className="py-6 min-h-[calc(100vh-64px)] bg-neutral-50/40">
       <div className="content-container flex flex-col justify-center items-center gap-y-10 max-w-4xl h-full mt-8">
-        
+
         {/* Success Header Banner */}
         <div className="flex flex-col gap-2 text-center max-w-md">
           <span className="text-emerald-600 text-xs font-bold uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full w-fit mx-auto border border-emerald-200">
@@ -51,7 +51,7 @@ export default function OrderCompletedTemplate({ order }: OrderCompletedTemplate
 
         {/* Core Layout Structure Split */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-          
+
           {/* Main Shipment Packages Breakdowns */}
           <div className="md:col-span-2 space-y-6">
             <h2 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-2">
@@ -60,7 +60,7 @@ export default function OrderCompletedTemplate({ order }: OrderCompletedTemplate
 
             {vendorGroups && Object.entries(vendorGroups).map(([vendorId, group]) => (
               <div key={vendorId} className="bg-white border border-neutral-200/70 rounded-2xl p-5 shadow-xs">
-                
+
                 {/* Package Title Banner */}
                 <div className="flex items-center gap-2 pb-3 mb-4 border-b border-neutral-100">
                   <span className="w-1.5 h-1.5 rounded-full bg-neutral-900" />

@@ -1,3 +1,4 @@
+// ==== ./src/workflows / marketplace / update - vendor - product / option - resolver.ts ====
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 

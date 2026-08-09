@@ -1,5 +1,21 @@
 // src/utils/apparel-guard.ts
 import type { ApparelDetails } from "@shared/index";
+import {
+  GENDERS,
+  SIZING_GROUPS,
+  GARMENT_CATEGORIES,
+  GARMENT_SUBCATEGORY_MAP,
+  FITS,
+  PATTERNS,
+  STYLE_TYPES,
+  OCCASIONS,
+  SLEEVE_TYPES,
+  NECK_TYPES,
+  AGE_GROUPS,
+  MATERIAL_TYPES,
+  SEASONS,
+  CONDITIONS,
+} from "@shared/index";
 
 const FORBIDDEN_WORDS = [
   "undergarment",
@@ -17,112 +33,8 @@ const FORBIDDEN_WORDS = [
   "wallet",
 ];
 
-const VALID_GARMENT_CATEGORIES = [
-  "TOP",
-  "BOTTOM",
-  "DRESS",
-  "ETHNIC",
-  "SET",
-  "OUTERWEAR",
-  "LOUNGEWEAR",
-  "ACTIVEWEAR",
-  "MATERNITY_WEAR",
-  "FABRIC",
-];
-
-const VALID_GARMENT_SUBCATEGORIES = {
-  TOP: ["TSHIRT", "T_SHIRT", "SHIRT", "BLOUSE", "TUNIC", "KURTA", "KURTI", "POLO", "TANK_TOP"],
-  BOTTOM: ["TROUSERS", "JEANS", "LEGGINGS", "SHORTS", "SKIRT", "JOGGERS"],
-  DRESS: [
-    "MAXI_DRESS",
-    "MIDI_DRESS",
-    "MINI_DRESS",
-    "GOWN",
-    "JUMPSUIT",
-    "ROMPER",
-    "A_LINE_DRESS",
-    "SHIFT_DRESS",
-  ],
-  ETHNIC: [
-    "SAREE",
-    "SALWAR_SUIT",
-    "LEHENGA",
-    "SHERWANI",
-    "DHOTI",
-    "ABAYA",
-    "KAFTAN",
-    "KURTI",
-    "KURTA",
-  ],
-  SET: ["CO_ORD_SET", "TWO_PIECE_SET", "THREE_PIECE_SET"],
-  OUTERWEAR: [
-    "JACKET",
-    "COAT",
-    "BLAZER",
-    "CARDIGAN",
-    "HOODIE",
-    "SWEATSHIRT",
-    "PONCHO",
-  ],
-  LOUNGEWEAR: ["PYJAMA_SET", "ROBE", "NIGHTWEAR"],
-  ACTIVEWEAR: ["TRACKSUIT", "YOGA_WEAR", "SPORTS_TOP", "SPORTS_BOTTOM"],
-  MATERNITY_WEAR: ["MATERNITY_DRESS", "MATERNITY_TOP"],
-  FABRIC: ["FABRIC_ROLL", "UNSTITCHED_FABRIC", "DRESS_MATERIAL"],
-};
-
-export const VALID_OCCASIONS = [
-  "CASUAL",
-  "FORMAL",
-  "ETHNIC",
-  "PARTY",
-  "OFFICE",
-  "SPORTS",
-  "LOUNGE",
-  "TRAVEL",
-  "VACATION",
-  "FESTIVE",
-  "WEDDING",
-] as const;
-
-export const VALID_FITS = [
-  "REGULAR",
-  "SLIM",
-  "RELAXED",
-  "OVERSIZED",
-  "SKINNY",
-  "STRAIGHT",
-  "BOOTCUT",
-  "FLARED",
-] as const;
-
-export const VALID_SLEEVE_TYPES = [
-  "SLEEVELESS",
-  "CAP",
-  "SHORT",
-  "HALF",
-  "THREE_QUARTER",
-  "FULL",
-  "PUFF",
-  "BELL",
-  "RAGLAN",
-  "COLD_SHOULDER",
-] as const;
-
-export const VALID_NECK_TYPES = [
-  "ROUND_NECK",
-  "V_NECK",
-  "SQUARE_NECK",
-  "BOAT_NECK",
-  "SWEETHEART",
-  "HALTER",
-  "OFF_SHOULDER",
-  "TURTLENECK",
-  "MANDARIN",
-  "POLO",
-  "COLLAR",
-] as const;
-
-export const VALID_CLOSURE_TYPES = [
+// Optional closure types if unique to the backend guard logic
+const CLOSURE_TYPES = [
   "PULL_ON",
   "BUTTON",
   "ZIPPER",
@@ -132,7 +44,7 @@ export const VALID_CLOSURE_TYPES = [
   "TIE_UP",
 ] as const;
 
-export function validateAndCleanApparelInput(body: any):ApparelDetails {
+export function validateAndCleanApparelInput(body: any): ApparelDetails {
   const { title, description, apparel_detail } = body;
 
   if (!apparel_detail) {
@@ -153,41 +65,107 @@ export function validateAndCleanApparelInput(body: any):ApparelDetails {
     );
   }
 
-  // 2. Uniform Normalization
+  // 2. Uniform Normalization & Validation using shared constants
   const category = (apparel_detail.garment_category || "").toUpperCase();
   const subcategory = (apparel_detail.garment_subcategory || "").toUpperCase();
 
-  if (!VALID_GARMENT_CATEGORIES.includes(category)) {
+  if (!(GARMENT_CATEGORIES as readonly string[]).includes(category)) {
     throw new Error(
       `Validation Error: '${category}' is not an authorized clothing category.`,
     );
   }
 
   const validSublist =
-    VALID_GARMENT_SUBCATEGORIES[
-      category as keyof typeof VALID_GARMENT_SUBCATEGORIES
-    ] || [];
-  if (!validSublist.includes(subcategory)) {
+    GARMENT_SUBCATEGORY_MAP[category as keyof typeof GARMENT_SUBCATEGORY_MAP] || [];
+
+  if (validSublist.length > 0 && !validSublist.includes(subcategory)) {
     throw new Error(
       `Validation Error: '${subcategory}' is not an authorized subcategory under ${category}.`,
     );
   }
 
-  // 3. Return a clean object matching your exact database columns
+  const gender = apparel_detail.gender?.toUpperCase() ?? null;
+  if (gender && !(GENDERS as readonly string[]).includes(gender)) {
+    throw new Error(`Invalid gender '${gender}'.`);
+  }
+
+  const style_type = apparel_detail.style_type?.toUpperCase() ?? null;
+  if (style_type && !(STYLE_TYPES as readonly string[]).includes(style_type)) {
+    throw new Error(`Invalid style_type '${style_type}'.`);
+  }
+
+  const occasion = apparel_detail.occasion?.toUpperCase() ?? null;
+  if (occasion && !(OCCASIONS as readonly string[]).includes(occasion)) {
+    throw new Error(`Invalid occasion '${occasion}'.`);
+  }
+
+  const fit = apparel_detail.fit?.toUpperCase() ?? null;
+  if (fit && !(FITS as readonly string[]).includes(fit)) {
+    throw new Error(`Invalid fit '${fit}'.`);
+  }
+
+  const sleeve_type = apparel_detail.sleeve_type?.toUpperCase() ?? null;
+  if (sleeve_type && !(SLEEVE_TYPES as readonly string[]).includes(sleeve_type)) {
+    throw new Error(`Invalid sleeve_type '${sleeve_type}'.`);
+  }
+
+  const neck_type = apparel_detail.neck_type?.toUpperCase() ?? null;
+  if (neck_type && !(NECK_TYPES as readonly string[]).includes(neck_type)) {
+    throw new Error(`Invalid neck_type '${neck_type}'.`);
+  }
+
+  const closure_type = apparel_detail.closure_type?.toUpperCase() ?? null;
+  if (closure_type && !CLOSURE_TYPES.includes(closure_type as any)) {
+    throw new Error(`Invalid closure_type '${closure_type}'.`);
+  }
+
+  const age_group = apparel_detail.age_group?.toUpperCase() ?? null;
+  if (age_group && !(AGE_GROUPS as readonly string[]).includes(age_group)) {
+    throw new Error(`Invalid age_group '${age_group}'.`);
+  }
+
+  const material_type = apparel_detail.material_type?.toUpperCase() ?? null;
+  if (material_type && !(MATERIAL_TYPES as readonly string[]).includes(material_type)) {
+    throw new Error(`Invalid material_type '${material_type}'.`);
+  }
+
+  const season = apparel_detail.season?.toUpperCase() ?? null;
+  if (season && !(SEASONS as readonly string[]).includes(season)) {
+    throw new Error(`Invalid season '${season}'.`);
+  }
+
+  const pattern = apparel_detail.pattern?.toUpperCase() ?? null;
+  if (pattern && !(PATTERNS as readonly string[]).includes(pattern)) {
+    throw new Error(`Invalid pattern '${pattern}'.`);
+  }
+
+  const condition = apparel_detail.condition?.toUpperCase() ?? null;
+  if (condition && !(CONDITIONS as readonly string[]).includes(condition)) {
+    throw new Error(`Invalid condition '${condition}'.`);
+  }
+
+  const sizing_group = apparel_detail.sizing_group?.toUpperCase() ?? null;
+  if (sizing_group && !(SIZING_GROUPS as readonly string[]).includes(sizing_group)) {
+    throw new Error(`Invalid sizing_group '${sizing_group}'.`);
+  }
+
+  // 3. Return a clean object matching your exact database columns / types
   return {
-    garment_category: category,
+    garment_category: category as any,
     garment_subcategory: subcategory,
-    style_type: (apparel_detail.style_type || "CASUAL").toUpperCase(),
-    gender: (apparel_detail.gender || "UNISEX").toUpperCase(),
-    fit: (apparel_detail.fit || "REGULAR").toUpperCase(),
-    occasion: (apparel_detail.occasion || "CASUAL").toUpperCase(),
-    season: (apparel_detail.season || "ALL_SEASON").toUpperCase(),
-    material_type: (apparel_detail.material_type || "NATURAL").toUpperCase(),
-    material_composition: apparel_detail.material_composition || "100% Cotton",
-    condition: (apparel_detail.condition ?? "NEW").toUpperCase(),
-    pattern: apparel_detail.pattern || "SOLID",
-    care_instructions: apparel_detail.care_instructions || "Machine wash cold",
-    age_group: apparel_detail.age_group || null,
-    sizing_group: apparel_detail.sizing_group || null,
+    style_type: style_type as any,
+    gender: gender as any,
+    fit: fit as any,
+    occasion: occasion as any,
+    season: season as any,
+    material_type: material_type as any,
+    material_composition: apparel_detail.material_composition ?? null,
+    condition: condition as any,
+    pattern: pattern as any,
+    care_instructions: apparel_detail.care_instructions ?? null,
+    age_group: age_group as any,
+    sizing_group: sizing_group as any,
+    sleeve_type: sleeve_type as any,
+    neck_type: neck_type as any,
   };
 }

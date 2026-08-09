@@ -22,19 +22,30 @@ export const SIZING_GROUPS = [
   "GIRLS",
 ] as const
 
+// Expanded to match backend guard categories
 export const GARMENT_CATEGORIES = [
   "TOP",
   "BOTTOM",
   "DRESS",
-  "OUTERWEAR",
   "ETHNIC",
+  "SET",
+  "OUTERWEAR",
+  "LOUNGEWEAR",
+  "ACTIVEWEAR",
+  "MATERNITY_WEAR",
+  "FABRIC",
 ] as const
 
+// Expanded fits
 export const FITS = [
   "REGULAR",
   "SLIM",
   "RELAXED",
   "OVERSIZED",
+  "SKINNY",
+  "STRAIGHT",
+  "BOOTCUT",
+  "FLARED",
 ] as const
 
 export const PATTERNS = [
@@ -43,8 +54,10 @@ export const PATTERNS = [
   "STRIPED",
   "CHECKED",
   "FLORAL",
+  "OTHER",
 ] as const
 
+// Expanded style types
 export const STYLE_TYPES = [
   "CASUAL",
   "FORMAL",
@@ -54,26 +67,48 @@ export const STYLE_TYPES = [
   "STRAIGHT",
 ] as const
 
+// Expanded occasions
 export const OCCASIONS = [
   "CASUAL",
   "FORMAL",
+  "ETHNIC",
   "PARTY",
+  "OFFICE",
+  "SPORTS",
+  "LOUNGE",
+  "TRAVEL",
+  "VACATION",
   "FESTIVE",
+  "WEDDING",
 ] as const
 
+// Expanded sleeve types
 export const SLEEVE_TYPES = [
+  "SLEEVELESS",
+  "CAP",
   "SHORT",
+  "HALF",
   "THREE_QUARTER",
   "FULL",
-  "SLEEVELESS",
+  "PUFF",
+  "BELL",
+  "RAGLAN",
+  "COLD_SHOULDER",
 ] as const
 
+// Expanded neck types
 export const NECK_TYPES = [
   "ROUND_NECK",
   "V_NECK",
-  "COLLAR",
-  "MANDARIN_COLLAR",
   "SQUARE_NECK",
+  "BOAT_NECK",
+  "SWEETHEART",
+  "HALTER",
+  "OFF_SHOULDER",
+  "TURTLENECK",
+  "MANDARIN",
+  "POLO",
+  "COLLAR",
 ] as const
 
 export const MATERIAL_TYPES = [
@@ -83,6 +118,9 @@ export const MATERIAL_TYPES = [
   "WOOL",
   "DENIM",
   "SILK",
+  "NATURAL",
+  "SYNTHETIC",
+  "BLENDED",
 ] as const
 
 export const SEASONS = [
@@ -98,20 +136,6 @@ export const CONDITIONS = [
   "REFURBISHED",
   "USED",
 ] as const
-export const SLEEVE_TYPE_OPTIONS = [
-  { value: "SHORT", label: "Short" },
-  { value: "THREE_QUARTER", label: "Three Quarter" },
-  { value: "FULL", label: "Full" },
-  { value: "SLEEVELESS", label: "Sleeveless" },
-]
-
-export const NECK_TYPE_OPTIONS = [
-  { value: "ROUND_NECK", label: "Round Neck" },
-  { value: "V_NECK", label: "V Neck" },
-  { value: "COLLAR", label: "Collar" },
-  { value: "MANDARIN_COLLAR", label: "Mandarin Collar" },
-  { value: "SQUARE_NECK", label: "Square Neck" },
-]
 
 export type SelectOption = {
   value: string
@@ -130,32 +154,15 @@ const toOptions = (
   }))
 
 export const GENDER_OPTIONS = toOptions(GENDERS)
-
 export const AGE_GROUP_OPTIONS = toOptions(AGE_GROUPS)
-
-export const SIZING_GROUP_OPTIONS =
-  toOptions(SIZING_GROUPS)
-
-export const GARMENT_CATEGORY_OPTIONS =
-  toOptions(GARMENT_CATEGORIES)
-
-export const FIT_OPTIONS =
-  toOptions(FITS)
-
-export const PATTERN_OPTIONS =
-  toOptions(PATTERNS)
-
-export const STYLE_TYPE_OPTIONS =
-  toOptions(STYLE_TYPES)
-
-export const OCCASION_OPTIONS =
-  toOptions(OCCASIONS)
-
-export const MATERIAL_TYPE_OPTIONS =
-  toOptions(MATERIAL_TYPES)
-
-export const SEASON_OPTIONS =
-  toOptions(SEASONS)
-
-export const CONDITION_OPTIONS =
-  toOptions(CONDITIONS)
+export const SIZING_GROUP_OPTIONS = toOptions(SIZING_GROUPS)
+export const GARMENT_CATEGORY_OPTIONS = toOptions(GARMENT_CATEGORIES)
+export const FIT_OPTIONS = toOptions(FITS)
+export const PATTERN_OPTIONS = toOptions(PATTERNS)
+export const STYLE_TYPE_OPTIONS = toOptions(STYLE_TYPES)
+export const OCCASION_OPTIONS = toOptions(OCCASIONS)
+export const MATERIAL_TYPE_OPTIONS = toOptions(MATERIAL_TYPES)
+export const SEASON_OPTIONS = toOptions(SEASONS)
+export const CONDITION_OPTIONS = toOptions(CONDITIONS)
+export const SLEEVE_TYPE_OPTIONS = toOptions(SLEEVE_TYPES)
+export const NECK_TYPE_OPTIONS = toOptions(NECK_TYPES)

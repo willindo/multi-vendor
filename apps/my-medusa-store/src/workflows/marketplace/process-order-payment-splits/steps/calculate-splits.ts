@@ -1,118 +1,125 @@
-// ==== Updated ./src/workflows/marketplace/process-order-payment-splits/steps/calculate-splits.ts ====
-import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
-
-export interface SplitTransferItem {
-  vendorId: string;
-  razorpayAccountId: string;
-  rawAmount: number;
-  platformCommission: number;
-  vendorNetPayout: number;
+// src/workflows/marketplace/process-order-payment-splits/steps/calculate-splits.ts
+import {
+  createStep,
+  StepResponse,
+} from "@medusajs/framework/workflows-sdk"
+import {
+  Modules,
+} from "@medusajs/framework/utils"
+export interface VendorSplitItem {
+  item_id: string
+  line_item_id: string
+  quantity: number
+  unit_price: number
+  subtotal: number
 }
-
-export interface UnifiedSplitPayload {
-  orderId: string;
-  currencyCode: string;
-  totalOrderAmount: number;
-  splits: SplitTransferItem[];
+export interface VendorSplit {
+  vendor_id: string
+  currency_code: string
+  gross_amount: number
+  commission_amount: number
+  fee_amount: number
+  tax_amount: number
+  net_amount: number
+  items: VendorSplitItem[]
 }
-
+export interface CalculateSplitsInput {
+  orderId: string
+}
+export interface CalculateSplitsOutput {
+  orderId: string
+  currency_code: string
+  splits: VendorSplit[]
+}
 export const calculateSplitsStep = createStep(
-  "calculate-splits-step",
-  async (input: { orderId: string }, context) => {
-    const { container } = context;
-    const query = container.resolve(ContainerRegistrationKeys.QUERY);
-    
-    // 1. Updated fields array to pull down shipping methods metadata
-    const { data: orders } = await query.graph({
-      entity: "order",
-      fields: ["id", "total", "currency_code", "items.*", "shipping_methods.*"],
-      filters: { id: input.orderId }
-    });
-
-    const order = orders[0];
-    if (!order || !order.items?.length) {
-      throw new Error(`[SplitEngine] Order ${input.orderId} has no processable items.`);
-    }
-
-    const vendorIdsInOrder = [
-      ...new Set(
-        order.items
-          .filter((item: any): item is any => !!item && !!item.metadata?.vendor_id)
-          .map((item: any) => item.metadata.vendor_id as string)
+  "calculate-order-payment-splits",
+  async (
+    input: CalculateSplitsInput,
+    { container }
+  ) => {
+    const orderModule =
+      container.resolve(Modules.ORDER)
+    const order =
+      await orderModule.retrieveOrder(
+        input.orderId,
+        {
+          relations: [
+            "items",
+          ],
+        }
       )
-    ] as string[];
-    
-    if (vendorIdsInOrder.length === 0) {
-      return new StepResponse({ 
-        orderId: order.id, 
-        currencyCode: order.currency_code, 
-        totalOrderAmount: order.total, 
-        splits: [] 
-      });
+    if (!order) {
+      throw new Error("Order not found.")
     }
-
-    const { data: vendors } = await query.graph({
-      entity: "vendor",
-      fields: ["id", "name", "metadata"],
-      filters: { id: vendorIdsInOrder }
-    });
-
-    const vendorTotalsMap: Record<string, number> = {};
-    
-    // Calculate line items base cost
+    if (!order.items?.length) {
+      throw new Error("Order contains no items.")
+    }
+    const vendorMap =
+      new Map<string, VendorSplit>()
     for (const item of order.items) {
-      if (!item || !item.metadata?.vendor_id) continue;
-      const vId = item.metadata.vendor_id as string;
-      vendorTotalsMap[vId] = (vendorTotalsMap[vId] || 0) + (item.subtotal || 0);
-    }
-
-    // 2. Shipping Allocation Rule: Add shipping fees directly to the vendor balance
-   // Inside calculate-splits.ts
-if (order.shipping_methods) {
-  for (const method of order.shipping_methods) {
-    // 🚀 Added '&& method' check to guard against null elements in the array
-    if (method && method.metadata?.vendor_id) {
-      const shippingVendorId = method.metadata.vendor_id as string;
-      
-      if (vendorTotalsMap[shippingVendorId] !== undefined) {
-        // Medusa v2 uses method.amount for the final calculated shipping price
-        vendorTotalsMap[shippingVendorId] += (method.amount || 0);
+      const vendorId =
+        item.metadata?.vendor_id as
+        | string
+        | undefined
+      if (!vendorId) {
+        throw new Error(
+          `Order item ${item.id} is missing metadata.vendor_id`
+        )
       }
-    }
-  }
-}
-
-    const splits: SplitTransferItem[] = [];
-
-    for (const [vendorId, rawAmount] of Object.entries(vendorTotalsMap)) {
-      const vendorEntity = vendors.find((v: any) => v.id === vendorId);
-      const payoutConfig = (vendorEntity?.metadata as any)?.payout_config || {};
-      const razorpayAccountId = payoutConfig.razorpay_account_id;
-      const commissionRate = payoutConfig.commission_rate !== undefined ? payoutConfig.commission_rate : 0.10;
-
-      if (!razorpayAccountId) {
-        console.warn(`⚠️ Vendor ${vendorId} missing payment routing configurations.`);
-        continue;
+      const subtotal =
+        Number(item.total ?? 0)
+      const unitPrice =
+        Number(item.unit_price ?? 0)
+      let split =
+        vendorMap.get(vendorId)
+      if (!split) {
+        split = {
+          vendor_id: vendorId,
+          currency_code:
+            order.currency_code,
+          gross_amount: 0,
+          commission_amount: 0,
+          fee_amount: 0,
+          tax_amount: 0,
+          net_amount: 0,
+          items: [],
+        }
+        vendorMap.set(
+          vendorId,
+          split
+        )
       }
-
-      const platformCommission = Math.round(rawAmount * commissionRate);
-      const vendorNetPayout = rawAmount - platformCommission;
-
-      splits.push({
-        vendorId,
-        razorpayAccountId,
-        rawAmount,
-        platformCommission,
-        vendorNetPayout
-      });
+      split.items.push({
+        item_id: item.id,
+        line_item_id: item.id,
+        quantity:
+          Number(item.quantity),
+        unit_price: unitPrice,
+        subtotal,
+      })
+      split.gross_amount += subtotal
     }
-
+    /**
+     * Marketplace policy.
+     *
+     * Replace these calculations later.
+     */
+    for (const split of vendorMap.values()) {
+      split.commission_amount = 0
+      split.fee_amount = 0
+      split.tax_amount = 0
+      split.net_amount =
+        split.gross_amount -
+        split.commission_amount -
+        split.fee_amount -
+        split.tax_amount
+    }
     return new StepResponse({
       orderId: order.id,
-      currencyCode: order.currency_code,
-      totalOrderAmount: order.total,
-      splits
-    });
+      currency_code:
+        order.currency_code,
+      splits:
+        [...vendorMap.values()],
+    })
   }
-);
+)

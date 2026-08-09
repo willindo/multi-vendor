@@ -19,9 +19,8 @@ export const retrieveOrder = async (id: string) => {
     .fetch<HttpTypes.StoreOrderResponse>(`/store/orders/${id}`, {
       method: "GET",
       query: {
-        // ⚡ CRUCIAL: Added shipping_address and shipping_methods to prevent layout page breakages
         fields:
-          "*payment_collections.payments,*items,*items.metadata,*items.variant,*items.product,*shipping_address,*shipping_methods",
+          "*payment_collections.payments,*items,*items.metadata,*items.variant,*items.product",
       },
       headers,
       next,
@@ -34,7 +33,7 @@ export const retrieveOrder = async (id: string) => {
 export const listOrders = async (
   limit: number = 10,
   offset: number = 0,
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
 ) => {
   const headers = {
     ...(await getAuthHeaders()),
@@ -51,7 +50,7 @@ export const listOrders = async (
         limit,
         offset,
         order: "-created_at",
-        fields: "*items,+items.metadata,*items.variant,*items.product,*shipping_address,*shipping_methods",
+        fields: "*items,+items.metadata,*items.variant,*items.product",
         ...filters,
       },
       headers,

@@ -94,5 +94,5 @@ export default async function productUpsertHandler({
 }
 
 export const config: SubscriberConfig = {
-  event: ["product.created", "product.updated"],
+  event: ["product.created", "product.updated", "vendor_product.updated"],
 };

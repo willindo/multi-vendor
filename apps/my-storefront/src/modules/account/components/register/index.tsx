@@ -8,7 +8,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { signup } from "@lib/data/customer"
-import { signupVendor } from "@lib/data/vendor"
+import { signupVendor } from "@lib/data/vendor/auth"
 
 // 🛠️ Update the interface to include activeRole
 type Props = {
@@ -26,7 +26,7 @@ const Register = ({ setCurrentView, activeRole }: Props) => {
       <h1 className="text-large-semi uppercase mb-6 text-center">
         {activeRole === "vendor" ? "Register Vendor Account" : "Become a Medusa Member"}
       </h1>
-      
+
       <p className="text-center text-base-regular text-ui-fg-base mb-6">
         {activeRole === "vendor"
           ? "Register your corporate profile to list products and manage marketplace payouts."
@@ -44,7 +44,7 @@ const Register = ({ setCurrentView, activeRole }: Props) => {
               autoComplete="organization"
             />
           )}
-          
+
           <div className="flex gap-x-2">
             <Input
               label="First name"
@@ -74,14 +74,14 @@ const Register = ({ setCurrentView, activeRole }: Props) => {
             autoComplete="new-password"
           />
         </div>
-        
+
         <ErrorMessage error={message} data-testid="register-error" />
-        
+
         <SubmitButton className="w-full mt-6" data-testid="register-button">
           {activeRole === "vendor" ? "Initialize Merchant Account" : "Join"}
         </SubmitButton>
       </form>
-      
+
       <span className="text-center text-ui-fg-base text-small-regular mt-6">
         Already a member?{" "}
         <button

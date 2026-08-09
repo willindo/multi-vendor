@@ -48,8 +48,10 @@
                   {"type":"file","name":"route.ts"}
                 ]}
               ]}
-            ]}
-          ]}
+            ]},
+            {"type":"file","name":"route.ts"}
+          ]},
+          {"type":"file","name":"route.ts"}
         ]},
         {"type":"directory","name":"products","contents":[
           {"type":"directory","name":"[id]","contents":[
@@ -64,7 +66,15 @@
       {"type":"file","name":"README.md"}
     ]},
     {"type":"directory","name":"lib","contents":[
-      {"type":"file","name":"meilisearch.ts"}
+      {"type":"file","name":"meilisearch.ts"},
+      {"type":"directory","name":"search","contents":[
+        {"type":"file","name":"build-product-document.ts"}
+      ]},
+      {"type":"directory","name":"vendor","contents":[
+        {"type":"file","name":"product-hydration.ts"},
+        {"type":"file","name":"product-projection.ts"},
+        {"type":"file","name":"product-utils.ts"}
+      ]}
     ]},
     {"type":"directory","name":"links","contents":[
       {"type":"file","name":"README.md"},
@@ -108,9 +118,9 @@
     ]},
     {"type":"directory","name":"utils","contents":[
       {"type":"file","name":"apparel-guard.ts"},
-      {"type":"file","name":"normalize-product-handle.ts"},
       {"type":"file","name":"normalize-product.ts"},
       {"type":"file","name":"normalize-variant-sku.ts"},
+      {"type":"file","name":"resolve-vendor-context.ts"},
       {"type":"file","name":"validate-vendor-ownership.ts"}
     ]},
     {"type":"directory","name":"workflows","contents":[
@@ -137,7 +147,7 @@
           ]}
         ]},
         {"type":"directory","name":"update-vendor-product","contents":[
-          {"type":"file","name":"index .ts"},
+          {"type":"file","name":"index.ts"},
           {"type":"file","name":"option-resolver.ts"},
           {"type":"file","name":"reconcile.ts"},
           {"type":"directory","name":"steps","contents":[
@@ -145,7 +155,9 @@
             {"type":"file","name":"sync-apparel.ts"},
             {"type":"file","name":"update-inventory.ts"},
             {"type":"file","name":"update-prices.ts"},
-            {"type":"file","name":"update-product.ts"}
+            {"type":"file","name":"update-product.ts"},
+            {"type":"file","name":"validate-sales-channels.ts"},
+            {"type":"file","name":"validate-variant-ownership.ts"}
           ]},
           {"type":"file","name":"suggest.txt"}
         ]}
@@ -153,5 +165,5 @@
     ]}
   ]}
 ,
-  {"type":"report","directories":42,"files":69}
+  {"type":"report","directories":44,"files":77}
 ]

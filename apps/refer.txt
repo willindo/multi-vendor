@@ -10,7 +10,6 @@ find . -name ".env*" -exec cat {} \; \
 | sort \
 | uniq
 You can use Find & Replace to clean them up right after pasting:
-
 Press Ctrl+H (Find & Replace)
 Click the .* (regex) button to enable regex
 Pattern	Removes
@@ -25,17 +24,17 @@ pnpm medusa db:generate marketplace
 pnpm medusa db:migrate 
 
 EXCLUDE_NAMES='-iname "readme*" -o -iname "license*" -o -iname "changelog*"'
-EXCLUDE_NAMES=(-iname "readme*" -o -iname "license*" -o -iname "changelog*")
+EXCLUDE_NAMES=(-iname "readme*" -o calcul-iname "license*" -o -iname "changelog*")
 -o -path "*//*" -o -path "*/*edit*/*" -o -iname "*product*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
 -not -path "*/*.medusa/*" -not -path "*/node_modules/*" 
 EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
-EXCL_UDE_PATHS='-not -path "*/*.next/*" -not -path "*/node_modules/*" -not -iname "index*" -not -iname "*txt*" -not -iname "*apparel"'
-
-INCL_UDES='-path "*//*" -o -iname "*tsconfig*"' 
+INCL_UDES='-path "*/process-order*/*"  ' 
+EXCL_UDE_PATHS=' -not -path "*/node_modules/*"  -not -path "*/migrations/*" -not -iname "*.txt*" -not -iname "*.md" -not -iname "validate*" '
+-o -path "*/lib/vendor/*" -not -path "*/admin/*" -not -path "*/store/*"
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/update-vendor-product/*" ' 
-EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -iname "*suggest*" -not -iname "*index*"  -not -iname "readme*"'
+INCL_UDES='-path "*/*login*/*" -o -path "*/*signout*/*" -o -path "*/*register*/*" -o -path "*/*signo-in*/*" -o -iname "*login*" ' 
+EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -path "*/.next/*" -not -iname "*test*" -not -iname "*back*" -not -iname "readme*"'
 eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
  
@@ -46,7 +45,7 @@ find . \( "${INCLUDES[@]}" \)  -type f \( "${EXCLUDE_PATHS[@]}" \) -print
    "${contents[@]}"  
 
 -exec grep -l "process\.env" {} \;  rl= list , rn= content with line numbers
-grep -r "import.*@shared/apparel*" --include="*.tsx" --include="*.ts" .
+grep -r "import.*@lib/data/products*" --include="*.tsx" --include="*.ts" .
 echo "=== Files with process.env (excluding .next and config) ===" && \
  grep -rl --include="*.ts" --include="*.js" --include="*.tsx" --include="*.jsx" "process\.env" . \
   --exclude-dir=.next \
@@ -55,7 +54,7 @@ echo "=== Files with process.env (excluding .next and config) ===" && \
 /home/badsha/medusa-dev/apps/my-storefront/src/app/vendor/dashboard/products/VendorProductsClientTable.tsx
 # Find all imports of SkeletonCartItem
 grep -r "import.*@modules/store/templates*" --include="*.tsx" --include="*.ts" .
-grep -r "import.*VendorProduct*" --include="*.tsx" --include="*.ts" .
+grep -r "import.*marketplace*" --include="*.tsx" --include="*.ts" .
 
 # Find all imports from skeleton-cart-item path
 grep -r "skeleton-cart-item" --include="*.tsx" --include="*.ts" .
@@ -233,12 +232,12 @@ npx eslint --fix       →  can ADD/REMOVE blank lines via rules
                            does NOT fix indentation
 
 Prettier + ESLint      →  complete auto-formatting ✅ # Run both together (one after the other)
-npx prettier --write src/lib/search/build-product-document.ts && npx eslint --fix src/lib/search/build-product-document.ts
+npx prettier --write src/workflows/marketplace/update-vendor-product/index.ts && npx eslint --fix src/workflows/marketplace/update-vendor-product/index.ts
 # STEP 1: Create config (one time only)
 echo '{"semi":true,"singleQuote":false,"printWidth":100}' > .prettierrc
 
 # STEP 2: Run whenever you want on any file
-npx prettier --write src/subscribers/product-upsert.ts && npx eslint --fix src/subscribers/product-upsert.ts
+npx prettier --write ./src/links/vendor-order.ts && npx eslint --fix /src/links/vendor-order.ts
 // .vscode/settings.json  ← one-time setup
 {
   "editor.formatOnSave": true,

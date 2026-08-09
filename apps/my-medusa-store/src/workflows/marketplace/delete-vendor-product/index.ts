@@ -5,7 +5,7 @@ import {
   StepResponse,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk";
-import { deleteProductsWorkflow } from "@medusajs/medusa/core-flows";
+import { deleteProductsWorkflow, emitEventStep } from "@medusajs/medusa/core-flows";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
 type DeleteInput = {
@@ -146,6 +146,12 @@ export const deleteVendorProductWorkflow = createWorkflow(
     deleteProductsWorkflow.runAsStep({
       input: { ids: [input.product_id] },
     });
+    emitEventStep({
+      eventName: "product.deleted",
+      data: {
+        product_id: input.product_id,
+      },
+    })
 
     return new WorkflowResponse({ success: true });
   },

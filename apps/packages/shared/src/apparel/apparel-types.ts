@@ -23,8 +23,13 @@ export type GarmentCategory =
   | "TOP"
   | "BOTTOM"
   | "DRESS"
-  | "OUTERWEAR"
   | "ETHNIC"
+  | "SET"
+  | "OUTERWEAR"
+  | "LOUNGEWEAR"
+  | "ACTIVEWEAR"
+  | "MATERNITY_WEAR"
+  | "FABRIC"
 
 export type GarmentSubcategory = string
 
@@ -33,6 +38,10 @@ export type Fit =
   | "SLIM"
   | "RELAXED"
   | "OVERSIZED"
+  | "SKINNY"
+  | "STRAIGHT"
+  | "BOOTCUT"
+  | "FLARED"
 
 export type Pattern =
   | "SOLID"
@@ -53,21 +62,41 @@ export type StyleType =
 export type Occasion =
   | "CASUAL"
   | "FORMAL"
+  | "ETHNIC"
   | "PARTY"
+  | "OFFICE"
+  | "SPORTS"
+  | "LOUNGE"
+  | "TRAVEL"
+  | "VACATION"
   | "FESTIVE"
+  | "WEDDING"
 
 export type SleeveType =
+  | "SLEEVELESS"
+  | "CAP"
   | "SHORT"
+  | "HALF"
   | "THREE_QUARTER"
   | "FULL"
-  | "SLEEVELESS"
+  | "PUFF"
+  | "BELL"
+  | "RAGLAN"
+  | "COLD_SHOULDER"
 
 export type NeckType =
   | "ROUND_NECK"
   | "V_NECK"
-  | "COLLAR"
-  | "MANDARIN_COLLAR"
   | "SQUARE_NECK"
+  | "BOAT_NECK"
+  | "SWEETHEART"
+  | "HALTER"
+  | "OFF_SHOULDER"
+  | "TURTLENECK"
+  | "MANDARIN"
+  | "MANDARIN_COLLAR"
+  | "POLO"
+  | "COLLAR"
 
 export type MaterialType =
   | "COTTON"
@@ -76,6 +105,9 @@ export type MaterialType =
   | "WOOL"
   | "DENIM"
   | "SILK"
+  | "NATURAL"
+  | "SYNTHETIC"
+  | "BLENDED"
 
 export type Season =
   | "ALL_SEASON"

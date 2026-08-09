@@ -1,0 +1,683 @@
+*** Begin Patch
+*** Add File: src/workflows/marketplace/update-vendor-product/steps/validate-ownership.ts
++import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
++import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
++
++type Input = {
++  vendor_admin_id: string;
++  product_id: string;
++  variant_ids?: string[];
++};
++
++type Output = {
++  vendor_id: string;
++  product_id: string;
++  product_variant_ids: string[];
++};
++
++/**
++ * Workflow-level authorization boundary.
++ *
++ * The API already performs this check, but the workflow must not depend on
++ * callers remembering to do so. This makes the workflow safe to reuse from
++ * other entry points (admin jobs, subscribers, bulk operations, etc.).
++ */
++export const validateVendorProductOwnershipStep = createStep(
++  "validate-vendor-product-ownership-step",
++  async (input: Input, { container }) => {
++    const query = container.resolve(ContainerRegistrationKeys.QUERY);
++
++    const { data: vendorAdmins } = await query.graph({
++      entity: "vendor_admin",
++      fields: ["id", "vendor.id"],
++      filters: { id: [input.vendor_admin_id] },
++    });
++
++    const vendorAdmin = vendorAdmins[0] as
++      | { id: string; vendor?: { id: string } }
++      | undefined;
++
++    if (!vendorAdmin?.vendor?.id) {
++      throw new Error("Unauthorized: vendor admin context is invalid.");
++    }
++
++    const vendorId = vendorAdmin.vendor.id;
++
++    const { data: links } = await query.graph({
++      entity: "vendor_product",
++      fields: ["vendor_id", "product_id"],
++      filters: {
++        vendor_id: [vendorId],
++        product_id: [input.product_id],
++      },
++    });
++
++    if (!links.length) {
++      throw new Error("Unauthorized: vendor does not own this product.");
++    }
++
++    const { data: products } = await query.graph({
++      entity: "product",
++      fields: ["id", "variants.id"],
++      filters: { id: [input.product_id] },
++    });
++
++    const product = products[0] as
++      | { id: string; variants?: { id: string }[] }
++      | undefined;
++
++    if (!product) {
++      throw new Error("Product not found.");
++    }
++
++    const productVariantIds = (product.variants ?? []).map((variant) => variant.id);
++    const requestedVariantIds = [...new Set(input.variant_ids ?? [])];
++    const productVariantIdSet = new Set(productVariantIds);
++
++    const invalidVariantIds = requestedVariantIds.filter(
++      (variantId) => !productVariantIdSet.has(variantId)
++    );
++
++    if (invalidVariantIds.length) {
++      throw new Error(
++        `Unauthorized: variant(s) do not belong to product ${input.product_id}: ${invalidVariantIds.join(", ")}`
++      );
++    }
++
++    return new StepResponse<Output>({
++      vendor_id: vendorId,
++      product_id: input.product_id,
++      product_variant_ids: productVariantIds,
++    });
++  }
++);
++
++export default validateVendorProductOwnershipStep;
+*** Update File: src/workflows/marketplace/update-vendor-product/index.ts
+@@
+ import { syncApparelDetailStep } from "./steps/sync-apparel";
++import { validateVendorProductOwnershipStep } from "./steps/validate-ownership";
+@@
+ export const updateVendorProductWorkflow = createWorkflow(
+   "update-vendor-product",
+   (input: WorkflowInput) => {
+@@
+     const { data: vendorAdmins } = useQueryGraphStep({
+@@
+     });
++
++    // ------------------------------------------------------
++    // 0b. Workflow-level vendor/product + variant ownership
++    // ------------------------------------------------------
++    const requestedVariantIds = transform({ input }, (data) => [
++      ...(data.input.variants_to_update || [])
++        .map((variant: any) => variant?.id)
++        .filter(Boolean),
++      ...(data.input.variants_to_delete || []).filter(Boolean),
++      ...(data.input.inventory_updates || [])
++        .map((update: any) => update?.variant_id)
++        .filter(Boolean),
++      ...(data.input.price_updates || [])
++        .map((update: any) => update?.variant_id)
++        .filter(Boolean),
++    ]);
++
++    const ownership = validateVendorProductOwnershipStep({
++      vendor_admin_id: input.vendor_admin_id,
++      product_id: input.product_id,
++      variant_ids: requestedVariantIds,
++    });
+@@
+-    updateProductStep(updateProductInput);
++    updateProductStep(updateProductInput);
+@@
+     const variantsToUpdatePayload = transform({ input }, (data) => {
+       const variants = data.input.variants_to_update || [];
+       return {
+         product_variants: variants.map((variant) => ({
+@@
+     const variantsToDeletePayload = transform({ input }, (data) => ({
+-      ids: data.input.variants_to_delete || [],
++      ids: (data.input.variants_to_delete || []).filter((variantId) =>
++        ownership.product_variant_ids.includes(variantId)
++      ),
+     }));
+@@
+     const inventoryInput = transform({ input }, (data) => ({
+       product_id: data.input.product_id,
+-      inventoryUpdates: data.input.inventory_updates || [],
++      inventoryUpdates: (data.input.inventory_updates || []).filter(
++        (update: any) =>
++          !update.variant_id || ownership.product_variant_ids.includes(update.variant_id)
++      ),
+       location_id: data.input.location_id,
+     }));
+@@
+     const priceInput = transform({ input }, (data) => ({
+       product_id: data.input.product_id,
+-      variantPrices: data.input.price_updates || [],
++      variantPrices: (data.input.price_updates || []).filter((update: any) =>
++        ownership.product_variant_ids.includes(update.variant_id)
++      ),
+     }));
+*** Update File: src/workflows/marketplace/update-vendor-product/steps/update-product.ts
+@@
+ export const updateProductStep = createStep(
+     "update-product-step",
+     async (input: { product_id: string; updateData: any }, { container }) => {
+         const productService = container.resolve(Modules.PRODUCT);
++
++        const query = container.resolve("query");
++        const { data: products } = await query.graph({
++            entity: "product",
++            fields: ["*"],
++            filters: { id: [input.product_id] },
++        });
++
++        const currentProduct = products[0];
++        if (!currentProduct) {
++            throw new Error(`Product ${input.product_id} not found.`);
++        }
++
+         const updated = await productService.updateProducts(
+             input.product_id,
+             input.updateData
+         );
+-        return new StepResponse(updated);
++
++        const rollbackData = Object.fromEntries(
++            Object.keys(input.updateData || {})
++                .filter((key) => key in currentProduct)
++                .map((key) => [key, (currentProduct as any)[key]])
++        );
++
++        return new StepResponse(
++            updated,
++            { product_id: input.product_id, updateData: rollbackData }
++        );
+-    }
++    },
++    async (rollbackData, { container }) => {
++        if (!rollbackData) return;
++        const productService = container.resolve(Modules.PRODUCT);
++        await productService.updateProducts(
++            rollbackData.product_id,
++            rollbackData.updateData
++        );
++    }
+ );
+*** Update File: src/workflows/marketplace/update-vendor-product/steps/sync-apparel.ts
+@@
+ export const syncApparelDetailStep = createStep(
+     "sync-apparel-detail-step",
+-    async (input: { product_id: string; apparel_detail: any }, { container }) => {
++    async (input: { product_id: string; apparel_detail?: any }, { container }) => {
++        if (!input.apparel_detail) {
++            return new StepResponse({ isNew: false, skipped: true });
++        }
++
+         const marketplaceService = container.resolve("marketplace");
+         const query = container.resolve("query");
+ 
+         const { data: products } = await query.graph({
+             entity: "product",
+-            fields: ["id", "apparel_detail.id"],
++            fields: ["id", "apparel_detail.*"],
+             filters: { id: input.product_id }
+         });
+ 
+-        const existingApparelId = products[0]?.apparel_detail?.id;
++        const existingApparel = products[0]?.apparel_detail;
+ 
+-        if (existingApparelId) {
++        if (existingApparel?.id) {
+             await marketplaceService.updateApparelDetails([
+                 {
+-                    id: existingApparelId,
++                    id: existingApparel.id,
+                     ...input.apparel_detail,
+                 },
+             ]);
+-            return new StepResponse({ apparel_detail_id: existingApparelId, isNew: false });
++            return new StepResponse(
++                { apparel_detail_id: existingApparel.id, isNew: false },
++                { isNew: false, previous: existingApparel }
++            );
+         } else {
+             const newDetail = await marketplaceService.createApparelDetails({
+                 product_id: input.product_id,
+                 ...input.apparel_detail,
+             });
+-            return new StepResponse({ apparel_detail_id: newDetail.id, isNew: true });
++            return new StepResponse(
++                { apparel_detail_id: newDetail.id, isNew: true },
++                { isNew: true, createdId: newDetail.id }
++            );
+         }
+-    }
++    },
++    async (rollbackData, { container }) => {
++        if (!rollbackData) return;
++        const marketplaceService = container.resolve("marketplace");
++
++        if (rollbackData.isNew && rollbackData.createdId) {
++            await marketplaceService.deleteApparelDetails([rollbackData.createdId]);
++            return;
++        }
++
++        if (!rollbackData.isNew && rollbackData.previous?.id) {
++            await marketplaceService.updateApparelDetails([rollbackData.previous]);
++        }
++    }
+ );
+*** Update File: src/workflows/marketplace/update-vendor-product/reconcile.ts
+@@
+ export const reconcileSalesChannelsStep = createStep(
+@@
+-    const query = container.resolve("query");
++    const query = container.resolve("query");
+     const remoteLink = container.resolve(ContainerRegistrationKeys.REMOTE_LINK);
++
++    // Marketplace vendors may only publish through the platform's default
++    // storefront sales channel. Do not allow arbitrary channel IDs from the
++    // vendor request to become links.
++    const { data: stores } = await query.graph({
++      entity: "store",
++      fields: ["default_sales_channel_id"],
++    });
++
++    const defaultSalesChannelId = stores[0]?.default_sales_channel_id;
++    if (!defaultSalesChannelId) {
++      throw new Error("Marketplace sales channel is not configured.");
++    }
++
++    const requestedChannelIds = new Set(input.sales_channel_ids);
++    const unsupportedChannelIds = [...requestedChannelIds].filter(
++      (channelId) => channelId !== defaultSalesChannelId
++    );
++
++    if (unsupportedChannelIds.length) {
++      throw new Error(
++        `Unauthorized sales channel(s): ${unsupportedChannelIds.join(", ")}`
++      );
++    }
+@@
+-    const targetChannelIds = new Set(input.sales_channel_ids);
++    const targetChannelIds = new Set(input.sales_channel_ids);
+*** Update File: src/utils/apparel-guard.ts
+@@
+ export const VALID_CLOSURE_TYPES = [
+@@
+ ] as const;
++
++function normalizeOptionalEnum(
++  value: unknown,
++  allowed: readonly string[],
++  fieldName: string
++): string | undefined {
++  if (value === undefined || value === null || value === "") return undefined;
++
++  const normalized = String(value).trim().toUpperCase();
++  if (!allowed.includes(normalized)) {
++    throw new Error(
++      `Validation Error: '${normalized}' is not a valid ${fieldName}.`
++    );
++  }
++
++  return normalized;
++}
+@@
+   const validSublist =
+@@
+   if (!validSublist.includes(subcategory)) {
+@@
+   }
++
++  const occasion = normalizeOptionalEnum(
++    apparel_detail.occasion,
++    VALID_OCCASIONS,
++    "occasion"
++  );
++  const fit = normalizeOptionalEnum(apparel_detail.fit, VALID_FITS, "fit");
++  const sleeveType = normalizeOptionalEnum(
++    apparel_detail.sleeve_type,
++    VALID_SLEEVE_TYPES,
++    "sleeve_type"
++  );
++  const neckType = normalizeOptionalEnum(
++    apparel_detail.neck_type,
++    VALID_NECK_TYPES,
++    "neck_type"
++  );
++  const closureType = normalizeOptionalEnum(
++    apparel_detail.closure_type,
++    VALID_CLOSURE_TYPES,
++    "closure_type"
++  );
++
++  if (apparel_detail.material_composition === undefined) {
++    throw new Error("Validation Error: material_composition is required.");
++  }
++  if (apparel_detail.care_instructions === undefined) {
++    throw new Error("Validation Error: care_instructions is required.");
++  }
+@@
+-    fit: (apparel_detail.fit || "REGULAR").toUpperCase(),
+-    occasion: (apparel_detail.occasion || "CASUAL").toUpperCase(),
++    fit: fit || "REGULAR",
++    occasion: occasion || "CASUAL",
+@@
+-    material_composition: apparel_detail.material_composition || "100% Cotton",
++    material_composition: apparel_detail.material_composition,
+     condition: (apparel_detail.condition ?? "NEW").toUpperCase(),
+     pattern: apparel_detail.pattern || "SOLID",
+-    care_instructions: apparel_detail.care_instructions || "Machine wash cold",
++    care_instructions: apparel_detail.care_instructions,
+     age_group: apparel_detail.age_group || null,
+     sizing_group: apparel_detail.sizing_group || null,
++    ...(sleeveType ? { sleeve_type: sleeveType } : {}),
++    ...(neckType ? { neck_type: neckType } : {}),
++    ...(closureType ? { closure_type: closureType } : {}),
+   };
+ }
+*** Update File: src/subscribers/order-placed.ts
+@@
+ export default async function orderPlacedHandler({
+@@
+   const vendorIds = new Set<string>();
++  const unassignedItemIds: string[] = [];
+   for (const item of order.items) {
+     const vendorId = item.metadata?.vendor_id as string | undefined;
+-    if (vendorId) vendorIds.add(vendorId);
++    if (vendorId) {
++      vendorIds.add(vendorId);
++    } else {
++      unassignedItemIds.push(item.id);
++    }
+   }
++
++  if (unassignedItemIds.length) {
++    console.error(
++      `❌ Order ${orderId} contains order item(s) without vendor_id: ${unassignedItemIds.join(", ")}`
++    );
++    throw new Error(
++      `Marketplace order association failed: ${unassignedItemIds.length} order item(s) are missing vendor ownership.`
++    );
++  }
+@@
+-  if (links.length > 0) {
+-    try {
+-      await link.create(links);
+-      console.log(`✅ Linked Order ${orderId} to Vendors: ${Array.from(vendorIds).join(", ")}`);
+-    } catch (error: any) {
+-      console.error(`❌ Failed to link order to marketplace vendors: ${error.message}`);
+-    }
++  if (links.length > 0) {
++    try {
++      // Make the subscriber idempotent: order.placed can be retried or
++      // delivered more than once. Existing vendor/order relations are removed
++      // from the create set before we call REMOTE_LINK.
++      const existingVendorLinks = await queryExistingVendorOrderLinks(
++        container,
++        orderId,
++        Array.from(vendorIds)
++      );
++
++      const pendingLinks = links.filter(
++        (candidate) =>
++          !existingVendorLinks.has(
++            `${candidate[MARKETPLACE_MODULE].vendor_id}:${orderId}`
++          )
++      );
++
++      if (pendingLinks.length) {
++        await link.create(pendingLinks);
++      }
++
++      console.log(
++        `✅ Vendor/order associations synchronized for Order ${orderId}: ${Array.from(vendorIds).join(", ")}`
++      );
++    } catch (error: any) {
++      console.error(`❌ Failed to link order to marketplace vendors: ${error.message}`);
++      throw error;
++    }
+   }
+ }
++
++async function queryExistingVendorOrderLinks(
++  container: any,
++  orderId: string,
++  vendorIds: string[]
++): Promise<Set<string>> {
++  const pg = container.resolve(ContainerRegistrationKeys.PG_CONNECTION);
++
++  const rows = await pg("marketplace_vendor_order_order")
++    .select("vendor_id", "order_id")
++    .where({ order_id: orderId })
++    .whereIn("vendor_id", vendorIds)
++    .whereNull("deleted_at");
++
++  return new Set(
++    rows.map((row: any) => `${row.vendor_id}:${row.order_id}`)
++  );
++}
+*** End Patch
+*** Add File: src/utils/hydrate-vendor-product.ts
++import { Modules } from "@medusajs/framework/utils";
++
++/**
++ * Canonical vendor-product projection used by list/detail/update responses.
++ * It converts Medusa's raw product graph into the inventory/price shape the
++ * vendor dashboard already consumes.
++ */
++export async function hydrateVendorProducts(scope: any, products: any[]) {
++  if (!products?.length) return [];
++
++  const inventoryService = scope.resolve(Modules.INVENTORY);
++  const inventoryItemIds = [
++    ...new Set(
++      products.flatMap((product) =>
++        (product.variants ?? []).flatMap((variant: any) =>
++          (variant.inventory_items ?? [])
++            .map((item: any) => item.inventory_item_id)
++            .filter(Boolean)
++        )
++      )
++    ),
++  ] as string[];
++
++  const locationId = process.env.MEDUSA_STOCK_LOCATION_ID;
++  const inventoryLevels = inventoryItemIds.length
++    ? await inventoryService.listInventoryLevels({
++        inventory_item_id: inventoryItemIds,
++        ...(locationId ? { location_id: [locationId] } : {}),
++      })
++    : [];
++
++  const inventoryMap = new Map<string, number>();
++  for (const level of inventoryLevels as any[]) {
++    const current = inventoryMap.get(level.inventory_item_id) ?? 0;
++    inventoryMap.set(
++      level.inventory_item_id,
++      current + Number(level.stocked_quantity ?? 0)
++    );
++  }
++
++  return products.map((product: any) => {
++    const variants = (product.variants ?? []).map((variant: any) => {
++      const prices = variant.price_set?.prices ?? [];
++      const primaryPrice = prices[0] ?? null;
++      const inventoryItems = (variant.inventory_items ?? []).map((item: any) => ({
++        ...item,
++        stocked_quantity: inventoryMap.get(item.inventory_item_id) ?? 0,
++      }));
++
++      const inventoryQuantity = inventoryItems.reduce(
++        (sum: number, item: any) =>
++          sum + Number(item.stocked_quantity ?? 0),
++        0
++      );
++
++      return {
++        ...variant,
++        price_amount: primaryPrice?.amount ?? 0,
++        currency_code: primaryPrice?.currency_code ?? null,
++        price_id: primaryPrice?.id ?? null,
++        prices,
++        inventory_quantity: inventoryQuantity,
++        stocked_quantity: inventoryQuantity,
++        inventory_items: inventoryItems,
++      };
++    });
++
++    return {
++      ...product,
++      variants,
++      inventory_quantity: variants.reduce(
++        (sum: number, variant: any) =>
++          sum + Number(variant.inventory_quantity ?? 0),
++        0
++      ),
++    };
++  });
++}
++
++export async function hydrateVendorProduct(scope: any, product: any) {
++  const [hydrated] = await hydrateVendorProducts(scope, product ? [product] : []);
++  return hydrated ?? null;
++}
++
+*** Update File: src/api/vendors/products/route.ts
+@@
+ import { resolveVendorContext } from "@/utils/resolve-vendor-context"
++import { hydrateVendorProducts } from "@/utils/hydrate-vendor-product"
+@@
+-  const inventoryService = req.scope.resolve(Modules.INVENTORY);
+-
+-  const inventoryItemIds = products.flatMap((product: any) =>
+-      (product.variants ?? []).flatMap((variant: any) =>
+-        (variant.inventory_items ?? [])
+-          .map((item: any) => item.inventory_item_id)
+-          .filter(Boolean)
+-      )
+-    );
+-
+-    const inventoryLevels = inventoryItemIds.length
+-      ? await inventoryService.listInventoryLevels({
+-          inventory_item_id: inventoryItemIds,
+-        })
+-      : [];
+-
+-    const inventoryMap = new Map(
+-      inventoryLevels.map((level: any) => [
+-        level.inventory_item_id,
+-        level.stocked_quantity,
+-      ])
+-    );
+-
+-    for (const product of products as ExtendedProduct[]) {
+-      for (const variant of (product.variants ?? []) as ExtendedVariant[]) {
+-        const inventoryItemId = variant.inventory_items?.[0]?.inventory_item_id;
+-        variant.inventory_quantity = inventoryMap.get(inventoryItemId) ?? 0;
+-        variant.stocked_quantity = variant.inventory_quantity;
+-
+-        variant.inventory_items = (variant.inventory_items ?? []).map((item: any) => ({
+-          ...item,
+-          stocked_quantity: inventoryMap.get(item.inventory_item_id) ?? 0,
+-        }));
+-      }
+-
+-      product.inventory_quantity = (product.variants ?? []).reduce(
+-        (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
+-        0
+-      );
+-    }
+-
+-    return res.json({ products });
++    const hydratedProducts = await hydrateVendorProducts(req.scope, products as any[]);
++
++    return res.json({ products: hydratedProducts });
+*** Update File: src/api/vendors/products/[id]/route.ts
+@@
+ import type { ApparelDetails } from "@shared/index";
++import { hydrateVendorProduct } from "@/utils/hydrate-vendor-product";
+@@
+-        const inventoryService = req.scope.resolve(Modules.INVENTORY);
+-
+@@
+-        // 2. Collect inventory item IDs
+-        const inventoryItemIds = (product.variants ?? []).flatMap((variant: any) =>
+-            (variant.inventory_items ?? [])
+-                .map((item: any) => item.inventory_item_id)
+-                .filter(Boolean)
+-        );
+-
+-        // 3. Fetch inventory levels
+-        const inventoryLevels = inventoryItemIds.length
+-            ? await inventoryService.listInventoryLevels({
+-                inventory_item_id: inventoryItemIds,
+-            })
+-            : [];
+-
+-        // 4. Build inventory map
+-        const inventoryMap = new Map(
+-            inventoryLevels.map((level: any) => [
+-                level.inventory_item_id,
+-                level.stocked_quantity,
+-            ])
+-        );
+-
+-        // 5. Enrich variants with inventory and price data
+-        const enrichedVariants = (product.variants ?? []).map((variant: any) => {
+-            const prices = variant.price_set?.prices || [];
+-            const primaryPrice = prices[0] || null;
+-
+-            const inventoryItemId = variant.inventory_items?.[0]?.inventory_item_id;
+-            const stockedQuantity = inventoryMap.get(inventoryItemId) ?? 0;
+-
+-            const enrichedInventoryItems = (variant.inventory_items ?? []).map((item: any) => ({
+-                ...item,
+-                stocked_quantity: inventoryMap.get(item.inventory_item_id) ?? 0,
+-            }));
+-
+-            return {
+-                ...variant,
+-                price_amount: primaryPrice?.amount ?? 0,
+-                currency_code: primaryPrice?.currency_code ?? "USD",
+-                price_id: primaryPrice?.id ?? null,
+-                prices, // Keep raw prices array intact if vendor dashboard needs multi-currency
+-                inventory_quantity: stockedQuantity,
+-                stocked_quantity: stockedQuantity,
+-                inventory_items: enrichedInventoryItems,
+-            };
+-        });
+-
+-        // 6. Calculate total product inventory
+-        const totalInventory = enrichedVariants.reduce(
+-            (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
+-            0
+-        );
+-
+-        // 7. Return enriched product
++        // Canonical vendor-product projection: same shape used by list/create/update.
++        const hydratedProduct = await hydrateVendorProduct(req.scope, product);
++
+         return res.json({
+-            product: {
+-                ...product,
+-                variants: enrichedVariants,
+-                inventory_quantity: totalInventory,
+-            },
++            product: hydratedProduct,
+         });
+*** Update File: src/workflows/marketplace/update-vendor-product/steps/get-product.ts
+@@
+ import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
++import { hydrateVendorProduct } from "@/utils/hydrate-vendor-product";
+@@
+-        return new StepResponse(products[0]);
++        const hydrated = await hydrateVendorProduct(container, products[0]);
++        return new StepResponse(hydrated);
+     }
+ );
+*** End Patch
