@@ -13,11 +13,9 @@ import VariantMatrixBuilder from "@/components/vendor/products/VariantMatrixBuil
 import VariantMatrixTable, {
   VariantMatrixRow,
 } from "@/components/vendor/products/VariantMatrixTable"
-import { getBackendUrl, } from "@/lib/data/vendor/session"
 import { buildApparelPayload } from "@/lib/util/vendor/apparel"
 import { buildProductOptionsPayload, buildVariantPayload } from "@/lib/util/vendor/product"
 import { ERROR_MESSAGES, sanitizeSku } from "@/lib/util/vendor/validation"
-import { getVendorAuthHeaders } from "@/lib/data/cookies"
 import { createVendorProduct } from "@/lib/data/vendor/products"
 
 // ============================================================================
@@ -315,38 +313,6 @@ export default function CreateProductFormClient({
       // --- SUBMIT ---
       try {
 
-        // const headers = await getVendorHeaders()
-
-        // await fetch(`${getBackendUrl()}/vendors/products`, {
-        //   method: "POST",
-        //   headers,
-        //   body: JSON.stringify(payload),
-        // })
-
-        // if (!response.ok) {
-        //   let errorData = {}
-        //   try {
-        //     errorData = await response.json()
-        //   } catch {
-        //     // Ignore JSON parse errors
-        //   }
-
-        //   type ErrorCode = keyof typeof ERROR_MESSAGES
-
-        //   const errorCode = (errorData as any)?.code as ErrorCode | undefined
-
-        //   const message =
-        //     errorCode && errorCode in ERROR_MESSAGES
-        //       ? ERROR_MESSAGES[errorCode]
-        //       : ERROR_MESSAGES.UNKNOWN
-        //   if (response.status === 409) {
-        //     throw new Error(`A product with the handle "${handle}" already exists. Please choose a different handle.`)
-        //   }
-
-        //   throw new Error(message)
-        // }
-
-        // const result = await response.json()
         const result = await createVendorProduct(payload)
 
         if (!result.success) {

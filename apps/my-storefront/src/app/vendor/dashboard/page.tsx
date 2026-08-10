@@ -1,6 +1,8 @@
 // ==== ./src/app/vendor/dashboard/page.tsx ====
 import React from "react"
-import { getVendorProfile, getVendorProducts, getVendorOrders } from "@lib/data/vendor"
+import { getVendorOrders } from "@lib/data/vendor/orders"
+import { getVendorProfile } from "@/lib/data/vendor/profile"
+import { getVendorProducts } from "@/lib/data/vendor/products"
 
 export const revalidate = 0 // Ensure metrics stay live on view refresh
 

@@ -22,8 +22,8 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
   const filteredOptions = (option.values ?? []).map((v) => v.value)
 
   return (
-    <div className="flex flex-col gap-y-3">
-      <span className="text-sm">Select {title}</span>
+    <div className="  flex flex-col gap-y-3">
+      <span className="text-sm text-[#a52233] ">Select {title}</span>
       <div
         className="flex flex-wrap justify-between gap-2"
         data-testid={dataTestId}

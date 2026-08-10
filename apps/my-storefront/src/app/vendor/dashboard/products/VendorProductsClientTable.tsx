@@ -4,7 +4,7 @@
 import React, { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { updateVendorProduct, deleteVendorProduct } from "@lib/data/vendor"
+import { updateVendorProduct, deleteVendorProduct } from "@lib/data/vendor/products"
 
 interface Variant {
   id: string
@@ -31,7 +31,7 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
   const handleToggleStatus = async (product: Product) => {
     if (!product || !product.id) return
     const nextStatus = product.status === "published" ? "draft" : "published"
-    
+
     setProducts(prev => prev.map(p => p && p.id === product.id ? { ...p, status: nextStatus } : p))
 
     startTransition(async () => {
@@ -108,11 +108,10 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
                         <button
                           onClick={() => handleToggleStatus(product)}
                           disabled={isPending}
-                          className={`inline-flex items-center gap-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase cursor-pointer select-none border transition-all ${
-                            product.status === "published"
+                          className={`inline-flex items-center gap-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase cursor-pointer select-none border transition-all ${product.status === "published"
                               ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
                               : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"
-                          }`}
+                            }`}
                         >
                           <span className={`h-1 w-1 rounded-full ${product.status === "published" ? "bg-emerald-500" : "bg-neutral-400"}`} />
                           {product.status || "Draft"}
@@ -164,7 +163,7 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
                                 if (!variant) return null
                                 const isINR = variant.prices?.[0]?.currency_code?.toLowerCase() === "inr"
                                 const currencySign = isINR ? "₹" : "$"
-                                const priceAmount = variant.prices?.[0]?.amount 
+                                const priceAmount = variant.prices?.[0]?.amount
                                   ? `${currencySign}${(variant.prices[0].amount / 100).toFixed(2)}`
                                   : "No Price Set"
 

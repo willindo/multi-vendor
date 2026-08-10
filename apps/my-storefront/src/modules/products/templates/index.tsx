@@ -6,7 +6,6 @@ import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
-import VendorSpotlight from "@modules/products/components/vendor/vendor-spotlight" 
 import ProductActionsWrapper from "./product-actions-wrapper"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
@@ -36,15 +35,15 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         data-testid="product-container"
       >
         {/* Left Column: Context Summaries, Vendor Info Card, and Accordion Specifications */}
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
+        <div className=" bg-[#264513] flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
           <ProductInfo product={product} />
-          
-          <VendorSpotlight 
+
+          {/* <VendorSpotlight 
             vendorId={product.vendor_id} 
             vendorName={product.vendor_name} 
             countryCode={countryCode}
-          />
-          
+          /> */}
+
           <ProductTabs product={product} />
         </div>
 

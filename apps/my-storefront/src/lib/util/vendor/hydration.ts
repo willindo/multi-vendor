@@ -112,6 +112,39 @@ function buildVariantOptions(
     return options
 }
 
+function extractPriceAmount(variant: any): number {
+    if (!variant) return 0;
+
+    // 1. Direct price_set array in payload: variant.price_set.prices[0].amount
+    const rawAmount =
+        variant.price_set?.prices?.[0]?.amount ??
+        variant.prices?.[0]?.amount ??
+        variant.amount ??
+        variant.price_amount ??
+        variant.min_price;
+
+    const parsed = Number(rawAmount);
+    if (isNaN(parsed) || rawAmount === null || rawAmount === undefined) {
+        return 0;
+    }
+    return parsed / 100;
+}
+
+function extractInventoryQuantity(variant: any): number {
+    if (!variant) return 0;
+
+    // 1. Direct object property in payload: variant.inventory.stocked_quantity
+    const val =
+        variant.inventory?.stocked_quantity ??
+        variant.stocked_quantity ??
+        variant.inventory_quantity ??
+        variant.inventory_levels?.[0]?.stocked_quantity ??
+        variant.inventory_items?.[0]?.inventory?.location_levels?.[0]?.stocked_quantity;
+
+    const parsed = Number(val);
+    return !isNaN(parsed) && val !== null && val !== undefined ? parsed : 0;
+}
+
 // Hydrate variant rows from product data
 export function hydrateVariantRows(product: Product): VariantMatrixRow[] {
     if (!product.variants || product.variants.length === 0) {
@@ -123,10 +156,6 @@ export function hydrateVariantRows(product: Product): VariantMatrixRow[] {
         // Note: Medusa doesn't return options in the variant by default
         // We need to build them from the product options and variant values
         const options = buildVariantOptions(product, variant)
-
-        // Get price from variant
-        const rawAmount = variant.price_amount ?? variant.prices?.[0]?.amount ?? 0;
-        const price = rawAmount ? rawAmount / 100 : 0;
 
         const currencyCode = (
             variant.currency_code ??
@@ -140,9 +169,9 @@ export function hydrateVariantRows(product: Product): VariantMatrixRow[] {
             id: variant.id,
             title: variant.title,
             sku: variant.sku,
-            price: price,
+            price: extractPriceAmount(variant),
             currencyCode: currencyCode,
-            inventoryQuantity: variant.stocked_quantity ?? variant.inventory_quantity ?? 0,
+            inventoryQuantity: extractInventoryQuantity(variant),
             manageInventory: variant.manage_inventory !== undefined ? variant.manage_inventory : true,
             options: options,
             enabled: true,
@@ -212,10 +241,6 @@ export function hydrateCommerceFields(product: Product) {
 
     const firstVariant = product.variants[0] as any;
 
-    // 🟢 Apply identical mapping logic for the default base values
-    const rawAmount = firstVariant.price_amount ?? firstVariant.prices?.[0]?.amount ?? 0;
-    const priceAmount = rawAmount ? rawAmount / 100 : 0;
-
     const currencyCode = (
         firstVariant.currency_code ??
         firstVariant.prices?.[0]?.currency_code ??
@@ -224,9 +249,10 @@ export function hydrateCommerceFields(product: Product) {
 
     return {
         sku: firstVariant.sku || "",
-        inventoryQuantity: firstVariant.stocked_quantity ?? firstVariant.inventory_quantity ?? 10,
+        // inventoryQuantity: firstVariant.stocked_quantity ?? firstVariant.inventory_quantity ?? 10,
+        inventoryQuantity: extractInventoryQuantity(firstVariant),
         manageInventory: firstVariant.manage_inventory !== undefined ? firstVariant.manage_inventory : true,
-        priceAmount: priceAmount,
+        priceAmount: extractPriceAmount(firstVariant),
         currencyCode: currencyCode,
     }
 }

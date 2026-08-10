@@ -172,5 +172,3 @@ Catalog / discovery = Every place where a customer sees a product gets the same 
                                 ▼
                          ProductPreview /
                          ProductProjection
-
-      

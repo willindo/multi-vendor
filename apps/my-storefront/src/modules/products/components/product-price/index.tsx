@@ -10,6 +10,8 @@ export default function ProductPrice({
   product: HttpTypes.StoreProduct
   variant?: HttpTypes.StoreProductVariant
 }) {
+  // console.log("Product", product)
+  console.log("Variant", variant)
   const { cheapestPrice, variantPrice } = getProductPrice({
     product,
     variantId: variant?.id,
@@ -22,7 +24,7 @@ export default function ProductPrice({
   }
 
   return (
-    <div className="flex flex-col text-ui-fg-base">
+    <div className=" bg-[#811590] border-solid border-orange-600 flex flex-col text-ui-fg-base">
       <span
         className={clx("text-xl-semi", {
           "text-ui-fg-interactive": selectedPrice.price_type === "sale",

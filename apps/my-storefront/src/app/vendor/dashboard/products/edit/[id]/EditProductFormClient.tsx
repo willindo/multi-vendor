@@ -22,8 +22,6 @@ import {
   deleteVendorProduct,
 } from "@/lib/data/vendor/products"
 import {
-  hydrateVariantRows,
-  hydrateApparelDetails,
   hydrateFormState,
   hydrateCommerceFields,
   extractOriginalVariantIds,
@@ -181,7 +179,8 @@ export default function EditProductFormClient({
         }
 
         console.log(`✅ Product found: ${product.title}`)
-
+        console.log("📦 Full Product Raw Payload:", product)
+        console.log("🔍 Product JSON:", JSON.stringify(product, null, 2))
         // ✅ Hydrate form state using utilities
         const formState = hydrateFormState(product)
         setTitle(formState.title)
@@ -205,11 +204,15 @@ export default function EditProductFormClient({
 
         // ✅ Hydrate commerce fields
         const commerceFields = hydrateCommerceFields(product)
+        console.log("📊 Hydrated Commerce Fields:", commerceFields)
         setSku(commerceFields.sku)
         setInventoryQuantity(commerceFields.inventoryQuantity)
         setManageInventory(commerceFields.manageInventory)
         setPriceAmount(commerceFields.priceAmount)
         setCurrencyCode(commerceFields.currencyCode)
+
+        console.log("🧪 Inventory Quantity:", commerceFields.inventoryQuantity)
+        console.log("🧪 Price Amount:", commerceFields.priceAmount)
 
         setFormTouched(false)
         console.log(`✅ Product loaded successfully: ${product.title}`)
@@ -419,11 +422,7 @@ export default function EditProductFormClient({
       }))
       // Get base variants built by helper
       const baseVariants = buildVariantPayload(variantRows, {
-        // skuPrefix: handle?.trim() || "sku",
-        // defaultPrice: priceAmount,
         defaultCurrency: currencyCode,
-        // defaultInventory: inventoryQuantity,
-        // manageInventory,
       })
 
       // Convert variant options array into a Key-Value Map: { "Size": "L", "Color": "White" }

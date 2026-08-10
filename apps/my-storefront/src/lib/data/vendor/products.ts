@@ -29,7 +29,34 @@ export interface CreateVendorProductPayload {
 
     variants?: ReturnType<typeof buildVariantPayload>
 
-    apparel_detail?: ApparelDetails
+    apparel_detail?: Partial<ApparelDetails>
+}
+
+export async function getVendorProducts() {
+    if (!BACKEND_URL) return []
+
+    try {
+        const headers = await getVendorHeaders()
+
+        const response = await fetch(
+            `${BACKEND_URL}/vendors/products`,
+            {
+                headers,
+                cache: "no-store",
+            }
+        )
+
+        if (!response.ok) {
+            return []
+        }
+
+        const data = await response.json()
+
+        return data.products ?? []
+    } catch (error) {
+        console.error("Error loading vendor products:", error)
+        return []
+    }
 }
 
 export async function getVendorProduct(productId: string) {

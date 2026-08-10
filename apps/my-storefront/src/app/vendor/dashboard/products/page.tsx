@@ -1,9 +1,9 @@
 import React from "react"
 import Link from "next/link"
-import { getVendorProducts } from "@lib/data/vendor"
+import { getVendorProducts } from "@lib/data/vendor/products"
 import VendorProductsClientTable from "./VendorProductsClientTable"
 
-export const revalidate = 0 
+export const revalidate = 0
 
 export default async function VendorProductsPage() {
   const products = await getVendorProducts()
@@ -18,7 +18,7 @@ export default async function VendorProductsPage() {
             Manage your localized marketplace inventory, status variants, and stock tiers.
           </p>
         </div>
-        
+
         <div>
           <Link
             href="/vendor/dashboard/products/create"

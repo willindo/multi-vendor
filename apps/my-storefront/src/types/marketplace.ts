@@ -21,7 +21,7 @@ export interface ApparelDetailFields {
   material_composition?: string | null
   care_instructions?: string | null
 
-  
+
   occasion?: string | null
   season?: string | null
   condition?: string | null
@@ -29,7 +29,7 @@ export interface ApparelDetailFields {
 
 // Extend the core Medusa type contract seamlessly
 export type ExtendedMarketplaceProduct = HttpTypes.StoreProduct & {
-  vendor_id?: string
-  vendor_name?: string
+  // vendor_id?: string
+  // vendor_name?: string
   apparel_detail?: ApparelDetailFields | null
 }

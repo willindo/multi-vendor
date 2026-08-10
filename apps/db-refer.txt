@@ -388,18 +388,20 @@ FROM product_option_value pov
 JOIN product_option po
     ON po.id = pov.option_id
 WHERE
-    po.product_id = 'prod_01KYQJW402V32TRT34JQJ9V1J0'
+    po.product_id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
     AND po.deleted_at IS NULL
     AND pov.deleted_at IS NULL
 ORDER BY
     po.title,
     pov.value;
 
+  MIN(p.amount)    AS min_price,
+
     SELECT
   pv.id            AS variant_id,
   pr.id            AS product_id,
+  p.amount,
   pv.sku,
-  MIN(p.amount)    AS min_price,
   p.currency_code,
   il.stocked_quantity,
   il.location_id
@@ -410,8 +412,9 @@ JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
 WHERE 
-     pv.deleted_at IS NULL
-GROUP BY pv.id, pv.sku, p.currency_code, il.stocked_quantity, il.location_id, pr.id 
+     pr.id = 'prod_01KYQJW402V32TRT34JQJ9V1J0'
+     AND pv.deleted_at IS NULL
+GROUP BY pv.id, pv.sku,p.amount, p.currency_code, il.stocked_quantity, il.location_id, pr.id 
 ORDER BY pv.sku;
 
 [ public.product ]
