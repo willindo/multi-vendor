@@ -28,12 +28,12 @@ EXCLUDE_NAMES=(-iname "readme*" -o calcul-iname "license*" -o -iname "changelog*
 -o -path "*//*" -o -path "*/*edit*/*" -o -iname "*product*" -o -iname "*" -o -iname "" -not -iname "**" -not -path "*/**/*"
 -not -path "*/*.medusa/*" -not -path "*/node_modules/*" 
 EXCL_UDE_PATHS='-not -path  "*/migrations/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*"'
-INCL_UDES='-path "*/process-order*/*"  ' 
+INCL_UDES='-path "*/*login*/*" -o -path "*/*signout*/*" -o -path "*/*register*/*" -o -path "*/*signo-in*/*" -o -iname "*login*" ' 
 EXCL_UDE_PATHS=' -not -path "*/node_modules/*"  -not -path "*/migrations/*" -not -iname "*.txt*" -not -iname "*.md" -not -iname "validate*" '
 -o -path "*/lib/vendor/*" -not -path "*/admin/*" -not -path "*/store/*"
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/*login*/*" -o -path "*/*signout*/*" -o -path "*/*register*/*" -o -path "*/*signo-in*/*" -o -iname "*login*" ' 
+INCL_UDES='-path "*/*search*/*" -o -iname "*search*" ' 
 EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -path "*/.next/*" -not -iname "*test*" -not -iname "*back*" -not -iname "readme*"'
 eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
