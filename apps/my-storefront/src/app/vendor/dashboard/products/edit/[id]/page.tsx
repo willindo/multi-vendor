@@ -18,10 +18,11 @@ async function getVendorProductDetails(
 
   try {
     // Resolve upstream network mapping contexts properly
-    const ipAddress = host ? host.split(":")[0] : "127.0.0.1"
-    const backendUrl = ipAddress === "localhost" || ipAddress === "127.0.0.1" 
-      ? "http://localhost:9000" 
-      : `http://${ipAddress}:9000`
+    // const ipAddress = host ? host.split(":")[0] : "127.0.0.1"
+    // const backendUrl = ipAddress === "localhost" || ipAddress === "127.0.0.1" 
+    //   ? "http://localhost:9000" 
+    //   : `http://${ipAddress}:9000`
+    const backendUrl = "http://localhost:9000"
 
     const response = await fetch(`${backendUrl}/vendors/products`, {
       method: "GET",
