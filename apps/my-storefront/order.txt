@@ -1,4 +1,4 @@
-src/api/vendors/orders/
+src/api/vendors/orders/  -=- this order specific file 
 ├── route.ts              <-- GET vendor order list
 └── [id]
     └── route.ts          <-- GET vendor order details
