@@ -6,8 +6,8 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Environment files
-.env
-.env.*
+# .env
+# .env.*
 !.env.example
 
 # Build outputs
