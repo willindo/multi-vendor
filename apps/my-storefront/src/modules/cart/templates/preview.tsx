@@ -5,24 +5,19 @@ import { Table, clx } from "@medusajs/ui"
 import Item from "@modules/cart/components/item"
 import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 import type { StorefrontLineItem, StorefrontCart } from "@lib/data/cart"
+import { groupAndSortVendorPartitions } from "@lib/util/cart-vendor"
 
 type ItemsTemplateProps = {
   cart: StorefrontCart
 }
 
 const ItemsPreviewTemplate = ({ cart }: ItemsTemplateProps) => {
-  const items = cart.items as StorefrontLineItem[]
-  const hasOverflow = items && items.length > 4
+  const items = cart?.items as StorefrontLineItem[] | undefined
+  const hasOverflow = Boolean(items && items.length > 4)
 
-  // Group checkout preview items by vendor for structural consistency
-  const sortedItems = items
-    ? [...items].sort((a, b) => {
-        const vendorA = a.metadata?.vendor_id || ""
-        const vendorB = b.metadata?.vendor_id || ""
-        if (vendorA !== vendorB) return vendorA.localeCompare(vendorB)
-        return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
-      })
-    : []
+  // Cluster and sort items chronologically grouped by vendor
+  const vendorGroups = groupAndSortVendorPartitions(items)
+  const sortedItems = vendorGroups.flatMap((group) => group.items)
 
   return (
     <div
@@ -33,18 +28,26 @@ const ItemsPreviewTemplate = ({ cart }: ItemsTemplateProps) => {
     >
       <Table>
         <Table.Body data-testid="items-table">
-          {items
-            ? sortedItems.map((item) => (
-                <Item
-                  key={item.id}
-                  item={item}
-                  type="preview"
-                  currencyCode={cart.currency_code}
-                />
-              ))
-            : repeat(5).map((i) => (
-                <SkeletonLineItem key={i} />
-              ))}
+          {items && items.length > 0 ? (
+            sortedItems.map((item) => (
+              <Item
+                key={item.id}
+                item={item}
+                type="preview"
+                currencyCode={cart.currency_code}
+              />
+            ))
+          ) : !items ? (
+            // Skeleton state while items are fetching
+            repeat(5).map((i) => <SkeletonLineItem key={i} />)
+          ) : (
+            // Empty cart state
+            <Table.Row>
+              <Table.Cell className="text-center py-6 text-neutral-500 text-xs italic">
+                Your cart is empty.
+              </Table.Cell>
+            </Table.Row>
+          )}
         </Table.Body>
       </Table>
     </div>

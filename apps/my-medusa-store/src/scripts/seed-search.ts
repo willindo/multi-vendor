@@ -11,7 +11,7 @@ export default async function seedSearch({ container }: ExecArgs) {
 
   const { Meilisearch } = await import("meilisearch");
   const meiliClient = new Meilisearch({
-    host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700",
+    host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700" || "http://localhost:7700",
     apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
   });
 

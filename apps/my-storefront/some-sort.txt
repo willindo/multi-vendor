@@ -234,6 +234,40 @@ badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-storefront$
  logo       | text                     |           |          | 
  is_active  | boolean                  |           | not null | true
  metadata   | jsonb                    |           |          | 
+                            Table "public.region"
+     Column      |           Type           | Collation | Nullable | Default 
+-----------------+--------------------------+-----------+----------+---------
+ id              | text                     |           | not null | 
+ name            | text                     |           | not null | 
+ currency_code   | text                     |           | not null | 
+ metadata        | jsonb                    |           |          | 
+ automatic_taxes | boolean                  |           | not null | true
+   source_table  | source_column | target_table | target_column 
+----------------+---------------+--------------+---------------
+ region_country | region_id     | region       | id
+ tax_region     | provider_id   | tax_provider | id
+ tax_region     | parent_id     | tax_region   | id
+ tax_rate       | tax_region_id | tax_region   | id
+(4 rows)
+       table_name        |    column_name    
+-------------------------+-------------------
+ cart                    | region_id
+ region_country          | region_id
+ store                   | default_region_id
+ tax_rate                | tax_region_id
+ order                   | region_id
+ region_payment_provider | region_id
+(6 rows)
+                                       Table "public.store"
+          Column          |           Type           | Collation | Nullable |       Default        
+--------------------------+--------------------------+-----------+----------+----------------------
+ id                       | text                     |           | not null | 
+ name                     | text                     |           | not null | 'Medusa Store'::text
+ default_sales_channel_id | text                     |           |          | 
+ default_region_id        | text                     |           |          | 
+ default_location_id      | text                     |           |          | 
+ metadata                 | jsonb                    |           |          | 
+
  Ship endpoint const { vendorId } =   await validateVendorOrderOwnership(...) Later you no longer use vendorId except returning it in the response. I'd remove it from the response.The frontend doesn't need the vendor id.
  Overall, this is a solid Medusa v2 marketplace architecture. The remaining work is less about restructuring and more about polishing: using MedusaError, making the order.placed subscriber idempotent, and fixing the field selection in the vendor order read endpoints (the likely source of the created_at error).
  http:    GET /vendors/products ← - (200) - 720.400 ms
@@ -301,4 +335,106 @@ vendor_admin
                              │
                              ▼
                         Order Items
-                        Do not make the storefront vendor-aware everywhere. Make the marketplace ownership layer vendor-aware, and let the storefront consume the result.
+Do not make the storefront vendor-aware everywhere. Make the marketplace ownership layer vendor-aware, and let the storefront consume the result.
+database confirms the actual Medusa relationship:
+This is why:orderModule.listOrders({
+    payment_collection_id: ...
+})  <=- was incorrect . payment_collection_id isn't an Order module filter. The Query Graph should be used for cross-module resolution. -=- 
+payment.captured  <=- medusa back concern <-=->The storefront should not participate in this process.
+       │
+       ▼
+resolve payment
+       │
+       ▼
+resolve payment collection
+       │
+       ▼
+resolve order
+       │
+       ▼
+processOrderPaymentSplitsWorkflow
+       │
+       ▼
+calculateSplits
+       │
+       ▼
+VendorSettlement(PENDING)
+       │
+       ▼
+executeTransfers
+       │
+       ▼
+VendorSettlement(PAID/FAILED)
+from payment
+
+The customer-facing storefront generally needs only:payment status  order status  order total
+Order confirmation page After checkout:should remain a customer order confirmation. But it can become vendor-aware:this is grouping, not separate orders.
+Order Confirmed
+
+Order #12345
+
+Vendor A
+ ├── Product A
+ └── Product B
+
+Vendor B
+ └── Product C
+
+Total: ₹2,499
+Payment: Paid  The storefront should not have to understand: vendor_products link vendor_product model inventory service internals price_set internals
+Area                Current backend         Storefront target
+Cart	            Medusa cart     	    Vendor-grouped UI
+Checkout	        Medusa checkout	        Same checkout + vendor context
+Payment	            Medusa payment	        Payment status only
+Order	            Single Medusa order	    Vendor-grouped order view
+Vendor order link	Backend link	        Used indirectly
+Settlement	        Marketplace module	    Not customer-facing
+Commission	        Marketplace backend	    Not customer-facing
+Transfer	        Marketplace backend	    Not customer-facing
+this a deliberate part of the architecture now rather than treating shipping as a later UI enhancement.  So there are two perspectives over the same  Platform dashboard
+order:PARTIALLY SHIPPED And the vendor dashboard sees only its own partition:
+Customer Order #1001
+│
+├── Vendor A
+│   ├── Item A1
+│   ├── Item A2
+│   └── Shipment A
+│       ├── status: SHIPPED
+│       ├── carrier
+│       ├── tracking
+│       └── delivered_at
+│
+├── Vendor B
+│   ├── Item B1
+│   └── Shipment B
+│       ├── status: PROCESSING
+│       ├── carrier
+│       └── tracking
+│
+└── Order-level status
+    └── PARTIALLY_SHIPPED
+    domain structure 
+Order <=- order as:
+│
+├── Payment
+│
+├── Vendor partitions
+│   │
+│   ├── Vendor A
+│   │    ├── items
+│   │    └── fulfillment/shipment
+│   │
+│   └── Vendor B
+│        ├── items
+│        └── fulfillment/shipment
+│
+└── Order summary
+Order  <=- settlement system remains independent: 
+│
+├── Vendor A
+│    ├── Fulfillment
+│    └── Settlement
+│
+└── Vendor B
+     ├── Fulfillment
+     └── Settlement

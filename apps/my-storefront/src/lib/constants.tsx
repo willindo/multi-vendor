@@ -1,6 +1,5 @@
 import React from "react"
 import { CreditCard } from "@medusajs/icons"
-
 import Ideal from "@modules/common/icons/ideal"
 import Bancontact from "@modules/common/icons/bancontact"
 import PayPal from "@modules/common/icons/paypal"
@@ -10,6 +9,14 @@ export const paymentInfoMap: Record<
   string,
   { title: string; icon: React.JSX.Element }
 > = {
+  pp_razorpay_razorpay: {
+    title: "Razorpay (UPI, Cards, NetBanking)",
+    icon: <CreditCard />,
+  },
+  pp_razorpay: {
+    title: "Razorpay (UPI, Cards, NetBanking)",
+    icon: <CreditCard />,
+  },
   pp_stripe_stripe: {
     title: "Credit card",
     icon: <CreditCard />,
@@ -34,13 +41,20 @@ export const paymentInfoMap: Record<
     title: "Manual Payment",
     icon: <CreditCard />,
   },
-  // Add more payment providers here
+}
+
+export const isRazorpay = (providerId?: string) => {
+  return (
+    providerId?.startsWith("pp_razorpay") ||
+    providerId?.includes("razorpay")
+  )
 }
 
 // This only checks if it is native stripe or medusa payments for card payments, it ignores the other stripe-based providers
 export const isStripeLike = (providerId?: string) => {
   return (
-    providerId?.startsWith("pp_stripe_") || providerId?.startsWith("pp_medusa-")
+    providerId?.startsWith("pp_stripe_") ||
+    providerId?.startsWith("pp_medusa-")
   )
 }
 

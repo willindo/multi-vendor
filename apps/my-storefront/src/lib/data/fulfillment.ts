@@ -24,7 +24,8 @@ export const listCartShippingMethods = async (cartId: string) => {
         },
         headers,
         next,
-        cache: "force-cache",
+        // cache: "force-cache",
+        cache: "no-cache", // Prevents stale shipping method cache across address changes
       }
     )
     .then(({ shipping_options }) => shipping_options)

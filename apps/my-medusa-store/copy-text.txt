@@ -1,32 +1,3 @@
-./src/lib
-├── config.ts
-├── constants.tsx
-├── context
-│   └── modal-context.tsx
-├── data
-│   ├── variants.ts
-│   └── vendor
-│       ├── auth.ts
-│       ├── index.ts
-│       ├── orders.ts
-│       ├── products.ts
-│       ├── profile.ts
-│       └── session.ts
-├── hooks
-│   ├── use-in-view.tsx
-│   └── use-toggle-state.tsx
-├── meilisearch-client.ts
-├── search-server.ts
-└── util
-    └── vendor
-        ├── apparel.ts
-        ├── hydration.ts
-        ├── inventory.ts
-        ├── pricing.ts
-        ├── product.ts
-        └── validation.ts
-
-7 directories, 46 files
 Product (Commerce Root) = decoupled database design schema tree
 │
 ├── Product Information
@@ -198,39 +169,99 @@ modules/
  variant_01KYF3F4KKYDGPZ8HTTKT7650N | prod_01KYF3F4BW307ZCSE39CR7C9E2 | 01KX3XB4-SKU-L-PINK                                |     15000 | usd           |               20 | default_location
  variant_01KYF3F4KMG2J8B4GNG8X67K6D | prod_01KYF3F4BW307ZCSE39CR7C9E2 | 01KX3XB4-SKU-XL-PINK                               |     15000 | usd           |               15 | default_location
 (24 rows)
- grep -r "import.*@lib/data/products*" --exclude-dir=.next --exclude-dir=node_modules
-src/modules/home/components/featured-products/product-rail/index.tsx:import { listProducts } from "@lib/data/products"
-src/modules/products/components/product-preview/index.tsx:import { listProducts } from "@lib/data/products"
-src/modules/products/components/related-products/index.tsx:import { listProducts } from "@lib/data/products"
-src/modules/products/templates/product-actions-wrapper/index.tsx:import { listProducts } from "@lib/data/products"
-src/modules/store/templates/paginated-products.tsx:import { listProductsWithSort } from "@lib/data/products"
-src/app/[countryCode]/(main)/products/[handle]/page.tsx:import { listProducts } from "@lib/data/products"
-badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-storefront$ 
-./src/lib
-├── config.ts
-├── constants.tsx
-├── context
-│   └── modal-context.tsx
-├── data
-│   ├── categories.ts
-│   ├── collections.ts
-│   ├── fulfillment.ts
-│   ├── locale-actions.ts
-│   ├── locales.ts
-│   ├── onboarding.ts
-│   ├── products.ts
-│   ├── variants.ts
-├── search-server.ts
-└── util
-    ├── compare-addresses.ts
-    ├── env.ts
-    ├── get-locale-header.ts
-    ├── get-percentage-diff.ts
-    ├── get-product-price.ts
-    ├── isEmpty.ts
-    ├── medusa-error.ts
-    ├── money.ts
-    ├── product.ts
-    ├── repeat.ts
-    ├── sort-products.ts
- 
+Product (Commerce Root) <=--not actual sellable -=- not as line-items for cart order 
+│
+├── Product Information
+│   ├── id
+│   ├── title
+│   ├── subtitle
+│   ├── description
+│   ├── handle
+│   └── type_id  <=-- not yet use default medusa 
+│
+├── Categories   <=-- not yet use  default medusa   
+│   ├── product_category_product
+│   └── product_category                
+│       └── parent_category_id
+│
+├── Product Type  <=-- not yet use default medusa
+│   └── product_type
+├── Apparel Detail (1:1) <=-- these are the custom category type 
+│   ├── gender
+│   ├── age_group
+│   ├── sizing_group
+│   │
+│   ├── garment_category
+│   ├── garment_subcategory
+│   │
+│   ├── fit
+│   ├── pattern
+│   ├── style_type
+│   ├── occasion
+│   ├── sleeve_type
+│   ├── neck_type
+│   │
+│   ├── material_type
+│   ├── material_composition
+│   ├── care_instructions
+│   │
+│   ├── season
+│   └── condition
+│
+├── Product Options
+│   ├── product_option
+│   │   ├── Size
+│   │   ├── Color
+│   │   ├── Length
+│   │   ├── Width
+│   │   └── Pack Size
+│   │
+│   └── product_option_value
+│
+└── Product Variants
+    │
+    ├── product_variant <=-- actual sellable -=- line-items for cart order 
+    │   ├── sku
+    │   ├── barcode
+    │   ├── ean
+    │   ├── upc
+    │   ├── thumbnail
+    │   ├── weight
+    │   ├── dimensions
+    │   ├── material
+    │   ├── manage_inventory
+    │   ├── allow_backorder
+    │   └── metadata
+    │
+    ├── Variant Option Values 
+    │   └── product_variant_option
+    │
+    ├── Variant Images
+    │   └── product_variant_product_image
+    │
+    ├── Inventory Module Link
+    │   └── product_variant_inventory_item
+    │        │
+    │        ▼
+    │     inventory_item
+    |       ▲
+    |       │ FK
+    |       │
+    |      inventory_level
+    |       │
+    |       ├── stocked_quantity
+    |       ├── location_id
+    |       └── reserved_quantity
+    │      
+    │        
+    │
+    └── Pricing Module Link
+         └── product_variant_price_set
+              │
+              ▼
+           price_set
+              │
+              ▼
+             price
+              ├── amount
+              └── currency_code

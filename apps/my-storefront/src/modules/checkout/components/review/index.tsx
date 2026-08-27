@@ -11,7 +11,7 @@ type ReviewProps = {
   cart: HttpTypes.StoreCart
 }
 
-const Review: React.FC<ReviewProps> = ({ cart }:{cart:any}) => {
+const Review: React.FC<ReviewProps> = ({ cart }: { cart: any }) => {
   const searchParams = useSearchParams()
   const isOpen = searchParams.get("step") === "review"
 

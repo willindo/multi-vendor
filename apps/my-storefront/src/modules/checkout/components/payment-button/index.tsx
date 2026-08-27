@@ -1,12 +1,18 @@
 "use client"
 
-import { isManual, isStripeLike } from "@lib/constants"
+import { isManual, isStripeLike, isRazorpay } from "@lib/constants"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import React, { useState } from "react"
 import ErrorMessage from "../error-message"
+
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -24,30 +30,42 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     !cart.email ||
     (cart.shipping_methods?.length ?? 0) < 1
 
-  const paymentSession = cart.payment_collection?.payment_sessions?.[0]
-// 1. Add a direct provider validation string check
-const isRazorpay = (providerId?: string) => {
-  return providerId?.startsWith("pp_razorpay") || providerId?.includes("razorpay")
-}
+  const paymentSession = cart.payment_collection?.payment_sessions?.find(
+    (s) => s.status === "pending"
+  )
+  // 1. Add a direct provider validation string check
+  const isRazorpay = (providerId?: string) => {
+    return providerId?.startsWith("pp_razorpay") || providerId?.includes("razorpay")
+  }
 
-// 2. Insert the case criteria within your main PaymentButton switch statement
-switch (true) {
-  case isStripeLike(paymentSession?.provider_id):
-    return (
-      <StripePaymentButton
-        notReady={notReady}
-        cart={cart}
-        data-testid={dataTestId}
-      />
-    )
-  case isManual(paymentSession?.provider_id):
-  case isRazorpay(paymentSession?.provider_id): // Hooks Razorpay session types straight into execution handlers
-    return (
-      <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
-    )
-  default:
-    return <Button disabled>Select a payment method</Button>
-}
+  // 2. Insert the case criteria within your main PaymentButton switch statement
+  switch (true) {
+    case isStripeLike(paymentSession?.provider_id):
+      return (
+        <StripePaymentButton
+          notReady={notReady}
+          cart={cart}
+          data-testid={dataTestId}
+        />
+      )
+    case isRazorpay(paymentSession?.provider_id):
+      return (
+        <RazorpayPaymentButton
+          notReady={notReady}
+          cart={cart}
+          data-testid={dataTestId}
+        />
+      )
+    case isManual(paymentSession?.provider_id):
+      return (
+        <ManualTestPaymentButton
+          notReady={notReady}
+          data-testid={dataTestId}
+        />
+      )
+    default:
+      return <Button disabled className="w-full">Select a payment method</Button>
+  }
 }
 
 const StripePaymentButton = ({
@@ -157,42 +175,125 @@ const StripePaymentButton = ({
   )
 }
 
-const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
+export const RazorpayPaymentButton = ({
+  cart,
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  cart: HttpTypes.StoreCart
+  notReady: boolean
+  "data-testid"?: string
+}) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
-  }
+  const paymentSession = cart.payment_collection?.payment_sessions?.find(
+    (s) => s.status === "pending"
+  )
+  // Extract amount safely: use paymentSession.amount or fallback to cart total
+  const amountInUnits = paymentSession?.amount ?? cart.total ?? 0
+  const razorpayAmountInPaise = Math.round(Number(amountInUnits) * 100)
+  const razorpayOrderId = paymentSession?.data?.razorpay_order_id as string | undefined
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setSubmitting(true)
+    setErrorMessage(null)
 
-    onPaymentCompleted()
+    if (!razorpayOrderId) {
+      setErrorMessage("Razorpay order ID missing. Please refresh and try again.")
+      setSubmitting(false)
+      return
+    }
+
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+      amount: razorpayAmountInPaise,
+      currency: cart.currency_code?.toUpperCase() ?? "INR",
+      name: "Healer",
+      description: `Order #${cart.id}`,
+      order_id: razorpayOrderId,
+      prefill: {
+        name: `${cart.billing_address?.first_name ?? ""} ${cart.billing_address?.last_name ?? ""}`.trim(),
+        email: cart.email,
+        contact: cart.billing_address?.phone ?? "",
+      },
+      theme: {
+        color: "#0F172A",
+      },
+      handler: async function (response: {
+        razorpay_payment_id: string
+        razorpay_order_id: string
+        razorpay_signature: string
+      }) {
+        try {
+          // Complete order creation in Medusa
+          await placeOrder()
+        } catch (err: any) {
+          setErrorMessage(err.message || "Failed to finalize order.")
+          setSubmitting(false)
+        }
+      },
+      modal: {
+        ondismiss: function () {
+          setSubmitting(false)
+        },
+      },
+    }
+
+    if (typeof window !== "undefined" && window.Razorpay) {
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+    } else {
+      setErrorMessage("Razorpay SDK failed to load. Check your internet connection.")
+      setSubmitting(false)
+    }
   }
 
   return (
     <>
       <Button
-        disabled={notReady}
+        disabled={notReady || submitting}
         isLoading={submitting}
         onClick={handlePayment}
         size="large"
-        data-testid="submit-order-button"
+        className="w-full"
+        data-testid={dataTestId}
       >
-        Place order
+        Pay with Razorpay
       </Button>
-      <ErrorMessage
-        error={errorMessage}
-        data-testid="manual-payment-error-message"
-      />
+      {errorMessage && (
+        <div className="text-small-regular text-rose-500 mt-2">
+          {errorMessage}
+        </div>
+      )}
     </>
+  )
+}
+const ManualTestPaymentButton = ({
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+
+  const handlePayment = async () => {
+    setSubmitting(true)
+    await placeOrder()
+  }
+
+  return (
+    <Button
+      disabled={notReady || submitting}
+      isLoading={submitting}
+      onClick={handlePayment}
+      size="large"
+      className="w-full"
+      data-testid={dataTestId}
+    >
+      Place order
+    </Button>
   )
 }
 

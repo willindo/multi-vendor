@@ -4,9 +4,10 @@ import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
+import { StorefrontOrder } from "@/types/order"
 
 type ShippingDetailsProps = {
-  order: HttpTypes.StoreOrder
+  order: StorefrontOrder
 }
 
 const ShippingDetails = ({ order }: ShippingDetailsProps) => {

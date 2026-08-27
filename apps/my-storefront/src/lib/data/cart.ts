@@ -30,6 +30,7 @@ export type StorefrontLineItem = HttpTypes.StoreCartLineItem & {
 export type StorefrontCart = Omit<HttpTypes.StoreCart, "items"> & {
   items?: StorefrontLineItem[]
 }
+
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
  */
@@ -58,7 +59,7 @@ export async function retrieveCart(cartId?: string, fields?: string) {
       },
       headers,
       next,
-      cache: "force-cache",
+      cache: "no-cache", // Changed from force-cache to prevent stale cart state during checkout
     })
     .then(({ cart }: { cart: HttpTypes.StoreCart }) => cart)
     .catch(() => null)
@@ -145,29 +146,36 @@ export async function addToCart({
   }
 
   const BACKEND_URL = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000"
+  const PUBLISHABLE_KEY =
+    process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ||
+    "pk_6ca3b2c0e56d8431bfba029f3d949bd4443c2357fed0843d1af76bc17715a468"
 
-  // Correct: Delegates the complex database join to your secure custom backend route
   const response = await fetch(
     `${BACKEND_URL}/store/carts/${cart.id}/line-items`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-publishable-api-key": PUBLISHABLE_KEY,
         ...(await getAuthHeaders()),
       },
       body: JSON.stringify({
         variant_id: variantId,
-        quantity: quantity,
+        quantity: Number(quantity),
       }),
     }
   )
 
+  const data = await response.json()
+
   if (!response.ok) {
-    const errData = await response.json().catch(() => ({}))
+    console.error("❌ Add to cart failed on backend:", data)
     throw new Error(
-      errData.message || "Failed to append vendor item to marketplace cart."
+      data.message || "Failed to append vendor item to marketplace cart."
     )
   }
+
+  console.log("✅ Line Item added successfully:", data)
 
   const cartCacheTag = await getCacheTag("carts")
   revalidateTag(cartCacheTag)
@@ -383,12 +391,12 @@ export async function placeOrder(cartId?: string) {
 
   if (cartRes?.type === "order") {
     const countryCode =
-      cartRes.order.shipping_address?.country_code?.toLowerCase()
+      cartRes.order.shipping_address?.country_code?.toLowerCase() || "in"
 
     const orderCacheTag = await getCacheTag("orders")
     revalidateTag(orderCacheTag)
 
-    removeCartId()
+    await removeCartId()
     redirect(`/${countryCode}/order/${cartRes?.order.id}/confirmed`)
   }
 
@@ -420,19 +428,17 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 
 export async function listCartOptions() {
   const cartId = await getCartId()
+  if (!cartId) return { shipping_options: [] }
+
   const headers = {
     ...(await getAuthHeaders()),
-  }
-  const next = {
-    ...(await getCacheOptions("shippingOptions")),
   }
 
   return await sdk.client.fetch<{
     shipping_options: HttpTypes.StoreCartShippingOption[]
   }>("/store/shipping-options", {
     query: { cart_id: cartId },
-    next,
     headers,
-    cache: "force-cache",
+    cache: "no-cache", // Ensures newly calculated options show instantly upon submitting address
   })
 }

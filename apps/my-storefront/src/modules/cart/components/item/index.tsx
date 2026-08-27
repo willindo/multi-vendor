@@ -39,12 +39,15 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
       })
   }
 
-  // Dynamic max inventory layout computation matching Medusa v2 properties
+  // Dynamic max inventory evaluation matching Medusa v2 properties
   const maxQtyFromInventory = 10
-  const maxQuantity = item.variant?.manage_inventory ? (item.variant.inventory_quantity ?? 10) : maxQtyFromInventory
+  const maxQuantity = item.variant?.manage_inventory
+    ? (item.variant.inventory_quantity ?? 10)
+    : maxQtyFromInventory
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
+      {/* 1. Thumbnail Cell */}
       <Table.Cell className={clx("p-4 w-24", { "!pl-0": type === "full" })}>
         <LocalizedClientLink
           href={`/products/${item.product_handle}`}
@@ -61,6 +64,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         </LocalizedClientLink>
       </Table.Cell>
 
+      {/* 2. Product Details Cell */}
       <Table.Cell className="text-left">
         <Text
           className="txt-medium-plus text-ui-fg-base font-medium truncate max-w-[240px] block"
@@ -69,8 +73,8 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
-        
-        {/* Inline contextual vendor verification banner inside side-port drawers */}
+
+        {/* Vendor tag for drawer preview */}
         {type === "preview" && item.metadata?.vendor_name && (
           <span className="block text-[10px] text-neutral-400 mt-0.5 font-medium italic">
             Via: {item.metadata.vendor_name}
@@ -78,9 +82,10 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         )}
       </Table.Cell>
 
+      {/* 3. Quantity Controls Cell */}
       {type === "full" && (
         <Table.Cell>
-          <div className="flex gap-2 items-center w-28">
+          <div className="flex gap-2 items-center justify-center w-28 mx-auto">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             <CartItemSelect
               value={item.quantity}
@@ -105,8 +110,9 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         </Table.Cell>
       )}
 
+      {/* 4. Unit Price Cell */}
       {type === "full" && (
-        <Table.Cell className="hidden small:table-cell">
+        <Table.Cell className="hidden sm:table-cell text-right">
           <LineItemUnitPrice
             item={item}
             style="tight"
@@ -115,7 +121,8 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         </Table.Cell>
       )}
 
-      <Table.Cell className={clx({ "!pr-0": type === "full" })}>
+      {/* 5. Total Price Cell */}
+      <Table.Cell className={clx("text-right", { "!pr-0": type === "full" })}>
         <span
           className={clx({
             "flex flex-col items-end h-full justify-center": type === "preview",

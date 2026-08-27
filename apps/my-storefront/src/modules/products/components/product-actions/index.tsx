@@ -94,26 +94,34 @@ export default function ProductActions({
 
   // check if the selected variant is in stock
   const inStock = useMemo(() => {
+    if (!selectedVariant) return false
     // If we don't manage inventory, we can always add to cart
-    if (selectedVariant && !selectedVariant.manage_inventory) {
+    // if (selectedVariant && !selectedVariant.manage_inventory) {
+    if (!selectedVariant.manage_inventory || selectedVariant.allow_backorder) {
       return true
     }
 
     // If we allow back orders on the variant, we can add to cart
-    if (selectedVariant?.allow_backorder) {
-      return true
-    }
+    // if (selectedVariant?.allow_backorder) {
+    //   return true
+    // }
 
     // If there is inventory available, we can add to cart
-    if (
-      selectedVariant?.manage_inventory &&
-      (selectedVariant?.inventory_quantity || 0) > 0
-    ) {
-      return true
-    }
-
+    // if (
+    //   selectedVariant?.manage_inventory &&
+    //   (selectedVariant?.inventory_quantity || 0) > 0
+    // ) {
+    //   return true
+    // }
+    // const availableQty =
+    //   selectedVariant.inventory_quantity ??
+    //   (selectedVariant as any).inventory?.stocked_quantity ??
+    //   0
+    // availableQty > 0
+    const qty = selectedVariant.inventory_quantity ?? 0
+    return qty > 0
     // Otherwise, we can't add to cart
-    return false
+    // return false
   }, [selectedVariant])
 
   const actionsRef = useRef<HTMLDivElement>(null)
@@ -128,6 +136,7 @@ export default function ProductActions({
 
     await addToCart({
       variantId: selectedVariant.id,
+      // variantId: "variant_01KYFP67V0SXKKS3KF8FFY7SZZ",
       quantity: 1,
       countryCode,
     })
@@ -161,6 +170,21 @@ export default function ProductActions({
         </div>
 
         <ProductPrice product={product} variant={selectedVariant} />
+
+        <div className="flex flex-col gap-y-3">
+          {/* Stock status indicator */}
+          {selectedVariant && (
+            <div className="text-sm font-medium">
+              {inStock ? (
+                <span className="text-emerald-600">
+                  In Stock ({selectedVariant.inventory_quantity} available)
+                </span>
+              ) : (
+                <span className="text-rose-600">Out of Stock</span>
+              )}
+            </div>
+          )}
+        </div>
 
         <Button
           onClick={handleAddToCart}

@@ -200,14 +200,14 @@ JOIN information_schema.constraint_column_usage ccu
     ON tc.constraint_name = ccu.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
 AND (
-    tc.table_name LIKE '%pay%'
-    OR ccu.table_name LIKE '%pay%'
+    tc.table_name LIKE '%region%'
+    OR ccu.table_name LIKE '%region%'
 );    
 
 SELECT table_name, column_name
 FROM information_schema.columns
 WHERE table_schema = 'public'
-AND column_name LIKE '%pay%';
+AND column_name LIKE '%region%';
 
 SELECT
     tc.table_name,
@@ -403,8 +403,7 @@ ORDER BY
   p.amount,
   pv.sku,
   p.currency_code,
-  il.stocked_quantity,
-  il.location_id
+  il.stocked_quantity
 FROM product_variant pv
 JOIN product pr ON pv.product_id = pr.id
 JOIN product_variant_inventory_item pvii ON pvii.variant_id = pv.id
@@ -412,10 +411,12 @@ JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
 WHERE 
-     pr.id = 'prod_01KYQJW402V32TRT34JQJ9V1J0'
-     AND pv.deleted_at IS NULL
-GROUP BY pv.id, pv.sku,p.amount, p.currency_code, il.stocked_quantity, il.location_id, pr.id 
-ORDER BY pv.sku;
+     pv.deleted_at IS NULL
+GROUP BY pv.id, pv.sku,p.amount, p.currency_code, il.stocked_quantity, pr.id 
+ORDER BY pr.id;
+     COALESCE(pv.sku, pv.metadata->>'merchant_sku') AS sku,
+     pr.id = 'prod_01KYKG710C8Y01FDT3RR8H34A6'
+    pv.metadata->>'vendor_id' AS vendor_id,
 
 [ public.product ]
                           │
@@ -548,5 +549,29 @@ Individual variants don't create new values—they simply select one concrete co
 | `product_variant`                | `product_id`                              |
 | `product_variant_option`         | `variant_id` / `option_value_id`          |
 | `product_variant_inventory_item` | `variant_id` / `inventory_item_id`        |
-
+SELECT 
+    pv.id AS variant_id,
+    pv.product_id,
+    pv.title AS variant_title,
+    pv.allow_backorder,
+    pv.manage_inventory,
+    il.stocked_quantity,
+    il.location_id,
+    p.amount,
+    p.currency_code,
+    pv.variant_rank,
+    pv.metadata AS variant_metadata
+FROM product_variant pv
+JOIN product pr ON pv.product_id = pr.id
+JOIN product_variant_inventory_item pvii ON pvii.variant_id = pv.id
+JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
+JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
+JOIN price p ON p.price_set_id = pvps.price_set_id
+WHERE pv.deleted_at IS NULL
+GROUP BY 
+    pv.id, pv.product_id, pv.title, pv.sku, pv.barcode, pv.ean,
+    pv.allow_backorder, pv.manage_inventory, pv.hs_code, pv.origin_country,
+    pv.variant_rank, pv.metadata, p.amount, p.currency_code,
+    il.stocked_quantity, il.location_id
+ORDER BY pv.sku;
 

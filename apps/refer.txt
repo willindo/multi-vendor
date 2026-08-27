@@ -33,13 +33,13 @@ EXCL_UDE_PATHS=' -not -path "*/node_modules/*"  -not -path "*/migrations/*" -not
 -o -path "*/lib/vendor/*" -not -path "*/admin/*" -not -path "*/store/*"
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/*search*/*" -o -iname "*search*" ' 
-EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -path "*/.next/*" -not -iname "*test*" -not -iname "*back*" -not -iname "readme*"'
+INCL_UDES='-path "*/links/*"  ' 
+EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -path "*/scripts/*" -not -path "*/migration*/*" -not -iname "*test*" -not -iname "*back*" -not -iname "readme*"'
 eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents
  
 contents=(-exec sh -c 'echo "==== $1 ===="; cat "$1"; echo' _ {} \;)
-INCLUDES=(-path "*apps/packages/*"")
+INCLUDES=(-path "*/links/*"")
 EXCLUDE_PATHS=(-not -path  "*/migrations/*" -not -path "*/script*/*" -not -path "*/node_modules/*" -not -iname "*.json" -not -iname "*.sh" -not -iname "readme*")
 find . \( "${INCLUDES[@]}" \)  -type f \( "${EXCLUDE_PATHS[@]}" \) -print 
    "${contents[@]}"  
@@ -146,9 +146,6 @@ Controls depth with -L N
 
 Works from anywhere with absolute/relative paths
 
-Great job building this! 🚀🎉
- 
-
 H42269114762
 
 src/
@@ -245,6 +242,42 @@ npx prettier --write ./src/links/vendor-order.ts && npx eslint --fix /src/links/
     "source.fixAll.eslint": "explicit"
   }
 }
+
+1. src/types/marketplace.ts
+        ↓
+2. src/lib/data/products.ts
+        ↓
+3. products/[handle]/page.tsx
+        ↓
+4. products/templates/index.tsx
+        ↓
+5. product-info
+        ↓
+6. product-tabs
+        ↓
+7. product-actions
+        ├── option-select
+        └── mobile-actions
+        ↓
+8. product-price
+        ↓
+9. image-gallery
+Catalog / discovery = Every place where a customer sees a product gets the same marketplace-aware projection.
+1. product-preview
+        ↓
+2. preview price
+        ↓
+3. product-price
+        ↓
+4. paginated-products
+        ↓
+5. product-rail
+        ↓
+6. related-products
+        ↓
+7. skeletons
+
+
 
 
 

@@ -7,7 +7,35 @@ import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
+import { normalizeProduct } from "../util/normalize-product"
 
+export const getProductByHandle = async (handle: string, countryCode: string) => {
+  const region = await getRegion(countryCode)
+  if (!region) return null
+
+  const headers = { ...(await getAuthHeaders()) }
+  const next = { ...(await getCacheOptions("products")) }
+
+  return sdk.client
+    .fetch<{ products: HttpTypes.StoreProduct[] }>(`/store/products`, {
+      method: "GET",
+      query: {
+        handle,
+        region_id: region.id,
+        currency_code: region.currency_code,
+        // Request inventory relation fields explicitly
+        fields:
+          "*variants,*variants.options,*options,*options.values,*images,*variants.images,+variants.inventory_quantity,+variants.inventory_items.inventory.location_levels.*,+metadata",
+      },
+      headers,
+      next,
+      cache: "force-cache",
+    })
+    .then(({ products }) => {
+      const product = products?.[0]
+      return product ? normalizeProduct(product) : null
+    })
+}
 export const listProducts = async ({
   pageParam = 1,
   queryParams,
@@ -64,7 +92,9 @@ export const listProducts = async ({
           offset,
           region_id: region?.id,
           fields:
-            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags,+vendor_id,+vendor_name,+apparel_detail.*",
+            // "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags,+vendor_id,+vendor_name,+apparel_detail.*",
+            // "*variants,*variants.options,*options,*options.values,*images,*variants.images,+metadata,+tags,+vendor_id,+vendor_name,+apparel_detail.*",
+            "*variants,*variants.options,*options,*options.values,*images,*variants.images,+variants.inventory_quantity,+variants.inventory_items.inventory.location_levels.*,+apparel_detail.*",
           ...queryParams,
         },
         headers,
@@ -73,14 +103,17 @@ export const listProducts = async ({
       }
     )
     .then(({ products, count }) => {
+      // Normalize all variants across products
+      const normalizedProducts = (products || []).map(normalizeProduct)
       const nextPage = count > offset + limit ? pageParam + 1 : null
       console.log('count', count)
       return {
         response: {
-          products,
+          products: normalizedProducts,
           count,
         },
-        nextPage: nextPage,
+        // nextPage: nextPage,
+        nextPage: count > offset + limit ? pageParam + 1 : null,
         queryParams,
       }
     })

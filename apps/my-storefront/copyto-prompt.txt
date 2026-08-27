@@ -1,203 +1,598 @@
-./src/lib   -=- see custom success variant specific such option . . . 
-├── config.ts
-├── constants.tsx
-├── context
-│   └── modal-context.tsx
-├── data
-│   ├── products.ts
-│   ├── regions.ts
-│   ├── variants.ts
-│   └── vendor
-│       ├── orders.ts
-│       ├── products.ts
-├── meilisearch-client.ts
-├── search-server.ts
-└── util
-    ├── get-product-price.ts
-    ├── money.ts
-    ├── product.ts
-    └── vendor
-        ├── hydration.ts
-        ├── inventory.ts
-        ├── pricing.ts
-        ├── product.ts
-        └── validation.ts
-
-7 directories, 46 files
-badsha@
-"use server"
-import { revalidatePath } from "next/cache"
-import {
-    getBackendUrl,
-    getVendorHeaders,
-} from "./session"
-import { buildVariantPayload, ProductOptionPayload } from "@/lib/util/vendor/product"
-import { ApparelDetails } from "@shared/index"
-const BACKEND_URL = getBackendUrl()
-export async function getVendorProduct(productId: string) {
-    if (!BACKEND_URL) return null
-    try {
-        const headers = await getVendorHeaders()
-        const response = await fetch(
-            `${BACKEND_URL}/vendors/products/${productId}`,
-            {
-                headers,
-                cache: "no-store",
-            }
-        )
-        if (!response.ok) {
-            return null
-        }
-        const data = await response.json()
-        return data.product ?? data
-    } catch (error) {
-        console.error("Error loading vendor product:", error)
-        return null
-    }
+these are storefront used --=>
+export default LineItemOptions-=-  
+export interface StoreCartLineItem extends Omit<BaseCartLineItem, "product" | "variant" | "cart"> {
+      product?: StoreProduct;
+       variant?: StoreProductVariant; 
+    cart: StoreCart;
+     tax_lines?: (BaseLineItemTaxLine & {
+        item: StoreCartLineItem;
+    })[];
+       adjustments?: (BaseLineItemAdjustment & {
+        item: StoreCartLineItem;
+    })[];
+}                          
+export interface BaseCartLineItem extends BaseCartLineItemTotals {
+       id: string;
+       title: string;
+      subtitle?: string;
+        thumbnail?: string;
+       quantity: number;
+        product?: BaseProduct;
+       product_id?: string;
+    product_title?: string;
+       product_description?: string;
+      product_subtitle?: string;
+       product_type?: string;
+    lection of the associated product.
+        product_collection?: string;
+     product_handle?: string;
+      variant?: BaseProductVariant;
+      variant_id?: string;
+    variant_sku?: string;
+       variant_barcode?: string;
+     variant_title?: string;
+      variant_option_values?: Record<string, unknown>;
+       requires_shipping: boolean;
+       is_discountable: boolean;
+      is_tax_inclusive: boolean;
+      compare_at_unit_price?: number;
+       unit_price: number;
+       tax_lines?: BaseLineItemTaxLine[];
+       adjustments?: BaseLineItemAdjustment[];
+      cart: BaseCart;
+      cart_id: string;
+      metadata?: Record<string, unknown> | null;
+      created_at?: Date;
+       updated_at?: Date;
+        deleted_at?: Date;   
+}    
+export interface StoreCart extends Omit<BaseCart, "items"> {
+    shipping_address?: StoreCartAddress;
+    billing_address?: StoreCartAddress;
+    items?: StoreCartLineItem[];
+    shipping_methods?: StoreCartShippingMethod[];
+    payment_collection?: StorePaymentCollection;   
+    region?: StoreRegion;
+    promotions: StoreCartPromotion[];
 }
-// src/lib/util/vendor/hydration.ts
-
-import type { ApparelDetails } from "@shared/apparel/apparel-types"
-import { DEFAULT_APPAREL_DETAILS } from "@shared/apparel/apparel-defaults"
-
-import type { VariantMatrixRow } from "@/components/vendor/products/VariantMatrixTable"
-
-export interface VendorProduct {
-    id: string
-    title: string
-    handle: string
-    description?: string
-    status: string
-
-    weight?: number
-    thumbnail?: string
-
-    type_id?: string | null
-    collection_id?: string | null
-
-    apparel_detail?: ApparelDetails
-
-    variants?: any[]
-    options?: any[]
+export interface BaseCart {
+id: string;
+  region?: BaseRegion;
+  region_id?: string;
+  customer_id?: string;
+  sales_channel_id?: string;
+  email?: string;
+  currency_code: string;
+  shipping_address?: BaseCartAddress;
+billing_address?: BaseCartAddress;
+  items?: BaseCartLineItem[];
+shipping_methods?: BaseCartShippingMethod[];
+  payment_collection?: BasePaymentCollection;
+metadata?: Record<string, unknown> | null;
+created_at?: string | Date;
+updated_at?: string | Date;
+  original_item_total: number;
+  original_item_subtotal: number;
+  original_item_tax_total: number;
+item_total: number;
+item_subtotal: number;
+  item_tax_total: number;
+  original_total: number;
+original_subtotal: number;
+  original_tax_total: number;
+  total: number;
+  subtotal: number;
+  tax_total: number;
+discount_total: number;
+  discount_tax_total: number;
+gift_card_total: number;
+  gift_card_tax_total: number;
+shipping_total: number;
+  shipping_subtotal: number;
+  shipping_tax_total: number;
+  original_shipping_total: number;
+original_shipping_subtotal: number;
+  original_shipping_tax_total: number;
+completed_at?: string | Date;
 }
-export interface Product {
-    id: string
-    title: string
-    handle: string
-    description?: string
-    status: string
-    weight?: number
-    thumbnail?: string
-    type_id?: string | null
-    collection_id?: string | null
-    metadata?: Record<string, any>
-    options?: ProductOption[]
-    variants?: ProductVariant[]
-    apparel_detail?: ApparelDetails
+export interface StoreCartShippingOption {
+ id: string;
+ name: string;
+ price_type: ShippingOptionPriceType;
+ service_zone_id: string;
+ shipping_profile_id: string;
+ provider_id: string;
+ data: Record<string, unknown> | null;
+ type: {
+ id: string;
+label: string;
+description: strin
+code: string;
+    };
+ provider: {
+  id: string;
+ is_enabled: boolean;
+ };
+ amount: number;
+ prices: StorePrice[];
+ calculated_price: StoreCalculatedPrice;
+  insufficient_inventory: boolean;
+}
+export type StoreCartShippingOptionWithServiceZone = StoreCartShippingOption & {
+service_zone: {
+  id: string;
+  fulfillment_set_id: string;
+    fulfillment_set: {
+      id:string;
+      type: string;
+location: {
+  id: string;
+   address: StoreFulfillmentAddress;
+};
+  };
+  };
+};
+interface StoreFulfillmentAddress {
+db -=> 
+                               Table "public.cart"
+       Column        |           Type           | Collation | Nullable | Default 
+---------------------+--------------------------+-----------+----------+---------
+ id                  | text                     |           | not null | 
+ region_id           | text                     |           |          | 
+ customer_id         | text                     |           |          | 
+ sales_channel_id    | text                     |           |          | 
+ email               | text                     |           |          | 
+ currency_code       | text                     |           | not null | 
+ shipping_address_id | text                     |           |          | 
+ billing_address_id  | text                     |           |          | 
+ metadata            | jsonb                    |           |          | 
+ locale              | text                     |           |          | 
+
+
+This structure explainedbelow represents the gold standard for multi-vendor marketplace architecture. By choosing **item/fulfillment-item status as the sole authoritative source of truth**, you eliminate state desynchronization bugs (such as a vendor marked "Delivered" while an underlying item is still "Processing").
+## 1. The Authoritative Bottom-Up State Engine
+rule—"Fulfillment Item --> Vendor fulfillment status --> Order fulfillment status"—
+[ Line Item / Fulfillment Item ]  <-- AUTHORITATIVE SOURCE OF TRUTH
+               │
+               ▼  (Rollup Engine)
+    [ Vendor Partition Status ]
+               │
+               ▼  (Rollup Engine)
+    [ Overall Order Status ]
+
+### State Rollup Rules Matrix
+
+| Item-Level Statuses in Partition         | Derived Vendor Status       | Derived Order Status |
+| ---                                      |                   ---       |                  --- |
+| All items `NOT_FULFILLED`                | `PROCESSING` | `PROCESSING` |
+  `PROCESSING` 
+| Some items `SHIPPED`,                    | `PARTIALLY_SHIPPED`         | `PARTIALLY_FULFILLED` |
+  some `PROCESSING`
+| All items in Vendor                      | Vendor A: `SHIPPED`         | `PARTIALLY_FULFILLED` |
+  A `SHIPPED`, Vendor B `PROCESSING        | Vendor B: `PROCESSING`     | 
+
+| All items across ALL vendors `DELIVERED` | Vendor A: `DELIVERED`       | `FULFILLED` / `DELIVERED` |
+                                             Vendor B: `DELIVERED`
+| Some items `DELIVERED`, some `CANCELED`  |`PARTIALLY_DELIVERED`       | `PARTIALLY_FULFILLED` |
+
+## 2. Structural Continuum Across the Customer & Platform Journey
+
+By preserving the `Vendor Partition` wrapper at every point in the lifecycle, the user experience remains predictable and smooth:
+
+CART                       CHECKOUT                   CUSTOMER ORDER             PLATFORM ADMIN
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────   ┐    ┌─────────────────────┐
+│ Vendor A            │    │ Vendor A            │    │ Order #1001          │    │ Order #1001       │
+│  ├── Item A         │    │  ├── Item A         │    │  ├── Vendor A          │    │  ├── Customer       │
+│  └── Item C         │    │  ├── Item C         │    │  │   ├── Item A (Ship) │    │  ├── Payment        │
+│ Subtotal: ₹...      │    │  └── Shipping A     │    │  │   └── Item C (Del)  │    │  └── Vendors (2)    │
+│                     │    │                     │    │  └── Vendor B          │    │      ├── Vendor A   │
+│ Vendor B            │    │ Vendor B            │    │      └── Item B        │    │      └── Vendor B   │
+│  └── Item B         │    │  ├── Item B         │    └─────────────────────   ┘    └─────────────────────┘
+│ Subtotal: ₹...      │    │  └── Shipping B     │
+└─────────────────────┘    │                     │
+                           │ Payment (Unified)   │
+                           │ Total: ₹...         │
+                           └─────────────────────┘
+
+## 3. Why This Architecture Wins
+
+1. **Unified Checkout, Distributed Logistics:**
+* The customer experiences a **single authorization & payment collection** at checkout (one credit card transaction or UPI payment).
+* Internally, the order breaks into clean vendor partitions with dedicated shipping quotes per vendor.
+2. **Granular Package Tracking:**
+* Vendors ship independently. Product A can have `Tracking: XXX1` (Delivery via BlueDart) while Product B from another seller has `Tracking: XXX2` (Delivery via Delhivery).
+3. **Decoupled Vendor Actions:**
+* Vendor A fulfilling or refunding Item A does not block or modify Vendor B’s fulfillment pipeline or force lock states on the parent Order entity.
+4. **Resilient Financial Ledger:**
+* Split payments, commissions, and vendor payouts naturally bind to the vendor partition layer, matching Medusa v2’s payment collection model.
+/shipping-options?cart_id=cart_01KZZQT94E5WY8617YHWPNZAW8&fields=%2Bservice_zone.fulfillment_set.type%2C%2Bservice_zone.fulfillment_set.location.address ← - (500) - 1971.681 ms
+                          Table "public.service_zone"
+       Column       |           Type           | Collation | Nullable | Default 
+--------------------+--------------------------+-----------+----------+---------
+ id                 | text                     |           | not null | 
+ name               | text                     |           | not null | 
+ metadata           | jsonb                    |           |          | 
+ fulfillment_set_id | text                     |           | not null | 
+                            Table "public.fulfillment"
+       Column        |           Type           | Collation | Nullable | Default 
+---------------------+--------------------------+-----------+----------+---------
+ id                  | text                     |           | not null | 
+ location_id         | text                     |           | not null | 
+ packed_at           | timestamp with time zone |           |          | 
+ shipped_at          | timestamp with time zone |           |          | 
+ delivered_at        | timestamp with time zone |           |          | 
+ canceled_at         | timestamp with time zone |           |          | 
+ data                | jsonb                    |           |          | 
+ provider_id         | text                     |           |          | 
+ shipping_option_id  | text                     |           |          | 
+ metadata            | jsonb                    |           |          | 
+ delivery_address_id | text                     |           |          | 
+ marked_shipped_by   | text                     |           |          | 
+ created_by          | text                     |           |          | 
+ requires_shipping   | boolean                  |           | not null | true
+./src/links/vendor-order.ts
+./src/links/product-apparel.ts
+./src/links/vendor-products.ts
+badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-medusa-store$ eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  $cont_ents
+==== ./src/links/vendor-order.ts ====
+import { defineLink } from "@medusajs/framework/utils"
+import MarketplaceModule from "../modules/marketplace"
+import OrderModule from "@medusajs/medusa/order"
+
+export default defineLink(MarketplaceModule.linkable.vendor, {
+  linkable: OrderModule.linkable.order.id,
+  isList: true,
+})
+==== ./src/links/product-apparel.ts ====
+import { defineLink } from "@medusajs/framework/utils"
+import MarketplaceModule from "../modules/marketplace"
+import ProductModule from "@medusajs/medusa/product"
+
+export default defineLink(
+  ProductModule.linkable.product,
+  MarketplaceModule.linkable.apparelDetail
+)
+==== ./src/links/vendor-products.ts ====
+import { defineLink } from "@medusajs/framework/utils"
+import MarketplaceModule from "../modules/marketplace"
+import ProductModule from "@medusajs/medusa/product"
+
+export default defineLink(
+  MarketplaceModule.linkable.vendor,
+  {
+    linkable: ProductModule.linkable.product.id,
+    isList: true
+  }
+)
+
+badsha@DESKTOP-BP2PLDB:~ -=-
+// src/modules/marketplace/models/vendor-settlement.ts
+import { model } from "@medusajs/framework/utils"
+const VendorSettlement = model.define("vendor_settlement", {
+    id: model.id().primaryKey(),
+    /*
+    |--------------------------------------------------------------------------
+    | Relations (stored as ids)
+    |--------------------------------------------------------------------------
+    */
+    vendor_id: model.text(),
+    order_id: model.text(),
+    payment_collection_id: model.text().nullable(),
+    payment_id: model.text().nullable(),
+    transfer_id: model.text().nullable(),
+    /*
+    |--------------------------------------------------------------------------
+    | Financials
+    |--------------------------------------------------------------------------
+    */
+    currency_code: model.text(),
+    gross_amount: model.bigNumber(),
+    commission_amount: model.bigNumber().default(0),
+    fee_amount: model.bigNumber().default(0),
+    tax_amount: model.bigNumber().default(0),
+    net_amount: model.bigNumber(),
+    /*
+    |--------------------------------------------------------------------------
+    | Status
+    |--------------------------------------------------------------------------
+    */
+    status: model.enum([
+        "pending",
+        "processing",
+        "paid",
+        "failed",
+        "cancelled",
+    ]).default("pending"),
+    /*
+    |--------------------------------------------------------------------------
+    | Retry
+    |--------------------------------------------------------------------------
+    */
+    retry_count: model.number().default(0),
+    last_error: model.text().nullable(),
+    /*
+    |--------------------------------------------------------------------------
+    | Provider Metadata
+    |--------------------------------------------------------------------------
+    */
+    provider: model.text().nullable(),
+    provider_reference: model.text().nullable(),
+    metadata: model.json().nullable(),
+})
+export default VendorSettlement -=- 
+import { MedusaService } from "@medusajs/framework/utils";
+import Vendor from "./models/vendor";
+import VendorAdmin from "./models/vendor-admin";
+import ApparelDetail from "./models/apparel-detail";
+import VendorSettlement from "./models/vendor-settlement";
+
+class MarketplaceModuleService extends MedusaService({
+  Vendor,
+  VendorAdmin,
+  ApparelDetail,
+  VendorSettlement
+}) { }
+
+export default MarketplaceModuleService; -=- 
+tree ./src/workflows/marketplace/process-order-payment-splits
+./src/workflows/marketplace/process-order-payment-splits
+├── index.ts
+└── steps
+    ├── calculate-splits.ts
+    └── execute-transfers.ts
+
+2 directories, 3 files
+
+SELECT id, shipping_address_id, billing_address_id,metadata,  sales_channel_id FROM cart;
+                   id                |        shipping_address_id        | billing_address_id | metadata |       sales_channel_id        
+---------------------------------+-----------------------------------+--------------------+----------+-------------------------------
+ cart_01KQM3QJWYHD5E8EX1N3AJZ663 | caaddr_01KR0QDSRCS44H01YQTQR0JPWR |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KR0RP7FGBTRM35RN91NFFWNF | caaddr_01KR0S662WYG3Q3988A822CNW3 |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KR1QFR3ANN4VG4Q7QGG22S6W | caaddr_01KRBNG48KMNZEDSS18RMEDDJ9 |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KRPCCP6NF13Y8NJS701R1G9R | caaddr_01KRPCCP6QJFFHV5ZTHXET1ZZM |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KRPCSV1VGWN389GEV3YNRXXC | caaddr_01KRPCSV1X8ZF9FA677YJP8Z78 |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KRPD2VBBP3J7QJP12VW123SE | caaddr_01KRPD2VBD37YZX7EVNVRGQJPG |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KT3H1KP40V73GQR50799DKSH | caaddr_01KT3H1KP6T1QT9YDEQSVD201Z |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KZQXRQ404QBPPZ4ZHKAS195C | caaddr_01KZQXRQ4FDVYZRR4Y2XKFVNCZ |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+ cart_01KZZQT94E5WY8617YHWPNZAW8 | caaddr_01KZZQT95CY6SKE4SZ5QWZ2Q06 |                    |          | sc_01KQFNPKMTK7SQRFPVNR1CQAZV
+(9 rows)  SELECT id, name, type, metadata FROM fulfillment_set;
+                id                |           name            |   type   | metadata 
+----------------------------------+---------------------------+----------+----------
+ fuset_01KRCQS42DQ527EGQH471CW3KH | Default Location shipping | shipping | 
+ fuset_01KRCV475V48QZ5W8K7KYHAAP9 | Marketplace Fulfillment   | shipping | 
+(2 rows) medusa=# SELECT id, name, metadata FROM stock_location;
+     id     |       name       | metadata 
+------------+------------------+----------
+ sl_default | Default Location | 
+(1 row) medusa=# SELECT id, name, metadata, fulfillment_set_id FROM service_zone ;
+                id                |    name    | metadata |        fulfillment_set_id        
+----------------------------------+------------+----------+----------------------------------
+ serzo_01KRD64FJJNA2WTQKWCZ733MBT | India Zone |          | fuset_01KRCV475V48QZ5W8K7KYHAAP9
+(1 row) medusa=# SELECT id, name, price_type, service_zone_id, shipping_profile_id, provider_id,shipping_option_type_id, data, metadata FROM shipping_option;
+              id               |       name        | price_type |         service_zone_id          |      shipping_profile_id      |  provider_id  |      shipping_option_type_id      | data | metadata 
+-------------------------------+-------------------+------------+----------------------------------+-------------------------------+---------------+-----------------------------------+------+----------
+ so_01KRD663G6P5WRP55V33M9KES4 | Standard Shipping | flat       | serzo_01KRD64FJJNA2WTQKWCZ733MBT | sp_01KQFNNRVCT39637JP9R0SMKMR | manual_manual | sotype_01KRD663G61ASAJ3PBEYWP93PH |      | 
+(1 row) medusa=# SELECT id, name, description FROM sales_channel;
+              id               |         name          |    description    
+-------------------------------+-----------------------+-------------------
+ sc_01KQFNPKMTK7SQRFPVNR1CQAZV | Default Sales Channel | Created by Medusa
+(1 row) medusa=# SELECT id, name, type, metadata FROM shipping_profile;
+              id               |           name           |  type   | metadata 
+-------------------------------+--------------------------+---------+----------
+ sp_01KQFNNRVCT39637JP9R0SMKMR | Default Shipping Profile | default | 
+
+(1 row)
+medusa=# SELECT id, name,data,metadata,description,shipping_option_id FROM order_shipping_method;
+                id                |       name        | data | metadata | description |      shipping_option_id       
+----------------------------------+-------------------+------+----------+-------------+-------------------------------
+ ordsm_01KRD8X59DMKERNVNG02C9GD9G | Standard Shipping | {}   |          |             | so_01KRD663G6P5WRP55V33M9KES4
+ ordsm_01KRPD2WZHTY14WAWA1GJW9NA1 | Standard Shipping | {}   |          |             | so_01KRD663G6P5WRP55V33M9KES4
+(2 rows)
+
+             source_table             |     source_column     |     target_table      | target_column 
+--------------------------------------+-----------------------+-----------------------+---------------
+ tax_region                           | provider_id           | tax_provider          | id
+ payment_collection_payment_providers | payment_collection_id | payment_collection    | id
+ payment_collection_payment_providers | payment_provider_id   | payment_provider      | id
+ provider_identity                    | auth_identity_id      | auth_identity         | id
+ shipping_option                      | provider_id           | fulfillment_provider  | id
+ fulfillment                          | provider_id           | fulfillment_provider  | id
+ notification                         | provider_id           | notification_provider | id
+(7 rows)
+ Schema |                Name                | Type  | Owner  
+--------+------------------------------------+-------+--------
+ public | marketplace_vendor_order_order     | table | medusa
+ public | marketplace_vendor_product_product | table | medusa
+ public | vendor                             | table | medusa
+ public | vendor_admin                       | table | medusa
+ public | vendor_settlement                  | table | medusa
+                                         Table "public.vendor_settlement"
+        Column         |           Type           | Collation | Nullable |                 Default                  
+-----------------------+--------------------------+-----------+----------+------------------------------------------
+ id                    | text                     |           | not null | 
+ vendor_id             | text                     |           | not null | 
+ order_id              | text                     |           | not null | 
+ payment_collection_id | text                     |           |          | 
+ payment_id            | text                     |           |          | 
+ transfer_id           | text                     |           |          | 
+ currency_code         | text                     |           | not null | 
+ gross_amount          | numeric                  |           | not null | 
+ commission_amount     | numeric                  |           | not null | 0
+ fee_amount            | numeric                  |           | not null | 0
+ tax_amount            | numeric                  |           | not null | 0
+ net_amount            | numeric                  |           | not null | 
+ status                | text                     |           | not null | 'pending'::text
+ retry_count           | integer                  |           | not null | 0
+ last_error            | text                     |           |          | 
+ provider              | text                     |           |          | 
+ provider_reference    | text                     |           |          | 
+ metadata              | jsonb                    |           |          | 
+ raw_gross_amount      | jsonb                    |           | not null | 
+ raw_commission_amount | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ raw_fee_amount        | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ raw_tax_amount        | jsonb                    |           | not null | '{"value": "0", "precision": 20}'::jsonb
+ raw_net_amount        | jsonb                    |           | not null | 
+ export interface StoreOrderResponse {
+    order: StoreOrder;
+}
+export type StoreOrderListResponse = PaginatedResponse<{
+    orders: StoreOrder[];
+}>;
+xport interface StoreOrder extends Omit<BaseOrder, "items" | "version" | "transations"> {
+    shipping_address?: StoreOrderAddress | null;
+    billing_address?: StoreOrderAddress | null;
+    items: StoreOrderLineItem[] | null;
+    shipping_methods: StoreOrderShippingMethod[] | null;
+    payment_collections?: StorePaymentCollection[];
+    fulfillments?: StoreOrderFulfillment[];
+    customer?: StoreCustomer;
+}
+export interface StoreOrderLineItem extends Omit<BaseOrderLineItem, "product" | "variant"> {
+    variant?: StoreProductVariant;
+    product?: StoreProduct;
+    tax_lines?: (BaseOrderLineItemTaxLine & {
+        item: StoreOrderLineItem;
+    })[];
+    adjustments?: (BaseOrderLineItemAdjustment & {
+        item: StoreOrderLineItem;
+    })[];
+    detail: BaseOrderItemDetail & {
+        item: StoreOrderLineItem;
+    };
+}
+export interface BaseOrderSummary {
+    pending_difference: number;
+    current_order_total: number;
+    original_order_total: number;
+    transaction_total: number;
+    paid_total: number;
+    refunded_total: number;
+    accounting_total: number;
+}
+type PaymentStatus = "not_paid" | "awaiting" | "authorized" | "partially_authorized" | "captured" | "partially_captured" | "partially_refunded" | "refunded" | "canceled" | "requires_action";
+type FulfillmentStatus = "not_fulfilled" | "partially_fulfilled" | "fulfilled" | "partially_shipped" | "shipped" | "partially_delivered" | "delivered" | "canceled";
+export interface BaseOrder {
+    id: string;
+    version: number;
+    region_id: string | null;
+    customer_id: string | null;
+    sales_channel_id: string | null;
+    email: string | null;
+    currency_code: string;
+    display_id?: number;
+    custom_display_id?: string;
+    status: string;
+    shipping_address?: BaseOrderAddress | null;
+    billing_address?: BaseOrderAddress | null;
+    items: BaseOrderLineItem[] | null;
+    shipping_methods: BaseOrderShippingMethod[] | null;
+    payment_collections?: BasePaymentCollection[];
+    payment_status: PaymentStatus;
+    fulfillments?: BaseOrderFulfillment[];
+    fulfillment_status: FulfillmentStatus;
+    transactions?: BaseOrderTransaction[];
+    summary: BaseOrderSummary;
+    metadata?: Record<string, unknown> | null;
+    created_at: string | Date;
+    updated_at: string | Date;
+    original_item_total: number;
+    original_item_subtotal: number;
+    original_item_tax_total: number;
+    item_total: number;
+    item_subtotal: number;
+    item_tax_total: number;
+     item_discount_total: number;
+    original_total: number;
+    original_subtotal: number;
+    original_tax_total: number;
+    total: number;
+    subtotal: number;
+    tax_total: number;
+    discount_total: number;
+    discount_tax_total: number;
+    gift_card_total: number;
+    gift_card_tax_total: number;
+    shipping_total: number;
+    shipping_subtotal: number;
+    shipping_tax_total: number;
+    shipping_discount_total: number;
+    original_shipping_total: number;
+    original_shipping_subtotal: number;
+    original_shipping_tax_total: number;
+    credit_line_total: number;
+}
+export interface BaseOrderFulfillment {
+ location_id: string;
+ provider_id: string;
+ shipping_option_id: string | null;
+}
+export interface BaseOrderTransaction {
+ order_id: string;
+  amount: number;
+  currency_code: string;
+ reference: "capture" | "refund";
+ export interface BaseOrderShippingMethod {
+ order_id: string;
+ shipping_option_id: string | null;
+data: Record<string, unknown> | null;
+ detail?: BaseOrderShippingDetail;
+}
+export interface BaseOrderLineItem {
+  variant?: BaseProductVariant | null;
+ product?: BaseProduct;
+}
+export interface BaseOrderItemDetail {
+ item: BaseOrderLineItem;
+}
+export interface BaseOrderShippingDetail {
+ shipping_method: BaseOrderShippingMethod;
 }
 
-interface ProductOption {
-    id: string
-    title: string
-    values?: ProductOptionValue[]
-    metadata?: any
-}
-
-interface ProductOptionValue {
-    id: string
-    value: string
-}
-
-interface ProductVariant {
-
-    title: string
-    sku: string
-    inventory_quantity: number
-    manage_inventory: boolean
-    currency_code?: string
-    prices?: Array<{
-        id: string
-        amount: number
-        currency_code: string
-    }>
-    options?: Array<{
-        option_id: string
-        option_value_id: string
-        option_name: string
-        value: string
-    }>
-}
-
-// Build variant options from product options and variant
-function buildVariantOptions(
-    product: Product,
-    variant: ProductVariant
-): Array<{ optionName: string; value: string }> {
-    const options: Array<{ optionName: string; value: string }> = []
-
-    // Parse variant title to extract option values
-    // Title format: "S / White" or "M / Black"
-    const titleParts = variant.title.split(" / ")
-
-    if (titleParts.length >= 2) {
-        // If product has options, map them
-        if (product.options && product.options.length > 0) {
-            // Try to match options by title parts
-            product.options.forEach((opt, index) => {
-                if (index < titleParts.length) {
-                    options.push({
-                        optionName: opt.title,
-                        value: titleParts[index]
-                    })
-                }
-            })
-        } else {
-            // Fallback: use generic option names
-            options.push({
-                optionName: `Option ${titleParts.length > 0 ? 1 : 0}`,
-                value: titleParts[0] || variant.title
-            })
-        }
-    } else {
-        // Single value or no slash
-        options.push({
-            optionName: "Variant",
-            value: variant.title
-        })
-    }
-
-    return options
-}
-
-function extractPriceAmount(variant: any): number {
-    if (!variant) return 0;
-
-    // 1. Direct price_set array in payload: variant.price_set.prices[0].amount
-    const rawAmount =
-        variant.price_set?.prices?.[0]?.amount ??
-        variant.prices?.[0]?.amount ??
-        variant.amount ??
-        variant.price_amount ??
-        variant.min_price;
-
-    const parsed = Number(rawAmount);
-    if (isNaN(parsed) || rawAmount === null || rawAmount === undefined) {
-        return 0;
-    }
-    return parsed / 100;
-}
-
-function extractInventoryQuantity(variant: any): number {
-    if (!variant) return 0;
-
-    // 1. Direct object property in payload: variant.inventory.stocked_quantity
-    const val =
-        variant.inventory?.stocked_quantity ??
-        variant.stocked_quantity ??
-        variant.inventory_quantity ??
-        variant.inventory_levels?.[0]?.stocked_quantity ??
-        variant.inventory_items?.[0]?.inventory?.location_levels?.[0]?.stocked_quantity;
-
-    const parsed = Number(val);
-    return !isNaN(parsed) && val !== null && val !== undefined ? parsed : 0;
-}
+./src
+├── admin
+│   ├── vendor-settlements
+│   │   └── route.ts
+├── api
+│   ├── admin
+│   │   └── orders
+│   │       └── [id]
+│   │           └── vendor-items
+│   │               └── route.ts
+│   ├── middlewares.ts
+│   ├── store
+│   │   ├── carts
+│   │   │   └── [id]
+│   │   │       └── line-items
+│   │   │           └── route.ts
+│   ├── vendors
+│   │   ├── orders
+│   │   │   ├── [id]
+│   │   │   │   ├── items
+│   │   │   │   │   └── [item_id]
+│   │   │   │   │       └── ship
+│   │   │   │   │           └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   └── route.ts
+│   └── webhooks
+│       └── razorpay
+│           └── route.ts
+├── links
+│   ├── vendor-order.ts
+├── modules
+│   └── razorpay
+│       ├── index.ts
+│       └── service.ts
+├── subscribers
+│   ├── order-payment-captured.ts
+│   ├── order-placed.ts
+├── utils
+│   └── validate-vendor-ownership.ts
+└── workflows
+    ├── README.md
+    └── marketplace
+        ├── process-order-payment-splits
+        │   ├── index.ts
+        │   └── steps
+        │       ├── calculate-splits.ts
+        │       └── execute-transfers.ts
+ badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-medusa-store$ 

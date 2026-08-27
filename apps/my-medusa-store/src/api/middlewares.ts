@@ -81,5 +81,12 @@ export default defineMiddlewares({
         },
       ],
     },
+    {
+      matcher: "/store/payment-methods/:provider_id/:account_holder_id",
+      method: "GET",
+      middlewares: [
+        authenticate("customer", ["bearer", "session"])
+      ]
+    }
   ],
 });

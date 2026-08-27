@@ -43,11 +43,11 @@ const createVendorWorkflow = createWorkflow(
 
     const admin = createVendorAdminStep(adminData)
 
-   setAuthAppMetadataStep({
-  authIdentityId: input.authIdentityId,
-  actorType: "vendor",
-  value: admin.vendorAdmin.id, 
-})
+    setAuthAppMetadataStep({
+      authIdentityId: input.authIdentityId,
+      actorType: "vendor",
+      value: admin.vendorAdmin.id,
+    })
 
     // fetch full vendor
     // @ts-ignore

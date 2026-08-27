@@ -4,14 +4,15 @@ import { HttpTypes } from "@medusajs/types"
 import Help from "@modules/order/components/help"
 import OrderSummary from "@modules/order/components/order-summary"
 import ShippingDetails from "@modules/order/components/shipping-details"
+import { StorefrontOrder } from "@/types/order"
 
 type OrderCompletedTemplateProps = {
-  order: HttpTypes.StoreOrder
+  order: StorefrontOrder
 }
 
 export default function OrderCompletedTemplate({ order }: OrderCompletedTemplateProps) {
   // Cluster items by vendor using line item metadata flags
-  const vendorGroups = order.items?.reduce((acc, item) => {
+  const vendorGroups = order?.items?.reduce((acc, item) => {
     const vendorId = (item.metadata as any)?.vendor_id || "platform"
     const vendorName = (item.metadata as any)?.vendor_name || "Platform Direct Store"
 

@@ -1,17 +1,39 @@
-src/api/vendors/orders/  -=- this order specific file 
-├── route.ts              <-- GET vendor order list
-└── [id]
-    └── route.ts          <-- GET vendor order details
-    src/api/vendors/orders/
-│
-├── route.ts          ← list vendor orders
-│
-└── [id]
-     ├── route.ts     ← vendor order details
-     └── items
-           └── [item_id]
-                └── ship
- Endpoint 1: GET /vendors/orders
+./src/workflows
+├── README.md
+└── marketplace
+    ├── process-order-payment-splits
+    │   ├── index.ts
+    │   └── steps
+    │       ├── calculate-splits.ts
+    │       └── execute-transfers.ts
+./src/subscribers
+├── order-payment-captured.ts
+├── order-placed.ts
+1 directory, 7 files
+./src/api
+├── README.md
+├── admin
+│   └── orders
+│       └── [id]
+│           └── vendor-items
+│               └── route.ts
+├── middlewares.ts
+├── store
+│   ├── carts
+│   │   └── [id]
+│   │       └── line-items
+│   │           └── route.ts
+└── vendors
+    ├── orders
+    │   ├── [id]
+    │   │   ├── items
+    │   │   │   └── [item_id]
+    │   │   │       └── ship
+    │   │   │           └── route.ts
+    │   │   └── route.ts
+    │   └── route.ts
+
+ Endpoint 1: GET /vendors/orders   
  Authenticate Vendor
         │
         ▼
@@ -64,6 +86,12 @@ edusa=# \dt *order*
  public | order_summary                    | table | medusa
  public | order_transaction                | table | medusa
 (25 rows)
+            Table "public.marketplace_vendor_order_order"
+   Column   |           Type           | Collation | Nullable |      Default      
+------------+--------------------------+-----------+----------+-------------------
+ vendor_id  | character varying(255)   |           | not null | 
+ order_id   | character varying(255)   |           | not null | 
+ id         | character varying(255)   |           | not null | 
                                               Table "public.order"
        Column        |           Type           | Collation | Nullable |                  Default                  
 ---------------------+--------------------------+-----------+----------+-------------------------------------------
@@ -83,6 +111,18 @@ edusa=# \dt *order*
  metadata            | jsonb                    |           |          | 
  custom_display_id   | text                     |           |          | 
  locale              | text                     |           |          | 
+                               Table "public.cart"
+       Column        |           Type           | Collation | Nullable | Default 
+---------------------+--------------------------+-----------+----------+---------
+ id                  | text                     |           | not null | 
+ region_id           | text                     |           |          | 
+ customer_id         | text                     |           |          | 
+ sales_channel_id    | text                     |           |          | 
+ email               | text                     |           |          | 
+ currency_code       | text                     |           | not null | 
+ shipping_address_id | text                     |           |          | 
+ billing_address_id  | text                     |           |          | 
+ metadata            | jsonb                    |           |          | 
                             Table "public.order_cart"
    Column   |           Type           | Collation | Nullable |      Default      
 ------------+--------------------------+-----------+----------+-------------------
@@ -145,9 +185,6 @@ edusa=# \dt *order*
  unit_price                | numeric                  |           | not null | 
  raw_unit_price            | jsonb                    |           | not null | 
  metadata                  | jsonb                    |           |          | 
- created_at                | timestamp with time zone |           | not null | now()
- updated_at                | timestamp with time zone |           | not null | now()
- deleted_at                | timestamp with time zone |           |          | 
  is_custom_price           | boolean                  |           | not null | false
  product_type_id           | text                     |           |          | 
  is_giftcard               | boolean                  |           | not null | false     | 
@@ -172,3 +209,65 @@ edusa=# \dt *order*
  return_id     | text                     |           |          | 
  claim_id      | text                     |           |          | 
  exchange_id   | text                     |           |          | 
+                     Table "public.order_fulfillment"
+     Column     |           Type           | Collation | Nullable |      Default      
+----------------+--------------------------+-----------+----------+-------------------
+ order_id       | character varying(255)   |           | not null | 
+ fulfillment_id | character varying(255)   |           | not null | 
+ id             | character varying(255)   |           | not null | 
+                        Table "public.fulfillment"
+       Column        |           Type           | Collation | Nullable | Default 
+---------------------+--------------------------+-----------+----------+---------
+ id                  | text                     |           | not null | 
+ location_id         | text                     |           | not null | 
+ packed_at           | timestamp with time zone |           |          | 
+ shipped_at          | timestamp with time zone |           |          | 
+ delivered_at        | timestamp with time zone |           |          | 
+ canceled_at         | timestamp with time zone |           |          | 
+ data                | jsonb                    |           |          | 
+ provider_id         | text                     |           |          | 
+ shipping_option_id  | text                     |           |          | 
+ metadata            | jsonb                    |           |          | 
+ delivery_address_id | text                     |           |          | 
+ marked_shipped_by   | text                     |           |          | 
+ created_by          | text                     |           |          | 
+ requires_shipping   | boolean                  |           | not null | true
+                      List of relations
+ Schema |              Name               | Type  | Owner  
+--------+---------------------------------+-------+--------
+ public | cart                            | table | medusa
+ public | cart_address                    | table | medusa
+ public | cart_line_item                  | table | medusa
+ public | cart_line_item_adjustment       | table | medusa
+ public | cart_line_item_tax_line         | table | medusa
+ public | cart_payment_collection         | table | medusa
+ public | cart_promotion                  | table | medusa
+ public | cart_shipping_method            | table | medusa
+ public | cart_shipping_method_adjustment | table | medusa
+ public | cart_shipping_method_tax_line   | table | medusa
+ public | order_cart                      | table | medusa
+(11 rows)
+                         Table "public.order_shipping"
+       Column       |           Type           | Collation | Nullable | Default 
+--------------------+--------------------------+-----------+----------+---------
+ id                 | text                     |           | not null | 
+ order_id           | text                     |           | not null | 
+ version            | integer                  |           | not null | 
+ shipping_method_id | text                     |           | not null | 
+ return_id          | text                     |           |          | 
+ claim_id           | text                     |           |          | 
+ exchange_id        | text                     |           |        
+                      Table "public.order_shipping_method"
+       Column       |           Type           | Collation | Nullable | Default 
+--------------------+--------------------------+-----------+----------+---------
+ id                 | text                     |           | not null | 
+ name               | text                     |           | not null | 
+ description        | jsonb                    |           |          | 
+ amount             | numeric                  |           | not null | 
+ raw_amount         | jsonb                    |           | not null | 
+ is_tax_inclusive   | boolean                  |           | not null | false
+ shipping_option_id | text                     |           |          | 
+ data               | jsonb                    |           |          | 
+ metadata           | jsonb                    |           |          | 
+ is_custom_amount   | boolean                  |           | not null | false
+ cart_shipping_method similar <=- only not =  is_custom_amount <-> the almost same  cart/order _line_item  -=- 

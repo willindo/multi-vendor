@@ -1,5 +1,5 @@
 import { Text } from "@medusajs/ui"
-import { getProductPrice } from "@lib/util/get-product-price"
+import { getProductPrice } from "@lib/util/get-product-price1"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"

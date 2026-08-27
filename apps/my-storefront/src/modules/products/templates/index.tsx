@@ -35,15 +35,8 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         data-testid="product-container"
       >
         {/* Left Column: Context Summaries, Vendor Info Card, and Accordion Specifications */}
-        <div className=" bg-[#264513] flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
+        <div className=" b-[#264513] border-orange-200 flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
           <ProductInfo product={product} />
-
-          {/* <VendorSpotlight 
-            vendorId={product.vendor_id} 
-            vendorName={product.vendor_name} 
-            countryCode={countryCode}
-          /> */}
-
           <ProductTabs product={product} />
         </div>
 

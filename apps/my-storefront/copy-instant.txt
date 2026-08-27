@@ -1,174 +1,454 @@
-DO NOT carry over
-/store/products
-       │
-       ▼
-StoreProduct
-       │
-       ├── product.title
-       ├── product.description
-       ├── product.images
-       ├── product.options
-       └── product.variants[]
-                    │
-                    ├── sku
-                    ├── price
-                    ├── inventory
-                    ├── options
-                    └── images
-                    src/types/marketplace.ts
-src/lib/data/products.ts
-src/app/[countryCode]/(main)/products/[handle]/page.tsx
-src/modules/products/templates/index.tsx
-src/modules/products/templates/product-info/index.tsx
-src/modules/products/components/product-tabs/index.tsx
-src/modules/products/components/product-price/index.tsx
-src/modules/products/components/product-actions/index.tsx
-src/modules/products/components/product-actions/mobile-actions.tsx
-src/modules/products/components/product-actions/option-select.tsx
+                       List of relations
+ Schema |                 Name                 | Type  | Owner  
+--------+--------------------------------------+-------+--------
+ public | cart_payment_collection              | table | medusa
+ public | order_payment_collection             | table | medusa
+ public | payment                              | table | medusa
+ public | payment_collection                   | table | medusa
+ public | payment_collection_payment_providers | table | medusa
+ public | payment_provider                     | table | medusa
+ public | payment_session                      | table | medusa
+ public | region_payment_provider              | table | medusa
+(8 rows)
 
-src/modules/products/components/image-gallery/index.tsx
-The important architectural decision is:
-
-Keep Medusa's Product as the commerce/catalog container, but make the storefront presentation variant-aware.
-
-A variant is the actual sellable SKU, while the product remains the grouping/container for options, images, apparel information, etc.
-lib/data/products.ts → storefront product retrieval
-lib/data/variants.ts → individual variant retrieval
-lib/data/vendor/products.ts → vendor CRUD
-lib/util/vendor/* → vendor payload construction
-ExtendedMarketplaceProduct → storefront projection
-packages/shared/* → shared domain rules
-default Medusa product UI → existing storefront behavior
-Commerce Product
-│
-├── Product identity
-│   ├── title
-│   ├── description
-│   ├── handle
+medusa=# \d payment 
+                              Table "public.payment"
+        Column         |           Type           | Collation | Nullable | Default 
+-----------------------+--------------------------+-----------+----------+---------
+ id                    | text                     |           | not null | 
+ amount                | numeric                  |           | not null | 
+ raw_amount            | jsonb                    |           | not null | 
+ currency_code         | text                     |           | not null | 
+ provider_id           | text                     |           | not null | 
+ data                  | jsonb                    |           |          | 
+ payment_collection_id | text                     |           | not null | 
+ payment_session_id    | text                     |           | not null | 
+ metadata              | jsonb                    |           |          | 
+                            Table "public.payment_collection"
+        Column         |           Type           | Collation | Nullable |     Default      
+-----------------------+--------------------------+-----------+----------+------------------
+ id                    | text                     |           | not null | 
+ currency_code         | text                     |           | not null | 
+ amount                | numeric                  |           | not null | 
+ raw_amount            | jsonb                    |           | not null | 
+ authorized_amount     | numeric                  |           |          | 
+ raw_authorized_amount | jsonb                    |           |          | 
+ captured_amount       | numeric                  |           |          | 
+ raw_captured_amount   | jsonb                    |           |          | 
+ refunded_amount       | numeric                  |           |          | 
+ raw_refunded_amount   | jsonb                    |           |          | 
+ status                | text                     |           | not null | 'not_paid'::text
+ metadata              | jsonb                    |           |          | 
+ 7 directories, 46 files
+./src/ 
+app/
+ [countryCode]/
+(main)/
+ account/
+    orders/page.tsx
+        details/[id]/ page.tsx
+ order/[id]/
+        confirmed/ loading.tsx, page.tsx
+        transfer/[token]/ page.tsx
+        accept/ page.tsx
+        decline/ page.tsx
+ lib/ 
+    data/ 
+        orders.ts,
+ modules/
+    account/
+        components/
+            order-card/ index.tsx
+            order-overview/ index.tsx
+    order/
+        components 
+            help/ index.tsx
+            item/ index.tsx
+            items/ index.tsx
+            onboarding-cta/ index.tsx
+            order-details/ index.tsx
+            order-summary/ index.tsx
+            payment-details/ index.tsx
+            shipping-details/ index.tsx
+            transfer-actions/ index.tsx
+            transfer-image/ index.tsx
+        templates/ order-completed-template.tsx, order-details-template.tsx
+    skeletons/
+        components/
+            skeleton-order-confirmed-header/ index.tsx
+            skeleton-order-information/ index.tsx
+            skeleton-order-items/ index.tsx
+            skeleton-order-summary/ index.tsx
+        templates/
+            skeleton-order-confirmed/ index.tsx
+./src/
+app/
+    [countryCode]/
+        (main)/
+             cart/ loading.tsx, not-found.tsx, page.tsx
+lib/
+    data/ cart.ts,
+modules/
+        cart/
+            components/
+                cart-item-select/ index.tsx
+                empty-cart-message/ index.tsx
+                item/ index.tsx
+                sign-in-prompt/ index.tsx
+        common/
+            components/
+                cart-totals/ index.tsx  
+        layout/
+            components/
+                cart-button/ index.tsx
+                cart-dropdown/ index.tsx
+                cart-mismatch-banner/ index.tsx
+        skeletons/
+            components/
+                skeleton-cart-item/ index.tsx
+                skeleton-cart-totals/ index.tsx
+            templates/
+                skeleton-cart-page/ index.tsx
+./src/
+app/
+    [countryCode]/
+        (checkout)/ layout.tsx, not-found.tsx
+            checkout/ page.tsx
+modules/
+    checkout/
+        components/
+            address-select/ index.tsx
+            addresses/ index.tsx
+            billing_address/ index.tsx
+            country-select/ index.tsx
+            discount-code/ index.tsx
+            error-message/ index.tsx
+            payment/ index.tsx
+            payment-button/ index.tsx
+            payment-container/ index.tsx
+            payment-test/ index.tsx
+            payment-wrapper/ index.tsx, stripe-wrapper.tsx
+            review/ index.tsx
+            shipping/ index.tsx
+            shipping-address/ index.tsx
+            submit-button/ index.tsx
+            vendor-split-summary/ index.tsx
+        templates/
+            checkout-form/ index.tsx
+            checkout-summary/ index.tsx
+    common/
+        components/
+            checkbox/ index.tsx            
+./src/lib/data/payment.ts,     
+ data <=-- current data layer <-> will show soon accordingly -=- 
+│   ├── cart.ts
+│   ├── fulfillment.ts
+│   ├── orders.ts
+│   ├── payment.ts
+./src/lib   -=- see custom success variant specific such option . . . 
+├── config.ts
+├── constants.tsx
+├── context
+│   └── modal-context.tsx
+├── data
+│   ├── products.ts
+│   ├── regions.ts
+│   ├── variants.ts
 │   └── vendor
-│
-├── Apparel information
-│   └── apparel_detail
-│
-├── Option definitions
-│   ├── Size
-│   ├── Color
-│   └── ...
-│
-└── Sellable variants
-    │
-    ├── Variant A
-    │   ├── SKU
-    │   ├── options
-    │   ├── price
-    │   ├── inventory
-    │   └── images
-    │
-    ├── Variant B
-    │   ├── SKU
-    │   ├── options
-    │   ├── price
-    │   ├── inventory
-    │   └── images
-    │
-    └── Variant C
-    product-actions/   Variant selling surface
-├── index.tsx
-├── option-select.tsx
-└── mobile-actions.tsx
-Option selection
-      │
-      ▼
-selectedVariant
-      │
-      ├── price
-      ├── inventory
-      ├── SKU
-      └── images
-      │
-      ▼
-Add to cart
-Product Details   product information
-├── Apparel
-│   ├── gender
-│   ├── age group
-│   ├── garment category
-│   ├── garment subcategory
-│   ├── fit
-│   ├── pattern
-│   ├── style
-│   ├── occasion
-│   ├── sleeve
-│   └── neck
-│
-├── Material & Care
-│   ├── material type
-│   ├── composition
-│   └── care instructions
-│
-├── Product condition
-│   ├── season
-│   └── condition
-│
-└── Shipping P
+│       ├── orders.ts
+│       ├── products.ts
+├── meilisearch-client.ts
+├── search-server.ts
+└── util
+    ├── get-product-price.ts
+    ├── money.ts
+    ├── product.ts
+    └── vendor
+        ├── hydration.ts
+        ├── inventory.ts
+        ├── pricing.ts
+        ├── product.ts
+        └── validat./src/api
+├── README.md
+├── admin
+│   ├── custom
+│   │   └── route.ts
+│   └── orders
+│       └── [id]
+│           └── vendor-items
+│               └── route.ts
+├── middlewares.ts
+├── store
+│   ├── carts
+│   │   └── [id]
+│   │       └── line-items
+│   │           └── route.ts
+│   └── custom
+│       └── route.ts
+└── vendors
+    ├── orders
+    │   ├── [id]
+    │   │   ├── items
+    │   │   │   └── [item_id]
+    │   │   │       └── ship
+    │   │   │           └── route.ts
+    │   │   └── route.ts
+    │   └── route.ts   -=-     ion.ts
+cart.ts = 
+export type StorefrontLineItem = HttpTypes.StoreCartLineItem & {
+  metadata?: {
+    vendor_id?: string
+    vendor_name?: string
+    fulfillment_status?: string
+    shipped_at?: string | null
+    [key: string]: any
+  }
+export type StorefrontCart = Omit<HttpTypes.StoreCart, "items"> & {
+  items?: StorefrontLineItem[]
+}
+export async function retrieveCart(cartId?: string, fields?: string) {
+const id = cartId || (await getCartId())
+ fields ??=
+    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name"
 
-src/modules/products/components/product-preview/index.tsx
-src/modules/products/components/product-preview/price.tsx
-src/modules/products/components/product-price/index.tsx
-src/modules/store/templates/paginated-products.tsx
-src/modules/home/components/featured-products/product-rail/index.tsx
-src/modules/home/components/featured-products/index.tsx
-src/modules/products/components/related-products/index.tsx
-src/modules/skeletons/components/skeleton-product-preview/index.tsx
-src/modules/skeletons/templates/skeleton-product-grid/index.tsx
-src/modules/skeletons/templates/skeleton-related-products/index.tsx
-Product detail / sellable variant  = One product page correctly represents a product container + its actual sellable variants + apparel information.
-1. src/types/marketplace.ts
-        ↓
-2. src/lib/data/products.ts
-        ↓
-3. products/[handle]/page.tsx
-        ↓
-4. products/templates/index.tsx
-        ↓
-5. product-info
-        ↓
-6. product-tabs
-        ↓
-7. product-actions
-        ├── option-select
-        └── mobile-actions
-        ↓
-8. product-price
-        ↓
-9. image-gallery
-Catalog / discovery = Every place where a customer sees a product gets the same marketplace-aware projection.
-1. product-preview
-        ↓
-2. preview price
-        ↓
-3. product-price
-        ↓
-4. paginated-products
-        ↓
-5. product-rail
-        ↓
-6. related-products
-        ↓
-7. skeletons
-                     ┌─────────────────────┐
-                     │ Commerce Product    │
-                     │ + variants          │
-                     │ + apparel           │
-                     │ + vendor            │
-                     └──────────┬──────────┘
-                                │
-               ┌────────────────┼────────────────┐
-               │                │                │
-               ▼                ▼                ▼
-        Product Page       Store Catalog      Vendor Shop
-               │                │                │
-               └────────────────┼────────────────┘
-                                ▼
-                         ProductPreview /
-                         ProductProjection
+ .fetch<HttpTypes.StoreCartResponse>(`/store/carts/${id}`, {
+.then(({ cart }: { cart: HttpTypes.StoreCart }) => cart)
+export async function updateCart(data: HttpTypes.StoreUpdateCart) {
+ .then(async ({ cart }: { cart: HttpTypes.StoreCart }) => {
+  cart: HttpTypes.StoreCart,
+  data: HttpTypes.StoreInitializePaymentSession
+ shipping_options: HttpTypes.StoreCartShippingOption[]
+  }>("/store/shipping-options", {
+    query: { cart_id: cartId },
+    next,
+    headers,
+    cache: "force-cache",
+  })
+}
+orders.ts = return sdk.client
+    .fetch<HttpTypes.StoreOrderResponse>(`/store/orders/${id}`, {
+      method: "GET",
+      query: {
+        fields:
+          "*payment_collections.payments,*items,*items.metadata,*items.variant,*items.product",
+      }, 
+      return sdk.client
+    .fetch<HttpTypes.StoreOrderListResponse>(`/store/orders`, {
+      method: "GET",
+      query: {
+        limit,
+        offset,
+        order: "-created_at",
+        fields: "*items,+items.metadata,*items.variant,*items.product",
+        ...filters,
+      },
+fulfillment.ts =  return sdk.client
+    .fetch<HttpTypes.StoreShippingOptionListResponse>(
+      `/store/shipping-options`,
+  method: "GET"
+  query: {
+          cart_id: cartId,
+          fields: "+service_zone.fulfillment_set.type,+service_zone.fulfillment_set.location.address"
+        },
+return sdk.client
+    .fetch<{ shipping_option: HttpTypes.StoreCartShippingOption }>(
+      `/store/shipping-options/${optionId}/calculate`,
+      {
+        method: "POST",
+        body,
+        headers,
+        next,
+      }
+    )
+    .then(({ shipping_option }) => shipping_option)
+payment.ts = "use server"
+return sdk.client
+    .fetch<HttpTypes.StorePaymentProviderListResponse>(
+      `/store/payment-providers`,
+      {
+        method: "GET",
+ .then(({ payment_providers }) =>
+      payment_providers.sort((a, b) => {
+       <=-- see default endpoint across storfront -=- 
+    data
+│   ├── cart.ts
+│   ├── fulfillment.ts
+│   ├── orders.ts
+│   ├── payment.ts <=-- current data layer -=- 
+Customer order view — product-wise status :
+Order #1001
+Status: Partially fulfilled
+
+Vendor A
+  Product A
+  Status: Shipped
+  Tracking: XXX
+
+  Product C
+  Status: Delivered
+  Tracking: XXX
+
+Vendor B
+  Product B
+  Status: Processing
+  Customer cart — also grouped by vendor 
+  Cart
+
+Vendor A
+  Product A
+  Product C
+  Subtotal: ₹...
+
+Vendor B
+  Product B
+  Subtotal: ₹...
+
+----------------
+Order Total: ₹...
+Checkout — vendor grouping should continue
+
+Vendor A
+  Product A
+  Product C
+
+  Shipping
+    Standard Delivery
+    ₹...
+
+Vendor B
+  Product B
+
+  Shipping
+    Express Delivery
+    ₹...
+
+Payment
+  ─────────────
+  Total ₹...
+  The payment remains one customer checkout/payment, while the marketplace internally knows how the order is partitioned.
+  That fits the payment-split architecture already built.
+  Platform dashboard — order-centric
+  Order #1001
+
+Customer
+  John
+
+Payment
+  Paid
+
+Overall fulfillment
+  Partially fulfilled
+
+Vendors
+  2
+Vendor A
+  Fulfillment: Delivered
+
+  Items:
+    Product A
+      Delivered
+      Tracking: XXX
+
+    Product C
+      Delivered
+      Tracking: XXX
+Vendor B
+  Fulfillment: Processing
+
+  Items:
+    Product B
+      Processing
+So the hierarchy is:
+ORDER
+ ├── Customer
+ ├── Payment
+ ├── Overall fulfillment
+ │
+ └── Vendors
+      │
+      ├── Vendor A
+      │    └── Items
+      │         ├── Product A → Delivered
+      │         └── Product C → Delivered
+      │
+      └── Vendor B
+           └── Items
+                └── Product B → Processing
+Don't make vendor fulfillment status the source of truth.Make the item/fulfillment-item status authoritative and derive the vendor/order status from it.
+Fulfillment Item
+       ↓
+Vendor fulfillment status
+       ↓
+Order fulfillment status 
+Cart
+
+Vendor
+  └── Items
+
+Checkout
+
+Vendor
+  ├── Items
+  └── Shipping
+
+Order
+
+Order
+  └── Vendor
+       └── Product/line item
+            └── Fulfillment status + tracking
+Platform
+Order
+ ├── Customer
+ ├── Payment
+ ├── Financial state
+ ├── Overall fulfillment state
+ │
+ └── Vendor partitions
+      ├── Vendor
+      │    ├── Fulfillment status
+      │    └── Items
+      │         └── fulfillment/tracking
+      │
+      └── Vendor
+           ├── Fulfillment status
+           └── Items
+export interface StoreOrderLineItem extends Omit<BaseOrderLineItem, "product" | "variant"> {
+    variant?: StoreProductVariant;
+     product?: StoreProduct;
+    tax_lines?: (BaseOrderLineItemTaxLine & {
+        item: StoreOrderLineItem;
+    })[];
+    adjustments?: (BaseOrderLineItemAdjustment & {
+        item: StoreOrderLineItem;
+    })[];
+    detail: BaseOrderItemDetail & {
+        item: StoreOrderLineItem;
+    };
+}
+export interface StoreOrder extends Omit<BaseOrder, "items" | "version" | "transations"> {
+    shipping_address?: StoreOrderAddress | null;
+    billing_address?: StoreOrderAddress | null;
+      items: StoreOrderLineItem[] | null;
+    shipping_methods: StoreOrderShippingMethod[] | null;
+    payment_collections?: StorePaymentCollection[];
+    fulfillments?: StoreOrderFulfillment[];
+    customer?: StoreCustomer;
+}
+export interface BaseOrderFulfillment {
+    id: string;
+    location_id: string;
+    packed_at: Date | null;
+    shipped_at: Date | null;
+     delivered_at: Date | null;
+    canceled_at: Date | null;
+     requires_shipping: boolean;
+    data: Record<string, unknown> | null;
+    provider_id: string;
+    shipping_option_id: string | null;
+    metadata: Record<string, unknown> | null;
+    created_at: Date;
+    created_by: string | null;
+    marked_shipped_by: string | null;
+    updated_at: Date;
+}

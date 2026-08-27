@@ -2,26 +2,17 @@
 import React from "react"
 import { HttpTypes } from "@medusajs/types"
 import { convertToLocale } from "@lib/util/money"
+import { groupAndSortVendorPartitions } from "@lib/util/cart-vendor"
+import { StorefrontCart } from "@/lib/data/cart"
 
 type VendorSplitSummaryProps = {
-  cart: HttpTypes.StoreCart
+  cart: StorefrontCart
 }
 
 export default function VendorSplitSummary({ cart }: VendorSplitSummaryProps) {
-  const vendorGroups = cart.items?.reduce((acc, item) => {
-    const vendorId = (item.metadata as any)?.vendor_id || "platform"
-    const vendorName = (item.metadata as any)?.vendor_name || `Partner Vendor (${vendorId.slice(0, 8)})`
-    
-    const groupKey = vendorId === "platform" ? "Direct Platform Store" : vendorName
+  const vendorGroups = groupAndSortVendorPartitions(cart.items)
 
-    if (!acc[groupKey]) {
-      acc[groupKey] = []
-    }
-    acc[groupKey].push(item)
-    return acc
-  }, {} as Record<string, HttpTypes.StoreCartLineItem[]>)
-
-  if (!vendorGroups || Object.keys(vendorGroups).length === 0) return null
+  if (!vendorGroups || vendorGroups.length === 0) return null
 
   return (
     <div className="space-y-4 my-6">
@@ -32,22 +23,22 @@ export default function VendorSplitSummary({ cart }: VendorSplitSummaryProps) {
         </h3>
       </div>
 
-      {Object.entries(vendorGroups).map(([groupTitle, items]) => (
+      {vendorGroups.map((group) => (
         <div
-          key={groupTitle}
+          key={group.id}
           className="border border-neutral-200/60 rounded-xl bg-neutral-50/50 p-4"
         >
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100">
             <p className="text-xs font-bold tracking-tight text-neutral-600">
-              {groupTitle}
+              {group.name}
             </p>
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-neutral-100 text-neutral-800 border border-neutral-200">
-              {items.length} {items.length === 1 ? "Item" : "Items"}
+              {group.items.length} {group.items.length === 1 ? "Item" : "Items"}
             </span>
           </div>
 
           <div className="space-y-3">
-            {items.map((item) => (
+            {group.items.map((item) => (
               <div
                 key={item.id}
                 className="flex justify-between items-center text-sm"
@@ -72,7 +63,7 @@ export default function VendorSplitSummary({ cart }: VendorSplitSummaryProps) {
                 <p className="font-semibold text-neutral-900">
                   {convertToLocale({
                     amount: item.unit_price * item.quantity,
-                    currency_code: cart.currency_code
+                    currency_code: cart.currency_code,
                   })}
                 </p>
               </div>

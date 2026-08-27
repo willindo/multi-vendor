@@ -1,4 +1,4 @@
-// /api/store/carts/[id]/line-items/route.ts
+// /src/api/store/carts/[id]/line-items/route.ts
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import { addToCartWorkflow } from "@medusajs/medusa/core-flows";
@@ -18,12 +18,13 @@ export async function POST(
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   try {
-    // 1. Fetch Vendor details securely through the Medusa Graph Link
+    // 1. Fetch Vendor details securely through Medusa Graph Link
     const { data: products } = await query.graph({
       entity: "product",
       fields: [
         "id",
         "variants.id",
+        "variants.metadata",
         "vendor.id",
         "vendor.handle",
         "vendor.name",
@@ -33,24 +34,26 @@ export async function POST(
       },
     });
 
+    console.log(`📦 [Line Item] Found ${products?.length || 0} products`);
     const product = products?.[0];
     const vendor = Array.isArray(product?.vendor)
       ? product.vendor[0]
       : product?.vendor;
 
+    console.log(`📦 [Line Item] Found vendor ${JSON.stringify(vendor)}`);
     if (!vendor?.id) {
       res.status(400).json({ message: "This product is not linked to a valid vendor profile." });
       return;
     }
 
-    // 2. Run standard Core Workflow to keep inventory/pricing states healthy
+    // 2. Run standard Core Workflow
     const { result, errors } = await addToCartWorkflow(req.scope).run({
       input: {
         cart_id: cartId,
         items: [
           {
             variant_id,
-            quantity,
+            quantity: Number(quantity),
             metadata: {
               vendor_id: vendor.id,
               vendor_name: vendor.name || vendor.handle || "Unknown Vendor",
@@ -62,19 +65,24 @@ export async function POST(
     });
 
     if (errors?.length) {
-      res.status(400).json({ message: "Workflow processing execution failed.", errors });
+      console.error("❌ [addToCartWorkflow] Errors:", JSON.stringify(errors, null, 2));
+      const firstError = errors[0]?.error?.message || "Workflow processing execution failed.";
+
+      res.status(400).json({
+        message: firstError,
+        errors,
+      });
       return;
     }
-
-    // 3. Fetch line items using the cart module
-    const cartModule = req.scope.resolve(Modules.CART);
-    const cart = await cartModule.retrieveCart(cartId, {
-      select: ["items.*"],
+    // Fetch line item via Query Graph for accurate, fresh relations
+    const { data: carts } = await query.graph({
+      entity: "cart",
+      fields: ["id", "items.*", "items.metadata"],
+      filters: { id: cartId },
     });
 
-    const latestItem = (cart?.items || []).find(
-      (item) => item.variant_id === variant_id
-    );
+    const cart = carts?.[0];
+    const latestItem = cart?.items?.find((item: any) => item.variant_id === variant_id);
 
     if (!latestItem) {
       res.status(404).json({
@@ -90,7 +98,11 @@ export async function POST(
     });
     return;
   } catch (error) {
-    res.status(500).json({ message: "Failed to manage cart item updates.", error: (error as Error).message });
+    console.error("❌ [Line Item Route Exception]:", error);
+    res.status(500).json({
+      message: "Failed to manage cart item updates.",
+      error: (error as Error).message,
+    });
     return;
   }
 }

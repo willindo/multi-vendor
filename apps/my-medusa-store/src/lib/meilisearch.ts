@@ -8,12 +8,13 @@ export async function getMeilisearchClient() {
 
     client = new Meilisearch({
       host:
-        process.env.MEILISEARCH_HOST ??
-        "http://127.0.0.1:7700",
+        process.env.MEILISEARCH_HOST
+        ?? "http://127.0.0.1:7700",
+      // ?? "http://localhost:7700",
 
       apiKey:
-        process.env.MEILISEARCH_API_KEY ??
-        "masterKey",
+        process.env.MEILISEARCH_API_KEY
+        ?? "masterKey",
     })
 
     console.log("🔌 Meilisearch client initialized")

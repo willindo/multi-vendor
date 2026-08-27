@@ -2,7 +2,7 @@
 "use client"
 
 import { login } from "@lib/data/customer"
-import { loginVendor } from "@lib/data/vendor/auth" // 🚀 Imported your new merchant verification action
+import { loginVendor } from "@lib/data/vendor/auth"
 import { LOGIN_VIEW, USER_ROLE } from "@modules/account/templates/login-template"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"

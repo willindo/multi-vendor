@@ -2,8 +2,8 @@
 import { Meilisearch } from "meilisearch"
 
 // Read configuration from your .env.local keys
-// const host = process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "http://127.0.0.1:7700"
-const host = process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "http://localhost:7700"
+const host = process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "http://127.0.0.1:7700"
+// const host = process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "http://localhost:7700"
 const apiKey = process.env.NEXT_PUBLIC_SEARCH_API_KEY || "masterKey"
 const indexName = process.env.NEXT_PUBLIC_SEARCH_INDEX_NAME || "products"
 
