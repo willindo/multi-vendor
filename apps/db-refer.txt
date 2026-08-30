@@ -1,14 +1,3 @@
-// Inside your parent entry form view or layout manager:
-import { deserializeApparelDetails } from "@shared/apparel/apparel-utils"
-
-// Use this to hydrate your form state safely, guaranteeing 
-// that 'value.garment_category' always has a string fallback
-const [apparelState, setApparelState] = useState(
-  deserializeApparelDetails(initialDbData?.metadata?.apparel_details)
-)   which file ? <<<<<===========---------
-{variants.map((variant, index) => {
-  return <tr key={index}>...</tr> 
-})}
 SELECT [DISTINCT] column1, column2, ...
 FROM table_name
 [JOIN other_table ON condition]
@@ -388,7 +377,7 @@ FROM product_option_value pov
 JOIN product_option po
     ON po.id = pov.option_id
 WHERE
-    po.product_id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
+    po.product_id = 'prod_01KZE7WAEQ0VC34N3RT9DG22JF'
     AND po.deleted_at IS NULL
     AND pov.deleted_at IS NULL
 ORDER BY
@@ -411,13 +400,20 @@ JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
 WHERE 
-     pv.deleted_at IS NULL
+    pr.id = 'prod_01KYKG710C8Y01FDT3RR8H34A6'
+    AND pv.deleted_at IS NULL
 GROUP BY pv.id, pv.sku,p.amount, p.currency_code, il.stocked_quantity, pr.id 
 ORDER BY pr.id;
+
      COALESCE(pv.sku, pv.metadata->>'merchant_sku') AS sku,
      pr.id = 'prod_01KYKG710C8Y01FDT3RR8H34A6'
     pv.metadata->>'vendor_id' AS vendor_id,
-
+WHERE 
+    season NOT IN ('ALL_SEASON', 'SUMMER', 'WINTER', 'SPRING', 'AUTUMN')
+    OR age_group NOT IN ('ADULT', 'TEEN', 'KIDS', 'TODDLER', 'INFANT')
+ALTER TABLE apparel_detail ADD CONSTRAINT valid_season 
+CHECK (season IN ('ALL_SEASON', 'SUMMER', 'WINTER', 'SPRING', 'AUTUMN'));
+BEGIN COMMIT ROLLBACK , SET UPPER() UNION 
 [ public.product ]
                           │
          ┌────────────────┴────────────────┬────────────────┐

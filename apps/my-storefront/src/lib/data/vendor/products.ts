@@ -6,7 +6,9 @@ import {
 } from "./session"
 import { buildVariantPayload, ProductOptionPayload } from "@/lib/util/vendor/product"
 import { ApparelDetails } from "@shared/index"
+
 const BACKEND_URL = getBackendUrl()
+
 export interface CreateVendorProductPayload {
     title: string
     handle: string
@@ -21,6 +23,7 @@ export interface CreateVendorProductPayload {
     variants?: ReturnType<typeof buildVariantPayload>
     apparel_detail?: Partial<ApparelDetails>
 }
+
 export async function getVendorProducts() {
     if (!BACKEND_URL) return []
     try {
@@ -42,6 +45,7 @@ export async function getVendorProducts() {
         return []
     }
 }
+
 export async function getVendorProduct(productId: string) {
     if (!BACKEND_URL) return null
     try {
@@ -63,6 +67,7 @@ export async function getVendorProduct(productId: string) {
         return null
     }
 }
+
 export async function createVendorProduct(
     payload: CreateVendorProductPayload
 ) {
@@ -103,6 +108,7 @@ export async function createVendorProduct(
         }
     }
 }
+
 export async function updateVendorProduct(
     productId: string,
     payload: any
@@ -144,6 +150,7 @@ export async function updateVendorProduct(
         }
     }
 }
+
 export async function deleteVendorProduct(
     productId: string
 ) {

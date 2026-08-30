@@ -61,6 +61,11 @@ export interface VariantRowPayload {
 
 export interface VariantPayloadConfig {
     defaultCurrency?: string
+    fallbackPrice?: number
+    fallbackCurrency?: string
+    fallbackInventory?: number
+    fallbackManageInventory?: boolean
+    fallbackSku?: string
 }
 
 export function buildVariantPayload(
@@ -83,27 +88,34 @@ export function buildVariantPayload(
                 variantOptions[optionName] = value
             }
 
+            // Determine effective values using row data first, then fallbacks
+            const effectivePrice = row.price ?? config.fallbackPrice ?? 0
+            const effectiveCurrency = row.currencyCode ?? config.fallbackCurrency ?? config.defaultCurrency ?? "usd"
+            const effectiveInventory = row.inventoryQuantity ?? config.fallbackInventory ?? 0
+            const effectiveManageInventory = row.manageInventory ?? config.fallbackManageInventory ?? true
+            const effectiveSku = row.sku ?? config.fallbackSku ?? ""
+
             return {
                 ...(row.id ? { id: row.id } : {}),
 
                 title: row.title.trim(),
 
-                sku: sanitizeSku(row.sku ?? ""),
+                sku: sanitizeSku(effectiveSku),
 
                 manage_inventory: shouldManageInventory(
-                    row.manageInventory
+                    effectiveManageInventory
                 ),
 
                 inventory_quantity: normalizeInventory(
-                    row.inventoryQuantity
+                    effectiveInventory
                 ),
 
                 prices: [
                     {
                         currency_code: ensureCurrencyCode(
-                            row.currencyCode ?? config.defaultCurrency
+                            effectiveCurrency
                         ),
-                        amount: normalizePrice(row.price),
+                        amount: normalizePrice(effectivePrice),
                     },
                 ],
 
@@ -111,4 +123,6 @@ export function buildVariantPayload(
             }
         })
 }
+
+
 

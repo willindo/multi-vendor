@@ -168,6 +168,7 @@ export const listProductsWithSort = async ({
     queryParams,
   }
 }
+
 export const listProductsByHandles = async ({
   countryCode,
   handles,

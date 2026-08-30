@@ -7,11 +7,11 @@ import { Button } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { isEqual } from "lodash"
-import { useParams, usePathname, useSearchParams } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useParams, usePathname, useSearchParams, useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
-import { useRouter } from "next/navigation"
+import { extractInventoryQuantity } from "@/lib/util/vendor/hydration"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -35,23 +35,33 @@ export default function ProductActions({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
 
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
 
-  // If there is only 1 variant, preselect the options
+  // Auto-select single variant or sync initial variant from URL parameter
   useEffect(() => {
+    const initialVariantId = searchParams.get("v_id")
+
+    if (initialVariantId && product.variants?.length) {
+      const match = product.variants.find((v) => v.id === initialVariantId)
+      if (match) {
+        setOptions(optionsAsKeymap(match.options) ?? {})
+        return
+      }
+    }
+
     if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
       setOptions(variantOptions ?? {})
     }
-  }, [product.variants])
+  }, [product.variants, searchParams])
 
+  // Resolve matching variant based on current options state
   const selectedVariant = useMemo(() => {
-    if (!product.variants || product.variants.length === 0) {
-      return
-    }
+    if (!product.variants || product.variants.length === 0) return undefined
 
     return product.variants.find((v) => {
       const variantOptions = optionsAsKeymap(v.options)
@@ -59,7 +69,16 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
-  // update the options when a variant is selected
+  // Pre-calculate lowest-priced fallback variant for display before user selection
+  const cheapestVariant = useMemo(() => {
+    if (!product.variants?.length) return undefined
+    return [...product.variants].sort((a, b) => {
+      const priceA = a.calculated_price?.calculated_amount ?? Infinity
+      const priceB = b.calculated_price?.calculated_amount ?? Infinity
+      return priceA - priceB
+    })[0]
+  }, [product.variants])
+
   const setOptionValue = (optionId: string, value: string) => {
     setOptions((prev) => ({
       ...prev,
@@ -67,7 +86,6 @@ export default function ProductActions({
     }))
   }
 
-  //check if the selected options produce a valid variant
   const isValidVariant = useMemo(() => {
     return product.variants?.some((v) => {
       const variantOptions = optionsAsKeymap(v.options)
@@ -75,116 +93,94 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
+  // Sync state to URL seamlessly without blocking render thread
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString())
-    const value = isValidVariant ? selectedVariant?.id : null
+    const targetValue = isValidVariant && selectedVariant ? selectedVariant.id : null
+    const currentValue = params.get("v_id")
 
-    if (params.get("v_id") === value) {
-      return
-    }
+    if (currentValue === targetValue) return
 
-    if (value) {
-      params.set("v_id", value)
+    if (targetValue) {
+      params.set("v_id", targetValue)
     } else {
       params.delete("v_id")
     }
 
-    router.replace(pathname + "?" + params.toString())
-  }, [selectedVariant, isValidVariant])
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    })
+  }, [selectedVariant, isValidVariant, pathname, router, searchParams])
 
-  // check if the selected variant is in stock
-  const inStock = useMemo(() => {
-    if (!selectedVariant) return false
-    // If we don't manage inventory, we can always add to cart
-    // if (selectedVariant && !selectedVariant.manage_inventory) {
-    if (!selectedVariant.manage_inventory || selectedVariant.allow_backorder) {
-      return true
+  // Precise inventory resolution using extracted utility
+  const { inStock, inventoryQuantity } = useMemo(() => {
+    if (!selectedVariant) return { inStock: false, inventoryQuantity: 0 }
+
+    if (selectedVariant.manage_inventory === false || selectedVariant.allow_backorder) {
+      return { inStock: true, inventoryQuantity: Infinity }
     }
 
-    // If we allow back orders on the variant, we can add to cart
-    // if (selectedVariant?.allow_backorder) {
-    //   return true
-    // }
-
-    // If there is inventory available, we can add to cart
-    // if (
-    //   selectedVariant?.manage_inventory &&
-    //   (selectedVariant?.inventory_quantity || 0) > 0
-    // ) {
-    //   return true
-    // }
-    // const availableQty =
-    //   selectedVariant.inventory_quantity ??
-    //   (selectedVariant as any).inventory?.stocked_quantity ??
-    //   0
-    // availableQty > 0
-    const qty = selectedVariant.inventory_quantity ?? 0
-    return qty > 0
-    // Otherwise, we can't add to cart
-    // return false
+    const qty = extractInventoryQuantity(selectedVariant)
+    return { inStock: qty > 0, inventoryQuantity: qty }
   }, [selectedVariant])
 
   const actionsRef = useRef<HTMLDivElement>(null)
-
   const inView = useIntersection(actionsRef, "0px")
 
-  // add the selected variant to the cart
   const handleAddToCart = async () => {
-    if (!selectedVariant?.id) return null
+    if (!selectedVariant?.id) return
 
     setIsAdding(true)
-
-    await addToCart({
-      variantId: selectedVariant.id,
-      // variantId: "variant_01KYFP67V0SXKKS3KF8FFY7SZZ",
-      quantity: 1,
-      countryCode,
-    })
-
-    setIsAdding(false)
+    try {
+      await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode,
+      })
+    } finally {
+      setIsAdding(false)
+    }
   }
+
+  const displayVariant = selectedVariant || cheapestVariant
 
   return (
     <>
-      <div className=" bg-[#264452] flex flex-col gap-y-2" ref={actionsRef}>
-        <div>
-          {(product.variants?.length ?? 0) > 1 && (
-            <div className="flex flex-col gap-y-4">
-              {(product.options || []).map((option) => {
-                return (
-                  <div key={option.id}>
-                    <OptionSelect
-                      option={option}
-                      current={options[option.id]}
-                      updateOption={setOptionValue}
-                      title={option.title ?? ""}
-                      data-testid="product-options"
-                      disabled={!!disabled || isAdding}
-                    />
-                  </div>
-                )
-              })}
-              <Divider />
-            </div>
-          )}
-        </div>
+      <div className="flex flex-col gap-y-4" ref={actionsRef}>
+        {(product.variants?.length ?? 0) > 1 && (
+          <div className="flex flex-col gap-y-4">
+            {(product.options || []).map((option) => (
+              <div key={option.id}>
+                <OptionSelect
+                  option={option}
+                  current={options[option.id]}
+                  updateOption={setOptionValue}
+                  title={option.title ?? ""}
+                  data-testid="product-options"
+                  disabled={!!disabled || isAdding}
+                />
+              </div>
+            ))}
+            <Divider />
+          </div>
+        )}
 
-        <ProductPrice product={product} variant={selectedVariant} />
+        {/* Dynamic price resolution falling back to lowest price */}
+        <ProductPrice product={product} variant={displayVariant} />
 
-        <div className="flex flex-col gap-y-3">
-          {/* Stock status indicator */}
-          {selectedVariant && (
-            <div className="text-sm font-medium">
-              {inStock ? (
-                <span className="text-emerald-600">
-                  In Stock ({selectedVariant.inventory_quantity} available)
-                </span>
-              ) : (
-                <span className="text-rose-600">Out of Stock</span>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Stock status indicator */}
+        {selectedVariant && (
+          <div className="text-sm font-medium">
+            {inStock ? (
+              <span className="text-emerald-600">
+                In Stock{" "}
+                {inventoryQuantity !== Infinity && `(${inventoryQuantity} available)`}
+              </span>
+            ) : (
+              <span className="text-rose-600">Out of Stock</span>
+            )}
+          </div>
+        )}
 
         <Button
           onClick={handleAddToCart}
@@ -201,11 +197,12 @@ export default function ProductActions({
           data-testid="add-product-button"
         >
           {!selectedVariant
-            ? "Select variant"
+            ? "Select options"
             : !inStock
               ? "Out of stock"
               : "Add to cart"}
         </Button>
+
         <MobileActions
           product={product}
           variant={selectedVariant}

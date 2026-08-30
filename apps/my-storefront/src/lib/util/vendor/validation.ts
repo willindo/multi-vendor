@@ -6,6 +6,7 @@ export const ERROR_MESSAGES = {
     SKU_REQUIRED: "SKU is required.",
     PRICE_REQUIRED: "Price is required.",
     INVENTORY_REQUIRED: "Inventory quantity is required.",
+    UPDATE_FAILED: "Unable to update product.",
     UNKNOWN: "Something went wrong.",
 } as const
 

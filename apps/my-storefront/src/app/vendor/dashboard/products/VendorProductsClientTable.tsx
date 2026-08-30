@@ -1,17 +1,27 @@
-// ==== ./src/app/vendor/dashboard/products/VendorProductsClientTable.tsx ====
+// src/app/vendor/dashboard/products/VendorProductsClientTable.tsx
 "use client"
 
 import React, { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { updateVendorProduct, deleteVendorProduct } from "@lib/data/vendor/products"
+import {
+  extractFormattedPrice,
+  hydrateVariantRows,
+  type VariantMatrixRow,
+} from "@/lib/util/vendor/hydration"
 
 interface Variant {
   id: string
   title: string
   sku?: string
   inventory_quantity?: number
-  prices?: Array<{ amount: number; currency_code: string }>
+  manage_inventory?: boolean
+  prices?: Array<{ id?: string; amount: number; currency_code: string }>
+  price_set?: {
+    prices?: Array<{ id?: string; amount: number; currency_code: string }>
+  }
+  options?: Array<{ option_name?: string; optionName?: string; value: string }>
 }
 
 interface Product {
@@ -22,17 +32,23 @@ interface Product {
   variants?: Variant[]
 }
 
-export default function VendorProductsClientTable({ initialProducts }: { initialProducts: Product[] }) {
+export default function VendorProductsClientTable({
+  initialProducts,
+}: {
+  initialProducts: Product[]
+}) {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>(initialProducts || [])
   const [isPending, startTransition] = useTransition()
   const [editingInventoryProductId, setEditingInventoryProductId] = useState<string | null>(null)
 
   const handleToggleStatus = async (product: Product) => {
-    if (!product || !product.id) return
+    if (!product?.id) return
     const nextStatus = product.status === "published" ? "draft" : "published"
 
-    setProducts(prev => prev.map(p => p && p.id === product.id ? { ...p, status: nextStatus } : p))
+    setProducts((prev) =>
+      prev.map((p) => (p && p.id === product.id ? { ...p, status: nextStatus } : p))
+    )
 
     startTransition(async () => {
       const res = await updateVendorProduct(product.id, { status: nextStatus })
@@ -48,7 +64,7 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
   const handleDelete = async (productId: string) => {
     if (!productId || !confirm("Are you sure you want to remove this product?")) return
 
-    setProducts(prev => prev.filter(p => p && p.id !== productId))
+    setProducts((prev) => prev.filter((p) => p && p.id !== productId))
 
     startTransition(async () => {
       const res = await deleteVendorProduct(productId)
@@ -61,135 +77,140 @@ export default function VendorProductsClientTable({ initialProducts }: { initial
     })
   }
 
+  const toggleInventoryRow = (productId: string) => {
+    setEditingInventoryProductId((prev) => (prev === productId ? null : productId))
+  }
+
   return (
-    <div className="bg-white border border-neutral-200/70 rounded-xl shadow-xs overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-neutral-50 border-b border-neutral-200/60 text-neutral-400 text-[10px] font-bold uppercase tracking-wider">
-              <th className="py-4 px-6">Product Details</th>
-              <th className="py-4 px-6">Handle Reference</th>
-              <th className="py-4 px-6">Visibility Status</th>
-              <th className="py-4 px-6">Stock Level Matrix</th>
-              <th className="py-4 px-6 text-right">Actions</th>
+    <div className="w-full overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+      {products.length === 0 ? (
+        <div className="p-8 text-center text-gray-500">
+          No products found. Add your first item to get started.
+        </div>
+      ) : (
+        <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
+          <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-700">
+            <tr>
+              <th className="px-6 py-3">Product Name</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3">Price Range</th>
+              <th className="px-6 py-3">Variants</th>
+              <th className="px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100 text-xs text-neutral-700">
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-neutral-400 font-medium">
-                  No products found on your shop floor. Create one to get started!
-                </td>
-              </tr>
-            ) : (
-              products.map((product) => {
-                if (!product || !product.id) return null
-                const aggregateStock = product.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) ?? 0
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {products.map((product) => {
+              const variants = product.variants || []
+              const firstVariant = variants[0]
 
-                return (
-                  <React.Fragment key={product.id}>
-                    <tr className="hover:bg-neutral-50/40 transition-colors">
-                      <td className="py-4 px-6">
-                        <div>
-                          <span className="block text-neutral-900 font-semibold">
-                            {product.title || "Untitled Composition"}
-                          </span>
-                          <span className="block text-[10px] font-mono text-neutral-400 mt-0.5">
-                            ID: {product.id}
-                          </span>
-                        </div>
-                      </td>
+              // Hydrate matrix rows for detailed inspection
+              const hydratedVariants: VariantMatrixRow[] = hydrateVariantRows(product, "INR")
 
-                      <td className="py-4 px-6 text-neutral-500 font-mono text-xs">
-                        /{product.handle || "-"}
-                      </td>
+              // Primary row price formatting
+              const priceDisplay = firstVariant
+                ? extractFormattedPrice(firstVariant, "INR")
+                : "N/A"
 
-                      <td className="py-4 px-6">
-                        <button
-                          onClick={() => handleToggleStatus(product)}
-                          disabled={isPending}
-                          className={`inline-flex items-center gap-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase cursor-pointer select-none border transition-all ${product.status === "published"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
-                              : "bg-neutral-100 text-neutral-500 border-neutral-200 hover:bg-neutral-200"
-                            }`}
-                        >
-                          <span className={`h-1 w-1 rounded-full ${product.status === "published" ? "bg-emerald-500" : "bg-neutral-400"}`} />
-                          {product.status || "Draft"}
-                        </button>
-                      </td>
+              const isExpanded = editingInventoryProductId === product.id
 
-                      <td className="py-4 px-6 text-xs text-neutral-600">
-                        <div className="flex items-center gap-x-2">
-                          <span className="font-semibold text-neutral-900">
-                            {aggregateStock} Units ({product.variants?.length || 0} SKUs)
-                          </span>
-                          <button
-                            onClick={() => setEditingInventoryProductId(editingInventoryProductId === product.id ? null : product.id)}
-                            className="text-neutral-400 hover:text-neutral-900 transition-colors text-[11px] font-medium underline underline-offset-2 decoration-neutral-200"
-                          >
-                            Review Metrics
-                          </button>
-                        </div>
-                      </td>
+              return (
+                <React.Fragment key={product.id}>
+                  <tr className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      <div>{product.title} </div>
+                      <div className="text-xs text-gray-400">/{product.handle}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => handleToggleStatus(product)}
+                        disabled={isPending}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border transition-opacity ${product.status === "published"
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
+                      >
+                        {product.status}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-gray-800">
+                      {priceDisplay}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {variants.length} {variants.length === 1 ? "Variant" : "Variants"}
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleInventoryRow(product.id)}
+                        className="text-xs text-indigo-600 hover:text-indigo-900 font-medium"
+                      >
+                        {isExpanded ? "Hide Matrix" : "Review Metrics"}
+                      </button>
+                      <Link
+                        href={`/vendor/dashboard/products/${product.id}/edit`}
+                        className="text-xs text-gray-600 hover:text-gray-900 font-medium"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(product.id)}
+                        disabled={isPending}
+                        className="text-xs text-red-600 hover:text-red-900 font-medium disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
 
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-x-3">
-                          <Link
-                            href={`/vendor/dashboard/products/edit/${product.id}`}
-                            className="px-2.5 py-1.5 bg-white border border-neutral-200 rounded-md font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs"
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            disabled={isPending}
-                            className="text-neutral-400 hover:text-red-600 font-medium transition-colors px-1"
-                          >
-                            Delete
-                          </button>
+                  {isExpanded && (
+                    <tr className="bg-gray-50">
+                      <td colSpan={5} className="px-6 py-4">
+                        <div className="space-y-2 border-l-2 border-indigo-500 pl-4">
+                          <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">
+                            Variant Classifications &amp; Pricing Matrix
+                          </h4>
+                          {hydratedVariants.length === 0 ? (
+                            <p className="text-xs text-gray-400">No variants available.</p>
+                          ) : (
+                            hydratedVariants.map((v) => (
+                              <div
+                                key={v.id}
+                                className="flex items-center justify-between bg-white p-2.5 rounded border border-gray-200 text-xs text-gray-700"
+                              >
+                                <span className="font-medium text-gray-900">
+                                  {v.title}
+                                </span>
+                                <div className="flex items-center space-x-6">
+                                  <span>
+                                    SKU:{" "}
+                                    <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-gray-600">
+                                      {v.sku || "N/A"}
+                                    </code>
+                                  </span>
+                                  <span>
+                                    Price:{" "}
+                                    <strong>
+                                      {(v.currencyCode as any).toUpperCase()} {v.price as any}
+                                    </strong>
+                                  </span>
+                                  <span>
+                                    Stock: <strong>{v.inventoryQuantity}</strong>
+                                  </span>
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </td>
                     </tr>
-
-                    {editingInventoryProductId === product.id && (
-                      <tr className="bg-neutral-50/50">
-                        <td colSpan={5} className="py-4 px-8">
-                          <div className="max-w-2xl bg-white p-5 rounded-xl border border-neutral-200/70 shadow-2xs">
-                            <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-3">
-                              Variant Classifications & Pricing Matrix
-                            </h4>
-                            <div className="space-y-2 divide-y divide-neutral-50">
-                              {product.variants?.map((variant) => {
-                                if (!variant) return null
-                                const isINR = variant.prices?.[0]?.currency_code?.toLowerCase() === "inr"
-                                const currencySign = isINR ? "₹" : "$"
-                                const priceAmount = variant.prices?.[0]?.amount
-                                  ? `${currencySign}${(variant.prices[0].amount / 100).toFixed(2)}`
-                                  : "No Price Set"
-
-                                return (
-                                  <div key={variant.id} className="flex items-center justify-between pt-2 text-xs first:pt-0">
-                                    <span className="font-medium text-neutral-800">{variant.title}</span>
-                                    <div className="flex gap-x-6 font-mono text-[11px] text-neutral-400">
-                                      <span>Base Price: <strong className="text-neutral-700 font-sans">{priceAmount}</strong></span>
-                                      <span>Quantity: <strong className="text-neutral-700 font-sans">{variant.inventory_quantity || 0}</strong></span>
-                                      <span>SKU: <span className="text-neutral-600">{variant.sku || "N/A"}</span></span>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                )
-              })
-            )}
+                  )}
+                </React.Fragment>
+              )
+            })}
           </tbody>
         </table>
-      </div>
+      )}
     </div>
   )
 }

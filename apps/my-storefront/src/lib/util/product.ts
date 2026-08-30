@@ -31,6 +31,29 @@ export interface SellableProductVariant {
     images: HttpTypes.StoreProductImage[]
 }
 
+export function toSellableVariant(
+    variant: HttpTypes.StoreProductVariant
+): SellableProductVariant {
+    return {
+        id: variant.id,
+        productId: variant.product_id ?? "",
+        title: variant.title,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        options: (variant.options ?? []).reduce((acc, opt) => {
+            if (opt.option?.title) {
+                acc[opt.option.title] = opt.value
+            }
+            return acc
+        }, {} as Record<string, string>),
+        price: variant.calculated_price,
+        inventoryQuantity: variant.inventory_quantity,
+        // manageInventory: variant.manage_inventory,
+        // allowBackorder: variant.allow_backorder,
+        thumbnail: variant.thumbnail,
+        images: variant.images ?? [],
+    }
+}
 /**
  * Converts a Medusa StoreProductVariant into the
  * storefront's sellable-unit representation.
@@ -38,34 +61,6 @@ export interface SellableProductVariant {
  * This does NOT copy product-level information such as
  * title, description, handle, collection, etc.
  */
-export const toSellableVariant = (
-    variant: HttpTypes.StoreProductVariant
-): SellableProductVariant => {
-    const options: Record<string, string> = {}
-
-    for (const option of variant.options ?? []) {
-        if (!option.option_id || !option.value) {
-            continue
-        }
-
-        options[option.option_id] = option.value
-    }
-
-    return {
-        id: variant.id,
-        productId: variant.product_id,
-        title: variant.title,
-        sku: variant.sku,
-        barcode: variant.barcode,
-        options,
-        price: variant.calculated_price,
-        inventoryQuantity: variant.inventory_quantity,
-        manageInventory: variant.manage_inventory,
-        allowBackorder: variant.allow_backorder,
-        thumbnail: variant.thumbnail,
-        images: variant.images ?? [],
-    }
-}
 
 export interface CatalogProduct {
     id: string

@@ -17,6 +17,7 @@ import { buildApparelPayload } from "@/lib/util/vendor/apparel"
 import { buildProductOptionsPayload, buildVariantPayload } from "@/lib/util/vendor/product"
 import { ERROR_MESSAGES, sanitizeSku } from "@/lib/util/vendor/validation"
 import { createVendorProduct } from "@/lib/data/vendor/products"
+import IdentityShellSection from "@/components/vendor/products/IdentityShellSection"
 
 // ============================================================================
 // TYPES
@@ -32,7 +33,11 @@ interface Product {
   id: string
   title: string
   handle: string
+  subtitle?: string
   description?: string
+  material?: string
+  origin_country?: string
+  hs_code?: string
   status: string
   weight?: number
   thumbnail?: string
@@ -78,10 +83,15 @@ export default function CreateProductFormClient({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [formTouched, setFormTouched] = useState(false)
-  // --- CORE FORM STATE ---
+  // Root Product Shell States
   const [title, setTitle] = useState(initialProduct?.title || "")
   const [handle, setHandle] = useState(initialProduct?.handle || "")
+  const [subtitle, setSubtitle] = useState(initialProduct?.subtitle || "")
   const [description, setDescription] = useState(initialProduct?.description || "")
+  const [material, setMaterial] = useState(initialProduct?.material || "")
+  const [originCountry, setOriginCountry] = useState(initialProduct?.origin_country || "")
+  const [hsCode, setHsCode] = useState(initialProduct?.hs_code || "")
+  const [status, setStatus] = useState(initialProduct?.status || "draft")
   const [priceAmount, setPriceAmount] = useState<number>(
     initialProduct?.variants?.[0]?.prices?.[0]?.amount ?
       initialProduct.variants[0].prices[0].amount / 100 : 0
@@ -288,12 +298,12 @@ export default function CreateProductFormClient({
       const payload = {
         title: title.trim(),
         handle: handle.toLowerCase().trim(),
-        description: description.trim(),
-        status: "draft",
-        weight: weight || 0,
-        thumbnail: initialProduct?.thumbnail || "",
-        type_id: typeId,
-        collection_id: collectionId,
+        subtitle: subtitle.trim() || undefined,
+        description: description.trim() || undefined,
+        material: material.trim() || undefined,
+        origin_country: originCountry.trim() || undefined,
+        hs_code: hsCode.trim() || undefined,
+        status,
         metadata: {
           // vendor_id: resolvedToken ? "authenticated" : "pending",
           created_from: "vendor_dashboard",
@@ -341,9 +351,7 @@ export default function CreateProductFormClient({
       }
     },
     [
-      title,
-      handle,
-      description,
+      title, handle, subtitle, description, material, originCountry, hsCode, status,
       priceAmount,
       currencyCode,
       inventoryQuantity,
@@ -366,130 +374,29 @@ export default function CreateProductFormClient({
       onSubmit={handleSubmit}
       className="bg-white border border-neutral-200 rounded-xl p-6 space-y-6 shadow-xs"
     >
-      {/* 01. IDENTITY MATRIX */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest border-b pb-1">
-          01. Identity Matrix
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
-              Product Title *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g., Raw Silk Hand-Weaved Kaftan"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg text-xs focus:border-neutral-900 focus:outline-none transition-all"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
-              Route Slug Handle *
-            </label>
-            <input
-              type="text"
-              required
-              value={handle}
-              onChange={(e) => handleHandleChange(e.target.value)}
-              placeholder="raw-silk-hand-weaved-kaftan"
-              className="w-full px-4 py-2 border font-mono rounded-lg text-xs focus:border-neutral-900 focus:outline-none transition-all"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 02. COMMERCE BASE */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-widest border-b pb-1">
-          02. Commerce Base
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div className="col-span-2 md:col-span-1">
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
-              Retail Price ($) *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              min="0.01"
-              value={priceAmount || ""}
-              onChange={(e) => setPriceAmount(parseFloat(e.target.value) || 0)}
-              className="w-full p-2 border rounded-md text-xs focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
-              Currency
-            </label>
-            <select
-              value={currencyCode}
-              onChange={(e) => setCurrencyCode(e.target.value)}
-              className="w-full p-2 border rounded-md text-xs bg-white focus:outline-none"
-            >
-              <option value="USD">USD ($)</option>
-              <option value="INR">INR (₹)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
-              SKU
-            </label>
-            <input
-              type="text"
-              placeholder="SKU-REF"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              className="w-full p-2 border rounded-md text-xs font-mono focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
-              Stock Vol *
-            </label>
-            <input
-              type="number"
-              required
-              min="0"
-              value={inventoryQuantity}
-              onChange={(e) =>
-                setInventoryQuantity(parseInt(e.target.value) || 0)
-              }
-              className="w-full p-2 border rounded-md text-xs focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
-              Manage Stock
-            </label>
-            <select
-              value={manageInventory ? "true" : "false"}
-              onChange={(e) => setManageInventory(e.target.value === "true")}
-              className="w-full p-2 border rounded-md text-xs bg-white focus:outline-none"
-            >
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
-              Weight (g)
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={weight || ""}
-              onChange={(e) => setWeight(parseInt(e.target.value) || 0)}
-              className="w-full p-2 border rounded-md text-xs focus:outline-none"
-            />
-          </div>
-        </div>
-      </div>
+      {/* 01. PRODUCT SHELL IDENTITY & LOGISTICS */}
+      <IdentityShellSection
+        category={apparel.garment_category}
+        subcategory={apparel.garment_subcategory}
+        title={title}
+        setTitle={setTitle}
+        handle={handle}
+        setHandle={setHandle}
+        subtitle={subtitle}
+        setSubtitle={setSubtitle}
+        description={description}
+        setDescription={setDescription}
+        material={material}
+        setMaterial={setMaterial}
+        originCountry={originCountry}
+        setOriginCountry={setOriginCountry}
+        hsCode={hsCode}
+        setHsCode={setHsCode}
+        status={status}
+        setStatus={setStatus}
+        isTouched={formTouched}
+        setIsTouched={setFormTouched}
+      />
 
       {/* 03. APPAREL DETAILS */}
       <ApparelDetailsSection

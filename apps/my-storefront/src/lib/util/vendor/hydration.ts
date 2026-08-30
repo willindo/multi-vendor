@@ -1,34 +1,75 @@
-// src/lib/util/vendor/hydration.ts
-
 import type { ApparelDetails } from "@shared/apparel/apparel-types"
 import { DEFAULT_APPAREL_DETAILS } from "@shared/apparel/apparel-defaults"
+import type { VariantCombination } from "@shared/index"
 
-import type { VariantMatrixRow } from "@/components/vendor/products/VariantMatrixTable"
-
-export interface VendorProduct {
-    id: string
-    title: string
-    handle: string
-    description?: string
-    status: string
-
-    weight?: number
-    thumbnail?: string
-
-    type_id?: string | null
-    collection_id?: string | null
-
-    apparel_detail?: ApparelDetails
-
-    variants?: any[]
-    options?: any[]
+// 1. Core API & Database Schemas
+export interface ProductOptionValue {
+    id?: string
+    value: string
 }
+
+export interface ProductOption {
+    id?: string
+    title: string
+    values?: ProductOptionValue[]
+    metadata?: Record<string, any>
+}
+
+export interface ProductVariantOption {
+    option_id?: string
+    option_value_id?: string
+    option_name?: string
+    optionName?: string
+    value: string
+}
+
+export interface ProductVariantOptionValue {
+    option_id?: string
+    option_value_id?: string
+    option_name: string
+    value: string
+}
+
+export interface ProductVariant {
+    id?: string
+    title: string
+    sku?: string
+    inventory_quantity?: number
+    manage_inventory?: boolean
+    currency_code?: string
+    currencyCode?: string
+    amount?: number
+    price_amount?: number
+    min_price?: number
+    price_set?: {
+        prices?: ProductPrice[]
+    }
+    prices?: ProductPrice[]
+    options?: ProductVariantOption[]
+}
+
+export interface ProductVariantPrice {
+    id?: string
+    amount: number
+    currency_code: string
+}
+
+export interface ProductPrice {
+    id?: string
+    amount: number // Minor units (paise/cents)
+    currency_code: string
+}
+
 export interface Product {
     id: string
     title: string
     handle: string
+    subtitle?: string
     description?: string
-    status: string
+    material?: string
+    origin_country?: string
+    hs_code?: string
+    status: "draft" | "proposed" | "published" | "rejected" | string
     weight?: number
     thumbnail?: string
     type_id?: string | null
@@ -36,56 +77,28 @@ export interface Product {
     metadata?: Record<string, any>
     options?: ProductOption[]
     variants?: ProductVariant[]
+    apparel_details?: ApparelDetails
     apparel_detail?: ApparelDetails
 }
 
-interface ProductOption {
-    id: string
-    title: string
-    values?: ProductOptionValue[]
-    metadata?: any
+// 2. UI Matrix Row Type Definition
+export type VariantMatrixRow = VariantCombination & {
+    id?: string
+    enabled: boolean
+    currencyCode?: string
+    priceId?: string
 }
 
-interface ProductOptionValue {
-    id: string
-    value: string
-}
-
-interface ProductVariant {
-
-    title: string
-    sku: string
-    inventory_quantity: number
-    manage_inventory: boolean
-    currency_code?: string
-    prices?: Array<{
-        id: string
-        amount: number
-        currency_code: string
-    }>
-    options?: Array<{
-        option_id: string
-        option_value_id: string
-        option_name: string
-        value: string
-    }>
-}
-
-// Build variant options from product options and variant
+// 2. Helper Utilities
 function buildVariantOptions(
     product: Product,
     variant: ProductVariant
 ): Array<{ optionName: string; value: string }> {
     const options: Array<{ optionName: string; value: string }> = []
-
-    // Parse variant title to extract option values
-    // Title format: "S / White" or "M / Black"
     const titleParts = variant.title.split(" / ")
 
     if (titleParts.length >= 2) {
-        // If product has options, map them
         if (product.options && product.options.length > 0) {
-            // Try to match options by title parts
             product.options.forEach((opt, index) => {
                 if (index < titleParts.length) {
                     options.push({
@@ -95,14 +108,12 @@ function buildVariantOptions(
                 }
             })
         } else {
-            // Fallback: use generic option names
             options.push({
-                optionName: `Option ${titleParts.length > 0 ? 1 : 0}`,
+                optionName: `Option 1`,
                 value: titleParts[0] || variant.title
             })
         }
     } else {
-        // Single value or no slash
         options.push({
             optionName: "Variant",
             value: variant.title
@@ -112,109 +123,157 @@ function buildVariantOptions(
     return options
 }
 
-function extractPriceAmount(variant: any): number {
-    if (!variant) return 0;
+export function extractPriceAmount(
+    variant?: ProductVariant | any,
+    targetCurrency: string = "inr"
+): number {
+    if (!variant) return 0
 
-    // 1. Direct price_set array in payload: variant.price_set.prices[0].amount
+    const priceList: ProductPrice[] =
+        variant.price_set?.prices || variant.prices || []
+
+    let matchedPrice = priceList.find(
+        (p) => p?.currency_code?.toLowerCase() === targetCurrency.toLowerCase()
+    )
+
+    if (!matchedPrice && priceList.length > 0) {
+        matchedPrice = priceList[0]
+    }
+
     const rawAmount =
-        variant.price_set?.prices?.[0]?.amount ??
-        variant.prices?.[0]?.amount ??
+        matchedPrice?.amount ??
         variant.amount ??
         variant.price_amount ??
-        variant.min_price;
+        variant.min_price
 
-    const parsed = Number(rawAmount);
+    const parsed = Number(rawAmount)
     if (isNaN(parsed) || rawAmount === null || rawAmount === undefined) {
-        return 0;
+        return 0
     }
-    return parsed / 100;
+
+    return parsed / 100
 }
 
-function extractInventoryQuantity(variant: any): number {
-    if (!variant) return 0;
+export function extractCurrencyCode(variant?: ProductVariant, fallback = "INR"): string {
+    if (!variant) return fallback.toUpperCase()
+    const code =
+        variant.currencyCode ||
+        variant.currency_code ||
+        variant.prices?.[0]?.currency_code ||
+        variant.price_set?.prices?.[0]?.currency_code ||
+        fallback
+    return code.toUpperCase()
+}
 
-    // 1. Direct object property in payload: variant.inventory.stocked_quantity
+export function extractFormattedPrice(variant?: ProductVariant, targetCurrency = "INR"): string {
+    const amount = extractPriceAmount(variant, targetCurrency)
+    const symbol = getCurrencySymbol(targetCurrency)
+    return `${symbol}${amount.toFixed(2)}`
+}
+
+export function getCurrencySymbol(code: string): string {
+    switch (code.toUpperCase()) {
+        case "INR":
+            return "₹"
+        case "USD":
+            return "$"
+        case "EUR":
+            return "€"
+        case "GBP":
+            return "£"
+        default:
+            return code.toUpperCase()
+    }
+}
+
+export function extractInventoryQuantity(variant: any): number {
+    if (!variant) return 0
+
     const val =
-        variant.inventory?.stocked_quantity ??
         variant.stocked_quantity ??
-        variant.inventory_quantity ??
+        variant.inventory?.stocked_quantity ??
+        variant.inventory_quantity_override ??
+        variant.inventory_items?.[0]?.inventory?.location_levels?.[0]?.stocked_quantity ??
         variant.inventory_levels?.[0]?.stocked_quantity ??
-        variant.inventory_items?.[0]?.inventory?.location_levels?.[0]?.stocked_quantity;
+        variant.inventory_quantity
 
-    const parsed = Number(val);
-    return !isNaN(parsed) && val !== null && val !== undefined ? parsed : 0;
+    const parsed = Number(val)
+    return !isNaN(parsed) && val !== null && val !== undefined ? parsed : 0
 }
 
-// Hydrate variant rows from product data
-export function hydrateVariantRows(product: Product): VariantMatrixRow[] {
-    if (!product.variants || product.variants.length === 0) {
-        return []
-    }
+// 3. Form & Table Matrix Hydration
+export function hydrateVariantRows(product: Product, targetCurrency = "INR"): VariantMatrixRow[] {
+    if (!product.variants || product.variants.length === 0) return []
 
-    return product.variants.map((variant: any) => {
-        // Build options array from variant options
-        // Note: Medusa doesn't return options in the variant by default
-        // We need to build them from the product options and variant values
-        const options = buildVariantOptions(product, variant)
+    return product.variants.map((variant) => {
+        const priceAmount = extractPriceAmount(variant, targetCurrency)
+        const currency = extractCurrencyCode(variant, targetCurrency)
 
-        const currencyCode = (
-            variant.currency_code ??
-            variant.prices?.[0]?.currency_code ??
-            "USD"
-        ).toUpperCase();
-
-        const priceId = variant.price_id ?? variant.prices?.[0]?.id;
+        // Check both prices array and price_set.prices
+        const priceList: ProductPrice[] = variant.prices || variant.price_set?.prices || []
+        const foundPrice =
+            priceList.find((p) => p.currency_code?.toLowerCase() === targetCurrency.toLowerCase()) ||
+            priceList[0]
 
         return {
             id: variant.id,
-            title: variant.title,
-            sku: variant.sku,
-            price: extractPriceAmount(variant),
-            currencyCode: currencyCode,
-            inventoryQuantity: extractInventoryQuantity(variant),
-            manageInventory: variant.manage_inventory !== undefined ? variant.manage_inventory : true,
-            options: options,
             enabled: true,
-            priceId: priceId,
+            title: variant.title,
+            sku: variant.sku || "",
+            price: priceAmount,
+            priceId: foundPrice?.id,
+            currencyCode: currency,
+            inventoryQuantity: extractInventoryQuantity(variant),
+            manageInventory: variant.manage_inventory ?? true,
+            options: (variant.options || []).map((o) => ({
+                optionName: o.option_name || o.optionName || "Option",
+                value: o.value,
+            })),
         }
     })
 }
-// Hydrate apparel details
+
 export function hydrateApparelDetails(product: Product): ApparelDetails {
     if (!product.apparel_detail) {
         return { ...DEFAULT_APPAREL_DETAILS }
     }
 
-    // Ensure all fields from DEFAULT_APPAREL_DETAILS are present
     return {
         ...DEFAULT_APPAREL_DETAILS,
         ...product.apparel_detail,
     }
 }
 
-//  Extract original variant IDs
+export function hydrateApparel(product?: Partial<Product>): ApparelDetails {
+    const apparelData = product?.apparel_detail || product?.apparel_details
+    return {
+        ...DEFAULT_APPAREL_DETAILS,
+        ...(apparelData ?? {}),
+    }
+}
+
 export function extractOriginalVariantIds(variantRows: VariantMatrixRow[]): Set<string> {
     return new Set(
         variantRows
-            .map(v => v.id)
+            .map((v) => v.id)
             .filter((id): id is string => Boolean(id))
     )
 }
 
-// Detect deleted variants
 export function detectDeletedVariants(
     originalIds: Set<string>,
     currentRows: VariantMatrixRow[]
 ): string[] {
-    const currentIds = new Set(
+    const activeIds = new Set(
         currentRows
-            .map(v => v.id)
+            .filter((v) => v.enabled)
+            .map((v) => v.id)
             .filter((id): id is string => Boolean(id))
     )
-    return Array.from(originalIds).filter(id => !currentIds.has(id))
+    return Array.from(originalIds).filter((id) => !activeIds.has(id))
 }
-// Hydrate form state
-export function hydrateFormState(product: Product) {
+
+export function hydrateFormState(product: Product, targetCurrency = "INR") {
     return {
         title: product.title || "",
         handle: product.handle || "",
@@ -223,36 +282,29 @@ export function hydrateFormState(product: Product) {
         thumbnail: product.thumbnail || "",
         type_id: product.type_id || null,
         collection_id: product.collection_id || null,
-        apparel: hydrateApparelDetails(product),
-        variants: hydrateVariantRows(product) || [],
+        // apparel: hydrateApparelDetails(product),
+        apparel: hydrateApparel(product),
+        variants: hydrateVariantRows(product, targetCurrency),
     }
 }
-// Hydrate commerce fields from first variant
-export function hydrateCommerceFields(product: Product) {
+
+export function hydrateCommerceFields(product: Product, targetCurrency = "INR") {
     if (!product.variants || product.variants.length === 0) {
         return {
             sku: "",
             inventoryQuantity: 10,
             manageInventory: true,
             priceAmount: 0,
-            currencyCode: "USD",
+            currencyCode: targetCurrency.toUpperCase(),
         }
     }
 
-    const firstVariant = product.variants[0] as any;
-
-    const currencyCode = (
-        firstVariant.currency_code ??
-        firstVariant.prices?.[0]?.currency_code ??
-        "USD"
-    ).toUpperCase();
-
+    const firstVariant = product.variants[0]
     return {
         sku: firstVariant.sku || "",
-        // inventoryQuantity: firstVariant.stocked_quantity ?? firstVariant.inventory_quantity ?? 10,
         inventoryQuantity: extractInventoryQuantity(firstVariant),
         manageInventory: firstVariant.manage_inventory !== undefined ? firstVariant.manage_inventory : true,
-        priceAmount: extractPriceAmount(firstVariant),
-        currencyCode: currencyCode,
+        priceAmount: extractPriceAmount(firstVariant, targetCurrency),
+        currencyCode: extractCurrencyCode(firstVariant, targetCurrency),
     }
 }

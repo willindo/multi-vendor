@@ -179,3 +179,22 @@ def strip_nulls:
 .products | map(strip_nulls)' 
 curl http://localhost:9000/store/regions \
   -H "x-publishable-api-key: $APIKEY"
+
+   useEffect(() => {
+    console.log("📋 Starting product load...")
+    console.log("📌 Product ID:", productId)
+ console.log(`✅ Product found: ${product.title}`)
+        console.log("📦 Full Product Raw Payload:", product)
+        console.log("🔍 Product JSON:", JSON.stringify(product, null, 2))
+ // ✅ Hydrate variants
+        console.log(`📦 Variants: ${formState.variants.length}`)
+ // ✅ Hydrate commerce fields
+        const commerceFields = hydrateCommerceFields(product)
+        console.log("📊 Hydrated Commerce Fields:", commerceFields)
+ console.log("🧪 Inventory Quantity:", commerceFields.inventoryQuantity)
+        console.log("🧪 Price Amount:", commerceFields.priceAmount)
+
+setFormTouched(false)
+        console.log(`✅ Product loaded successfully: ${product.title}`)
+ const message = error instanceof Error ? error.message : "Failed to load product"
+        console.error("❌ Load error:", message)
