@@ -68,7 +68,7 @@ export const getVendorAuthHeaders = async (): Promise<
 
     return token
         ? {
-            Authorization: `Bearer ${token}`,
+            authorization: `Bearer ${token}`,
         }
         : {}
 }

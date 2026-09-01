@@ -115,10 +115,23 @@ export function buildVendorProductProjection(
                 variant.inventory_items?.[0]?.inventory_item_id
             const levels =
                 input.inventoryLevels?.[inventoryItemId] ?? []
-            const stocked_quantity = levels.reduce(
-                (sum, level) => sum + Number(level.stocked_quantity ?? 0),
-                0
-            )
+            // Deduplicate levels by location_id (taking the highest/newest updated quantity)
+            const uniqueLocationLevels = Object.values(
+                levels.reduce((acc: Record<string, any>, level: any) => {
+                    acc[level.location_id] = level;
+                    return acc;
+                }, {})
+            );
+            const { stocked_quantity, reserved_quantity, available_quantity } =
+                uniqueLocationLevels.reduce(
+                    (acc, level) => {
+                        acc.stocked_quantity += Number(level.stocked_quantity ?? 0);
+                        acc.reserved_quantity += Number(level.reserved_quantity ?? 0);
+                        acc.available_quantity += Number(level.available_quantity ?? 0);
+                        return acc;
+                    },
+                    { stocked_quantity: 0, reserved_quantity: 0, available_quantity: 0 }
+                );
             return {
                 id: variant.id,
                 title: variant.title,

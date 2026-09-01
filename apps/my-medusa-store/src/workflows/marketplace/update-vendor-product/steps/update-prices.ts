@@ -161,15 +161,20 @@ export const updatePricesStep = createStep(
         if (!rollbackData?.length) return;
         const pricingModuleService = container.resolve(Modules.PRICING);
 
-        // Compensation step ensuring currency_code satisfies CreatePricesDTO
         for (const rollbackItem of rollbackData) {
-            await pricingModuleService.updatePriceSets(rollbackItem.price_set_id, {
-                prices: rollbackItem.prices.map((price) => ({
-                    id: price.id,
-                    amount: price.amount,
-                    currency_code: price.currency_code,
-                })),
-            });
+            const pricesToRestore = rollbackItem.prices
+                .filter((p) => p.id)
+                .map((p) => ({
+                    id: p.id!,
+                    amount: p.amount,
+                    currency_code: p.currency_code,
+                }));
+
+            if (pricesToRestore.length > 0) {
+                await pricingModuleService.updatePriceSets(rollbackItem.price_set_id, {
+                    prices: pricesToRestore,
+                });
+            }
         }
     }
 );

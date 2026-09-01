@@ -17,17 +17,20 @@ type ResolveOptionsStepOutput = {
 
 type ResolveOptionsRollbackData = {
     createdOptionIds: string[];
+    createdValueIds: string[];
 };
 
 export const resolveOptionsStep = createStep(
     "resolve-options-step",
-    async (input: ResolveOptionsInput, { container }): Promise<StepResponse<ResolveOptionsStepOutput, ResolveOptionsRollbackData>> => {
+    async (
+        input: ResolveOptionsInput,
+        { container }
+    ): Promise<StepResponse<ResolveOptionsStepOutput, ResolveOptionsRollbackData>> => {
         if (!input.variants?.length) {
-            return new StepResponse({ success: true }, { createdOptionIds: [] });
+            return new StepResponse({ success: true }, { createdOptionIds: [], createdValueIds: [] });
         }
 
         const productService = container.resolve(Modules.PRODUCT);
-        // const query = container.resolve("query");
         const query = container.resolve(ContainerRegistrationKeys.QUERY);
 
         // 1. Query existing options and option values for this product
@@ -45,9 +48,12 @@ export const resolveOptionsStep = createStep(
                 values?: { id: string; value: string }[];
             }[];
         } | undefined;
-        if (!existingProduct) return new StepResponse({ success: true }, { createdOptionIds: [] });
 
-        // Map existing options: Title -> { id, valuesMap: Value -> id }
+        if (!existingProduct) {
+            return new StepResponse({ success: true }, { createdOptionIds: [], createdValueIds: [] });
+        }
+
+        // Map existing options: Title (lowercase) -> { id, valuesMap: Value (lowercase) -> id }
         const optionMap = new Map<
             string,
             { id: string; values: Map<string, string> }
@@ -63,6 +69,7 @@ export const resolveOptionsStep = createStep(
                 values: valMap,
             });
         }
+
         // 2. Extract distinct options & values from incoming variants
         const incomingOptions = new Map<string, Set<string>>();
 
@@ -81,6 +88,7 @@ export const resolveOptionsStep = createStep(
         }
 
         const createdOptionIds: string[] = [];
+        const createdValueIds: string[] = [];
 
         // 3. Ensure options and option values exist in database
         for (const [optTitle, valSet] of incomingOptions.entries()) {
@@ -106,13 +114,10 @@ export const resolveOptionsStep = createStep(
                 }
                 optionMap.set(normTitle, { id: newOpt.id, values: valMap });
             } else {
-                // Option exists -> check if any value is missing in product_option_value
-                const missingValues: string[] = [];
-                for (const val of valSet) {
-                    if (!existingOpt.values.has(val.toLowerCase())) {
-                        missingValues.push(val);
-                    }
-                }
+                // Option exists -> filter strictly for values missing in DB
+                const missingValues = Array.from(valSet).filter(
+                    (v) => !existingOpt!.values.has(v.toLowerCase())
+                );
 
                 if (missingValues.length > 0) {
                     const newValues = await productService.createProductOptionValues(
@@ -123,18 +128,29 @@ export const resolveOptionsStep = createStep(
                     );
 
                     for (const nv of newValues) {
+                        createdValueIds.push(nv.id);
                         existingOpt.values.set(nv.value.toLowerCase(), nv.id);
                     }
                 }
             }
         }
 
-        return new StepResponse({ success: true }, { createdOptionIds });
+        return new StepResponse({ success: true }, { createdOptionIds, createdValueIds });
     },
+
     // Compensation / Rollback Logic
     async (rollbackState, { container }) => {
-        if (!rollbackState?.createdOptionIds?.length) return;
+        if (!rollbackState) return;
         const productService = container.resolve(Modules.PRODUCT);
-        await productService.deleteProductOptions(rollbackState.createdOptionIds);
+
+        // 1. Delete created option values first (child records)
+        if (rollbackState.createdValueIds?.length) {
+            await productService.deleteProductOptionValues(rollbackState.createdValueIds);
+        }
+
+        // 2. Delete created options (parent records)
+        if (rollbackState.createdOptionIds?.length) {
+            await productService.deleteProductOptions(rollbackState.createdOptionIds);
+        }
     }
 );

@@ -1,21 +1,20 @@
-// ==== ./src/app/vendor/dashboard/products/[id]/[id]/page.tsx
+// ==== ./src/app/vendor/dashboard/products/[productId]/edit/page.tsx ====
 import React from "react"
 import { cookies } from "next/headers"
-
-import EditProductFormClient from "../edit/EditProductFormClient"
-import { getVendorProduct } from "@lib/data/vendor/products"
+import EditProductFormClient from "./EditProductFormClient"
+import { getVendorProduct } from "@/lib/data/vendor"
 
 interface EditPageProps {
   params: Promise<{
-    id: string
+    productId: string
   }>
 }
 
 export default async function VendorProductEditPage({ params }: EditPageProps) {
-  const { id } = await params
+  const { productId } = await params
   const cookieStore = await cookies()
   const serverToken = cookieStore.get("medusa_vendor_jwt")?.value
-  const product = await getVendorProduct(id)
+  const product = await getVendorProduct(productId)
   console.log(product, "Product Details")
 
   return (
@@ -30,7 +29,7 @@ export default async function VendorProductEditPage({ params }: EditPageProps) {
       </div>
 
       <EditProductFormClient
-        productId={id}
+        productId={productId}
         initialProduct={product}
         serverToken={serverToken}
       />

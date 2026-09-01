@@ -1,6 +1,6 @@
-// src/workflows/marketplace/update-vendor-product/steps/update-inventory.ts
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { Modules } from "@medusajs/framework/utils";
+import { uniqueInventoryItemIds, indexBy } from "@/lib/vendor/product-utils";
 
 export type InventoryUpdateItem = {
     variant_id?: string;
@@ -38,13 +38,6 @@ type QueryProductVariantGraph = {
     manage_inventory: boolean;
     inventory_items?: {
         inventory_item_id: string;
-        inventory_item?: {
-            location_levels?: {
-                id: string;
-                location_id: string;
-                stocked_quantity: number;
-            }[];
-        };
     }[];
 };
 
@@ -72,6 +65,7 @@ export const updateInventoryStep = createStep(
             throw new Error("Missing stock location ID for inventory update.");
         }
 
+        // 1. Fetch Product Variants
         const { data: products } = await query.graph({
             entity: "product",
             fields: [
@@ -84,9 +78,22 @@ export const updateInventoryStep = createStep(
         });
 
         const product = products[0] as { variants?: QueryProductVariantGraph[] } | undefined;
-        if (!product) {
+        if (!product || !product.variants?.length) {
             return new StepResponse({ updated: 0, created: 0 }, emptyRollback);
         }
+
+        // 2. Batch Fetch ALL existing inventory levels in ONE query using product-utils
+        const inventoryItemIds = uniqueInventoryItemIds(product);
+
+        const existingLevels = inventoryItemIds.length
+            ? await inventoryService.listInventoryLevels({
+                inventory_item_id: inventoryItemIds,
+                location_id: [locationId],
+            })
+            : [];
+
+        // Index existing levels by inventory_item_id for O(1) lookup
+        const levelMap = indexBy(existingLevels, "inventory_item_id");
 
         const levelsToCreate: {
             inventory_item_id: string;
@@ -104,33 +111,23 @@ export const updateInventoryStep = createStep(
         const rollbackData: RollbackUpdateItem[] = [];
         const createdLevelIds: string[] = [];
 
+        // 3. Process updates synchronously in memory
         for (const update of input.inventoryUpdates) {
-            // Support both variant_id and sku identifiers from upstream payload
-            const variant = (product.variants || []).find((v) =>
+            const variant = product.variants.find((v) =>
                 (update.variant_id && v.id === update.variant_id) ||
                 (update.sku && v.sku === update.sku)
             );
 
             if (!variant || !variant.manage_inventory) continue;
 
-            // const inventoryItemLink = variant.inventory_items?.[0];
             const inventoryItemId = variant.inventory_items?.[0]?.inventory_item_id;
             if (!inventoryItemId) continue;
 
-            // const inventoryItem = inventoryItemLink.inventory_item;
-            // const newQty = Number(update.inventory_quantity);
-            // const existingLevel = inventoryItem?.location_levels?.find(
-            //     (lvl) => lvl.location_id === locationId
-            // );
-            // Extract target quantity safely
-            const newQty = Number(
-                update.stocked_quantity ?? update.inventory_quantity ?? 0
-            );
-            // Directly query the current inventory level from the Inventory module
-            const [existingLevel] = await inventoryService.listInventoryLevels({
-                inventory_item_id: [inventoryItemId],
-                location_id: [locationId],
-            });
+            const rawQty = update.stocked_quantity ?? update.inventory_quantity;
+            if (rawQty === undefined) continue; // Skip if no explicit quantity provided
+
+            const newQty = Number(rawQty);
+            const existingLevel = levelMap.get(inventoryItemId);
 
             if (existingLevel) {
                 if (Number(existingLevel.stocked_quantity) !== newQty) {
@@ -156,6 +153,7 @@ export const updateInventoryStep = createStep(
             }
         }
 
+        // 4. Batch Operations
         if (levelsToUpdate.length) {
             await inventoryService.updateInventoryLevels(levelsToUpdate);
         }

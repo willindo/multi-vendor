@@ -61,6 +61,7 @@ function sanitizeVariantForUpdate(variant: Record<string, any>) {
         "material",
         "metadata",
         "variant_rank",
+        "options" // Preserve variant options object!
     ];
 
     const cleanVariant: Record<string, any> = {};
@@ -98,9 +99,22 @@ export const PATCH = async (
         const rawVariants = req.body.variants || req.body.variants_to_update || [];
 
         // 1. Sanitize variants
+        // const cleanVariantsToUpdate = rawVariants
+        //     .filter((v: any) => v.id)
+        //     .map(sanitizeVariantForUpdate);
+
         const cleanVariantsToUpdate = rawVariants
             .filter((v: any) => v.id)
-            .map(sanitizeVariantForUpdate);
+            .map((v: any) => {
+                const sanitized = sanitizeVariantForUpdate(v);
+                if (sanitized.options) {
+                    const formattedOptions = formatVariantOptions(sanitized.options);
+                    // Assign back to the correct property
+                    sanitized.options = formattedOptions;
+                }
+                return sanitized;
+            });
+
 
         // 2. Extract Core Product Fields
         const coreProductData: Record<string, any> = {};
@@ -142,6 +156,18 @@ export const PATCH = async (
                 variant_id: v.id,
                 stocked_quantity: Number(v.inventory_quantity),
             }));
+
+        function formatVariantOptions(rawOptions: any): Record<string, string> {
+            if (!rawOptions) return {};
+            if (!Array.isArray(rawOptions)) return rawOptions; // Already { Title: "Value" }
+
+            // Transforms [{ id: "...", value: "M" }] or [{ title: "Size", value: "M" }]
+            return rawOptions.reduce((acc: Record<string, string>, opt: any) => {
+                const key = opt.title || opt.option_id;
+                if (key && opt.value) acc[key] = opt.value;
+                return acc;
+            }, {});
+        }
 
         // 5. Construct Workflow Input
         const workflowInput: WorkflowInput = {

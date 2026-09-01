@@ -10,16 +10,18 @@ export interface ProductOptionPayload {
 export function buildProductOptionsPayload(
     variantRows: Array<{
         options?: Array<{
-            optionName: string
-            value: string
+            optionName?: string
+            option_name?: string
+            value?: string
         }>
     }>
 ): ProductOptionPayload[] {
     const map = new Map<string, Set<string>>()
 
     for (const row of variantRows) {
-        for (const option of row.options ?? []) {
-            const optionName = option.optionName?.trim()
+        for (const option of (row.options as any[]) ?? []) {
+            // Safely resolve property name regardless of source casing
+            const optionName = (option.optionName || option.option_name)?.trim()
             const value = option.value?.trim()
 
             if (!optionName || !value) {
@@ -77,15 +79,19 @@ export function buildVariantPayload(
         .map((row) => {
             const variantOptions: MedusaVariantOptionMap = {}
 
-            for (const option of row.options ?? []) {
-                const optionName = option.optionName?.trim()
+            for (const option of (row.options as any[]) ?? []) {
+                const optionName = (option.optionName || option.option_name)?.trim()
                 const value = option.value?.trim()
 
-                if (!optionName || !value) {
-                    continue
-                }
+                if (!optionName || !value) continue
 
                 variantOptions[optionName] = value
+
+                // Ensure backend maps object options to Medusa variant option values:
+                // options: Object.entries(row.options).map(([title, value]) => ({
+                //     option_id: titleToIdMap[title],
+                //     value: value
+                // }))
             }
 
             // Determine effective values using row data first, then fallbacks

@@ -400,7 +400,7 @@ JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
 WHERE 
-    pr.id = 'prod_01KYKG710C8Y01FDT3RR8H34A6'
+    pr.id = 'prod_01KZE7WAEQ0VC34N3RT9DG22JF'
     AND pv.deleted_at IS NULL
 GROUP BY pv.id, pv.sku,p.amount, p.currency_code, il.stocked_quantity, pr.id 
 ORDER BY pr.id;

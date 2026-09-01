@@ -19,6 +19,7 @@ import { ERROR_MESSAGES, sanitizeSku } from "@/lib/util/vendor/validation"
 import { createVendorProduct } from "@/lib/data/vendor/products"
 import IdentityShellSection from "@/components/vendor/products/IdentityShellSection"
 
+import { Product } from "@/lib/util/vendor/hydration"
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -27,47 +28,6 @@ interface CreateProductFormClientProps {
   initialProduct?: Partial<Product>
   onSuccess?: (product: Product) => void
   onError?: (error: Error) => void
-}
-
-interface Product {
-  id: string
-  title: string
-  handle: string
-  subtitle?: string
-  description?: string
-  material?: string
-  origin_country?: string
-  hs_code?: string
-  status: string
-  weight?: number
-  thumbnail?: string
-  type_id?: string | null
-  collection_id?: string | null
-  metadata?: Record<string, any>
-  options?: ProductOption[]
-  variants?: ProductVariant[]
-  apparel_detail?: ApparelDetails
-}
-
-interface ProductOption {
-  title: string
-  values: string[]
-}
-
-interface ProductVariant {
-  title: string
-  sku: string
-  inventory_quantity: number
-  manage_inventory: boolean
-  currency_code: string
-  prices: Array<{
-    amount: number
-    currency_code: string
-  }>
-  options?: Array<{
-    option_name: string
-    value: string
-  }>
 }
 
 // ============================================================================

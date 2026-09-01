@@ -48,8 +48,8 @@ export function toSellableVariant(
         }, {} as Record<string, string>),
         price: variant.calculated_price,
         inventoryQuantity: variant.inventory_quantity,
-        // manageInventory: variant.manage_inventory,
-        // allowBackorder: variant.allow_backorder,
+        manageInventory: variant.manage_inventory ?? false,
+        allowBackorder: variant.allow_backorder ?? false,
         thumbnail: variant.thumbnail,
         images: variant.images ?? [],
     }

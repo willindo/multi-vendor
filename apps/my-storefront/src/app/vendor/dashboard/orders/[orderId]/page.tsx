@@ -1,4 +1,4 @@
-// src/app/vendor/dashboard/orders/[id]/page.tsx
+// src/app/vendor/dashboard/orders/[orderId]/page.tsx
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -32,7 +32,7 @@ interface VendorOrderGraph {
 export default function VendorOrderDetailsPage() {
   const params = useParams()
   const orderId = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : ""
-  
+
   const [order, setOrder] = useState<VendorOrderGraph | null>(null)
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
