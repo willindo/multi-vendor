@@ -8,8 +8,8 @@ import { DEFAULT_APPAREL_DETAILS } from "@shared/apparel/apparel-defaults"
 import type { ApparelDetails } from "@shared/apparel/apparel-types"
 
 import IdentityShellSection from "@/components/vendor/products/IdentityShellSection"
-import ApparelDetailsSection from "@/components/vendor/products/apparel/ApparelDetailsSection"
 import VariantMatrixBuilder from "@/components/vendor/products/VariantMatrixBuilder"
+import ApparelDetailsSection from "@/components/vendor/products/apparel/ApparelDetailsSection"
 import VariantMatrixTable, {
   VariantMatrixRow,
 } from "@/components/vendor/products/VariantMatrixTable"
@@ -67,17 +67,40 @@ export default function EditProductFormClient({
   const params = useParams()
 
   const productId = propProductId || (params?.id as string) || (params?.productId as string) || initialProduct?.id || ""
+  console.log("🔵 INITIAL PRODUCT OPTIONS:", initialProduct?.options)
+  console.log(
+    "🔵 INITIAL PRODUCT VARIANT OPTIONS:",
+    initialProduct?.variants?.map((v) => ({
+      id: v.id,
+      title: v.title,
+      options: v.options,
+    })))
 
   // Synchronously compute initial form values if initialProduct exists
   const initialFormState = useMemo(() => {
     if (!initialProduct) return null
-    return hydrateFormState(initialProduct)
+
+    const state = hydrateFormState(initialProduct)
+
+    console.log("🟢 HYDRATED FORM STATE:", state)
+
+    console.log(
+      "🟢 HYDRATED VARIANT ROWS:",
+      state.variants.map((v) => ({
+        id: v.id,
+        title: v.title,
+        options: v.options,
+      }))
+    )
+
+    return state
   }, [initialProduct])
 
   const initialCommerceState = useMemo(() => {
     if (!initialProduct) return null
     return hydrateCommerceFields(initialProduct)
   }, [initialProduct])
+
 
   // --- CONTROLS STATE ---
   const [isLoading, setIsLoading] = useState<boolean>(!initialProduct && !!productId)
@@ -120,11 +143,21 @@ export default function EditProductFormClient({
   })
 
   // --- VARIANTS STATE ---
+
   const [variantRows, setVariantRows] = useState<VariantMatrixRow[]>(initialFormState?.variants || [])
   const [originalVariantIds, setOriginalVariantIds] = useState<Set<string>>(() =>
     initialFormState ? extractOriginalVariantIds(initialFormState.variants) : new Set()
   )
-
+  useEffect(() => {
+    console.log(
+      "🟡 VARIANT ROWS CHANGED:",
+      variantRows.map((v) => ({
+        id: v.id,
+        title: v.title,
+        options: v.options,
+      }))
+    )
+  }, [variantRows])
   // --- LOAD & HYDRATE PRODUCT DATA (Client Fetch Fallback) ---
   useEffect(() => {
     // If initialProduct was supplied by SSR/RSC, hydration is complete.
@@ -195,28 +228,49 @@ export default function EditProductFormClient({
 
   // Initial options extraction for VariantMatrixBuilder
   const initialBuilderOptions = useMemo(() => {
-    return variantRows.reduce((acc, v) => {
+    console.log("🟠 INPUT TO initialBuilderOptions:", variantRows)
+
+    const result = variantRows.reduce((acc, v) => {
+      console.log("🟠 Processing variant:", {
+        title: v.title,
+        options: v.options,
+      })
+
       if (v.options) {
         v.options.forEach((opt) => {
+          console.log("🟠 Processing option:", opt)
+
           const rawName = opt.optionName || ""
-          if (!rawName) return
+
+          if (!rawName) {
+            console.warn("⚠️ Missing optionName:", opt)
+            return
+          }
 
           const existing = acc.find(
             (o) => o.name.toUpperCase() === rawName.toUpperCase()
           )
+
           if (existing) {
             if (!existing.values.includes(opt.value)) {
               existing.values.push(opt.value)
             }
           } else {
-            acc.push({ name: rawName, values: [opt.value] })
+            acc.push({
+              name: rawName,
+              values: [opt.value],
+            })
           }
         })
       }
+
       return acc
     }, [] as Array<{ name: string; values: string[] }>)
-  }, [variantRows])
 
+    console.log("🟠 OUTPUT initialBuilderOptions:", result)
+
+    return result
+  }, [variantRows])
   // Clear variant matrix if user changes classification taxonomy after form touch
   useEffect(() => {
     if (variantRows.length > 0 && formTouched) {
@@ -359,6 +413,7 @@ export default function EditProductFormClient({
 
       const deletedVariantIds = detectDeletedVariants(originalVariantIds, variantRows)
       const optionsPayload = buildProductOptionsPayload(variantRows)
+      console.log('optionsPayload', optionsPayload)
       const baseVariants = buildVariantPayload(variantRows, {
         fallbackPrice: priceAmount,
         fallbackCurrency: currencyCode,
@@ -398,7 +453,6 @@ export default function EditProductFormClient({
         if (!result.success) {
           throw new Error(result.error || ERROR_MESSAGES.UPDATE_FAILED)
         }
-
         if (onSuccess) {
           // Standardize returned product to strictly match the Product type interface
           const updatedProduct: Product = result.product
@@ -422,7 +476,8 @@ export default function EditProductFormClient({
 
           onSuccess(updatedProduct)
         }
-
+        console.log(" Result Product options ", result.product?.options)
+        console.log(" Result Product variants options ", result.product?.variants?.[0].options)
         router.push("/vendor/dashboard/products")
         router.refresh()
       } catch (error: any) {
@@ -660,7 +715,6 @@ export default function EditProductFormClient({
           setFormTouched(true)
         }}
       />
-
       {/* 04. VARIANT MATRIX BUILDER */}
       <div className="space-y-4">
         <VariantMatrixBuilder

@@ -16,6 +16,7 @@ export interface ProductOption {
 }
 
 export interface ProductVariantOption {
+    id?: string
     option_id?: string
     option_value_id?: string
     option_name?: string
@@ -214,7 +215,20 @@ export function hydrateVariantRows(product: Product, targetCurrency = "INR"): Va
         const foundPrice =
             priceList.find((p) => p.currency_code?.toLowerCase() === targetCurrency.toLowerCase()) ||
             priceList[0]
+        // option_value_id → option name lookup
+        // ---------------------------------------
+        const optionValueToOptionName = new Map<string, string>()
 
+        for (const productOption of product.options || []) {
+            for (const optionValue of productOption.values || []) {
+                if (optionValue.id) {
+                    optionValueToOptionName.set(
+                        optionValue.id,
+                        productOption.title
+                    )
+                }
+            }
+        }
         return {
             id: variant.id,
             enabled: true,
@@ -225,10 +239,28 @@ export function hydrateVariantRows(product: Product, targetCurrency = "INR"): Va
             currencyCode: currency,
             inventoryQuantity: extractInventoryQuantity(variant),
             manageInventory: variant.manage_inventory ?? true,
-            options: (variant.options || []).map((o) => ({
-                optionName: o.option_name || o.optionName || "Option",
-                value: o.value,
-            })),
+            options: (variant.options || []).map((o) => {
+                const optionName =
+                    o.option_name ||
+                    o.optionName ||
+                    optionValueToOptionName.get(o.id || "")
+
+                if (!optionName) {
+                    console.error(
+                        "Could not resolve option name",
+                        {
+                            variantId: variant.id,
+                            variantTitle: variant.title,
+                            optionValue: o,
+                        }
+                    )
+                }
+
+                return {
+                    optionName: optionName || "",
+                    value: o.value,
+                }
+            }),
         }
     })
 }

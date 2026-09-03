@@ -11,7 +11,7 @@ export type InventoryUpdateItem = {
 
 export type UpdateInventoryInput = {
     product_id: string;
-    inventoryUpdates: InventoryUpdateItem[];
+    inventory_updates: InventoryUpdateItem[];
     location_id?: string;
 };
 
@@ -52,7 +52,7 @@ export const updateInventoryStep = createStep(
             rollbackData: [],
         };
 
-        if (!input.inventoryUpdates?.length) {
+        if (!input.inventory_updates?.length) {
             return new StepResponse({ updated: 0, created: 0 }, emptyRollback);
         }
 
@@ -112,7 +112,7 @@ export const updateInventoryStep = createStep(
         const createdLevelIds: string[] = [];
 
         // 3. Process updates synchronously in memory
-        for (const update of input.inventoryUpdates) {
+        for (const update of input.inventory_updates) {
             const variant = product.variants.find((v) =>
                 (update.variant_id && v.id === update.variant_id) ||
                 (update.sku && v.sku === update.sku)

@@ -265,3 +265,5 @@ Product (Commerce Root) <=--not actual sellable -=- not as line-items for cart o
              price
               ├── amount
               └── currency_code
+              useCallback deps — price + inventory + options
+

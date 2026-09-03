@@ -205,7 +205,7 @@ export const updateVendorProductWorkflow = createWorkflow(
         // 3f. Update Variant Inventory
         const inventoryInput = transform({ input }, (data) => ({
             product_id: data.input.product_id,
-            inventoryUpdates: data.input.inventory_updates || [],
+            inventory_updates: data.input.inventory_updates || [],
             location_id: data.input.location_id,
         }));
 

@@ -75,6 +75,37 @@ function sanitizeVariantForUpdate(variant: Record<string, any>) {
     return cleanVariant;
 }
 
+function capitalize(str: string): string {
+    if (!str) return "";
+    return str
+        .trim()
+        .toLowerCase()
+        .replace(/(?:^|\s|-|\/)\S/g, (m) => m.toUpperCase());
+}
+
+function formatAndNormalizeVariantOptions(rawOptions: any): Record<string, string> {
+    if (!rawOptions) return {};
+
+    const normalized: Record<string, string> = {};
+
+    if (Array.isArray(rawOptions)) {
+        for (const opt of rawOptions) {
+            const key = opt.title || opt.option_id;
+            if (key && opt.value) {
+                normalized[capitalize(key)] = capitalize(opt.value);
+            }
+        }
+    } else if (typeof rawOptions === "object") {
+        for (const [key, val] of Object.entries(rawOptions)) {
+            if (key && val) {
+                normalized[capitalize(key)] = capitalize(val as string);
+            }
+        }
+    }
+
+    return normalized;
+}
+
 // Inside your PATCH route handler:
 export const PATCH = async (
     req: AuthenticatedMedusaRequest<any>,
@@ -96,25 +127,37 @@ export const PATCH = async (
             product_id
         )
 
-        const rawVariants = req.body.variants || req.body.variants_to_update || [];
+        //  Gather all incoming variants from supported payload locations
+        const rawVariants = [
+            ...(req.body.variants || []),
+            ...(req.body.variants_to_update || [])
+        ];
 
-        // 1. Sanitize variants
-        // const cleanVariantsToUpdate = rawVariants
-        //     .filter((v: any) => v.id)
-        //     .map(sanitizeVariantForUpdate);
-
+        //  Process VARIANTS TO UPDATE (must have an `id`)
         const cleanVariantsToUpdate = rawVariants
-            .filter((v: any) => v.id)
+            .filter((v: any) => Boolean(v.id))
             .map((v: any) => {
                 const sanitized = sanitizeVariantForUpdate(v);
                 if (sanitized.options) {
-                    const formattedOptions = formatVariantOptions(sanitized.options);
-                    // Assign back to the correct property
-                    sanitized.options = formattedOptions;
+                    sanitized.options = formatAndNormalizeVariantOptions(sanitized.options);
+                }
+                if (sanitized.title) {
+                    sanitized.title = capitalize(sanitized.title);
                 }
                 return sanitized;
             });
 
+        //  Process VARIANTS TO CREATE (new variants without an `id` OR explicitly passed in variants_to_create)
+        const rawVariantsToCreate = [
+            ...rawVariants.filter((v: any) => !v.id),
+            ...(req.body.variants_to_create || [])
+        ];
+
+        const variantsToCreate = rawVariantsToCreate.map((v: any) => ({
+            ...v,
+            title: v.title ? capitalize(v.title) : undefined,
+            options: formatAndNormalizeVariantOptions(v.options),
+        }));
 
         // 2. Extract Core Product Fields
         const coreProductData: Record<string, any> = {};
@@ -157,26 +200,15 @@ export const PATCH = async (
                 stocked_quantity: Number(v.inventory_quantity),
             }));
 
-        function formatVariantOptions(rawOptions: any): Record<string, string> {
-            if (!rawOptions) return {};
-            if (!Array.isArray(rawOptions)) return rawOptions; // Already { Title: "Value" }
-
-            // Transforms [{ id: "...", value: "M" }] or [{ title: "Size", value: "M" }]
-            return rawOptions.reduce((acc: Record<string, string>, opt: any) => {
-                const key = opt.title || opt.option_id;
-                if (key && opt.value) acc[key] = opt.value;
-                return acc;
-            }, {});
-        }
-
         // 5. Construct Workflow Input
         const workflowInput: WorkflowInput = {
             vendor_admin_id: vendorAdminId,
             product_id,
             product_data: coreProductData,
             sales_channel_ids: req.body.sales_channel_ids,
-            apparel_details: apparelData,  // ✅ Now works with undefined
-            variants_to_create: req.body.variants_to_create || [],
+            apparel_details: apparelData,
+            // variants_to_create: req.body.variants_to_create || [],
+            variants_to_create: variantsToCreate,
             variants_to_update: cleanVariantsToUpdate,
             variants_to_delete: req.body.deleted_variant_ids || req.body.variants_to_delete || [],
             inventory_updates: inventoryUpdates,

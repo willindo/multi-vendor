@@ -20,6 +20,15 @@ type ResolveOptionsRollbackData = {
     createdValueIds: string[];
 };
 
+// Helper function to capitalize strings (e.g., "indigo" -> "Indigo", "L / INDIGO" -> "L / Indigo")
+function capitalize(str: string): string {
+    if (!str) return "";
+    return str
+        .trim()
+        .toLowerCase()
+        .replace(/(?:^|\s|-|\/)\S/g, (m) => m.toUpperCase());
+}
+
 export const resolveOptionsStep = createStep(
     "resolve-options-step",
     async (
@@ -77,8 +86,10 @@ export const resolveOptionsStep = createStep(
             if (!v.options) continue;
             for (const [title, val] of Object.entries(v.options)) {
                 if (!title || !val) continue;
-                const normTitle = title.trim();
-                const normVal = val.trim();
+
+                // Force Title Case Normalization
+                const normTitle = capitalize(title);
+                const normVal = capitalize(val);
 
                 if (!incomingOptions.has(normTitle)) {
                     incomingOptions.set(normTitle, new Set());

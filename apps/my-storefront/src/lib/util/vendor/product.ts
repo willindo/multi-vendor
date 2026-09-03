@@ -24,9 +24,7 @@ export function buildProductOptionsPayload(
             const optionName = (option.optionName || option.option_name)?.trim()
             const value = option.value?.trim()
 
-            if (!optionName || !value) {
-                continue
-            }
+            if (!optionName || !value) continue
 
             if (!map.has(optionName)) {
                 map.set(optionName, new Set<string>())
@@ -129,6 +127,3 @@ export function buildVariantPayload(
             }
         })
 }
-
-
-

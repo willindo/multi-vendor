@@ -189,14 +189,14 @@ JOIN information_schema.constraint_column_usage ccu
     ON tc.constraint_name = ccu.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
 AND (
-    tc.table_name LIKE '%region%'
-    OR ccu.table_name LIKE '%region%'
+    tc.table_name LIKE '%option%'
+    OR ccu.table_name LIKE '%option%'
 );    
 
 SELECT table_name, column_name
 FROM information_schema.columns
 WHERE table_schema = 'public'
-AND column_name LIKE '%region%';
+AND column_name LIKE '%option%';
 
 SELECT
     tc.table_name,
@@ -377,7 +377,7 @@ FROM product_option_value pov
 JOIN product_option po
     ON po.id = pov.option_id
 WHERE
-    po.product_id = 'prod_01KZE7WAEQ0VC34N3RT9DG22JF'
+    po.product_id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
     AND po.deleted_at IS NULL
     AND pov.deleted_at IS NULL
 ORDER BY
@@ -400,7 +400,7 @@ JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
 WHERE 
-    pr.id = 'prod_01KZE7WAEQ0VC34N3RT9DG22JF'
+    pr.id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
     AND pv.deleted_at IS NULL
 GROUP BY pv.id, pv.sku,p.amount, p.currency_code, il.stocked_quantity, pr.id 
 ORDER BY pr.id;
