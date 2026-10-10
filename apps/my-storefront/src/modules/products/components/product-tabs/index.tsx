@@ -5,11 +5,11 @@ import FastDelivery from "@modules/common/icons/fast-delivery"
 import Refresh from "@modules/common/icons/refresh"
 import Accordion from "./accordion"
 import { ExtendedMarketplaceProduct } from "@/types/marketplace"
+import { HttpTypes } from "@medusajs/types"
 
 type ProductTabsProps = {
   product: ExtendedMarketplaceProduct
 }
-
 const InfoRow = ({
   label,
   value,
@@ -50,6 +50,7 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
       component: <ShippingInfoTab />,
     },
   ]
+  // console.log(product)
 
   return (
     <div className="w-full">
@@ -76,6 +77,7 @@ const ProductInfoTab = ({
 }: ProductTabsProps) => {
   return (
     <div className="grid grid-cols-1 small:grid-cols-2 gap-y-4 gap-x-8 py-2">
+      <InfoRow label="Title" value={product.title || "-"} />
       <InfoRow label="Product Information" value={product.description || "-"} />
       <InfoRow label="Material" value={product.material || "-"} />
       <InfoRow label="Country of origin" value={product.origin_country || "-"} />

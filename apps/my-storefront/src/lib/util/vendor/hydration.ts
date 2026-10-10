@@ -130,28 +130,28 @@ export function extractPriceAmount(
 ): number {
     if (!variant) return 0
 
+    // 1. Medusa calculated_price — MINOR units
+    if (variant.calculated_price?.calculated_amount != null) {
+        return Number(variant.calculated_price.calculated_amount) / 100
+    }
+
+    // 2. price_set.prices / prices — MINOR units
     const priceList: ProductPrice[] =
         variant.price_set?.prices || variant.prices || []
 
-    let matchedPrice = priceList.find(
-        (p) => p?.currency_code?.toLowerCase() === targetCurrency.toLowerCase()
-    )
+    const matched =
+        priceList.find(
+            (p) => p?.currency_code?.toLowerCase() === targetCurrency.toLowerCase()
+        ) ?? priceList[0]
 
-    if (!matchedPrice && priceList.length > 0) {
-        matchedPrice = priceList[0]
-    }
-
-    const rawAmount =
-        matchedPrice?.amount ??
+    const raw =
+        matched?.amount ??
         variant.amount ??
         variant.price_amount ??
         variant.min_price
 
-    const parsed = Number(rawAmount)
-    if (isNaN(parsed) || rawAmount === null || rawAmount === undefined) {
-        return 0
-    }
-
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed)) return 0
     return parsed / 100
 }
 

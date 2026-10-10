@@ -7,8 +7,8 @@ const host = process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "http://127.0.0.1:7700"
 const apiKey = process.env.NEXT_PUBLIC_SEARCH_API_KEY || "masterKey"
 const indexName = process.env.NEXT_PUBLIC_SEARCH_INDEX_NAME || "products"
 
-// ✅ FIX: Instantiate the missing meilisearchClient instance here using your env keys
-const meilisearchClient = new Meilisearch({
+// ✅ FIX: Instantiate the missing meilisearchClient instance here using  env keys
+export const meilisearchClient = new Meilisearch({
   host: host,
   apiKey: apiKey,
 })
@@ -126,3 +126,4 @@ export async function searchMarketplaceProducts(query: string, limit = 12) {
     return []
   }
 }
+

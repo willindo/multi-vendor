@@ -5,6 +5,7 @@ import RefinementList from "@modules/store/components/refinement-list"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 import PaginatedProducts from "./paginated-products"
+import ShaderCanvas from "@/components/ShaderCanvas"
 
 const StoreTemplate = ({
   sortBy,
@@ -16,7 +17,7 @@ const StoreTemplate = ({
   countryCode: string
 }) => {
   const pageNumber = page ? parseInt(page) : 1
-  const sort = sortBy || "created_at"
+  const sort = sortBy || "created_at_desc"
 
   return (
     <div

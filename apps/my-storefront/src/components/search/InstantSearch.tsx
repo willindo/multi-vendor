@@ -51,9 +51,8 @@ export default function InstantSearch() {
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && searchTerm.trim()) {
-              window.location.href = `/${
-                window.location.pathname.split("/")[1]
-              }/search?q=${encodeURIComponent(searchTerm)}`
+              window.location.href = `/${window.location.pathname.split("/")[1]
+                }/search?q=${encodeURIComponent(searchTerm)}`
             }
           }}
           placeholder="Search items, vendor lines, categories..."
@@ -70,9 +69,8 @@ export default function InstantSearch() {
           {results.map((hit) => (
             <Link
               key={hit.id}
-              href={`/${window.location.pathname.split("/")[1]}/products/${
-                hit.handle
-              }`}
+              href={`/${window.location.pathname.split("/")[1]}/products/${hit.handle
+                }`}
               className="block p-4 hover:bg-ui-bg-subtle/40 transition-colors group"
               onClick={() => setResults([])}
             >

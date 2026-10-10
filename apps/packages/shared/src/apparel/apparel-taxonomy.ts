@@ -4,7 +4,7 @@ export const GARMENT_SUBCATEGORY_MAP: Record<
   GarmentCategory,
   string[]
 > = {
-  TOP: ["TSHIRT", "T_SHIRT", "SHIRT", "BLOUSE", "TUNIC", "KURTA", "KURTI", "POLO", "TANK_TOP"],
+  TOP: ["TSHIRT", "SHIRT", "BLOUSE", "TUNIC", "KURTA", "KURTI", "POLO", "TANK_TOP"],
   BOTTOM: ["TROUSERS", "JEANS", "LEGGINGS", "SHORTS", "SKIRT", "JOGGERS"],
   DRESS: [
     "MAXI_DRESS",

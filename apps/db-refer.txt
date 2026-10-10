@@ -400,10 +400,11 @@ JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
 JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
 JOIN price p ON p.price_set_id = pvps.price_set_id
 WHERE 
-    pr.id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
-    AND pv.deleted_at IS NULL
+    pv.deleted_at IS NULL
 GROUP BY pv.id, pv.sku,p.amount, p.currency_code, il.stocked_quantity, pr.id 
 ORDER BY pr.id;
+    pr.id = 'prod_01KYF3F4BW307ZCSE39CR7C9E2'
+    AND pv.deleted_at IS NULL
 
      COALESCE(pv.sku, pv.metadata->>'merchant_sku') AS sku,
      pr.id = 'prod_01KYKG710C8Y01FDT3RR8H34A6'
@@ -475,44 +476,6 @@ Standalone / Global Catalogs (Root records do NOT belong to any single product)
 ├── product_type (Global type directory)
 ├── product_tag (Global unique text string store)
 └── product_shipping_profile (Global fulfillment rule mappings)
-
-
-product
-(id)
-
-    │ product.id
-    ▼
-
-product_option
-(id, product_id, title)
-
-    │ product_option.id
-    ▼
-
-product_option_value
-(id, option_id, value)
-
-          ▲
-          │ option_value_id
-          │
-product_variant_option
-(variant_id, option_value_id)
-          │
-          ▼ variant_id
-
-product_variant
-(id, product_id, sku, title, ...)
-
-Variant
-    │
-    ▼
-product_variant_option
-    │
-    ▼
-product_option_value
-    │
-    ▼
-product_option
 
 TS-GREEN-M
       │

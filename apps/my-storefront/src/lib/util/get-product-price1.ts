@@ -14,41 +14,45 @@ export interface NormalizedVariantPrice {
     percentage_diff: number | any
 }
 
+const toMajorUnits = (raw: unknown): number => {
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return 0
+    return n / 100
+}
+
 /**
  * Safely extracts numeric price from variant across custom backend & standard Medusa schemas
  */
 export function extractRawAmount(variant: any): { amount: number; currency: string } {
-    if (!variant) return { amount: 0, currency: "USD" }
+    if (!variant) return { amount: 0, currency: "usd" }
 
-    // 1. Check Medusa standard calculated_price
+    // 1. Medusa v2 calculated_price — MINOR units
     if (variant.calculated_price?.calculated_amount != null) {
         return {
-            amount: variant.calculated_price.calculated_amount,
-            currency: variant.calculated_price.currency_code || "USD",
+            amount: toMajorUnits(variant.calculated_price.calculated_amount),
+            currency: (variant.calculated_price.currency_code || "usd").toLowerCase(),
         }
     }
 
-    // 2. Check custom price_set structure (price_set.prices[0].amount)
+    // 2. price_set.prices[0].amount — MINOR units
     const priceSetObj = variant.price_set?.prices?.[0]
     if (priceSetObj?.amount != null) {
-        const raw = Number(priceSetObj.amount)
         return {
-            amount: raw > 1000 ? raw / 100 : raw, // Normalize cents to major units if needed
-            currency: (priceSetObj.currency_code || "USD").toLowerCase(),
+            amount: toMajorUnits(priceSetObj.amount),
+            currency: (priceSetObj.currency_code || "usd").toLowerCase(),
         }
     }
 
-    // 3. Fallback to direct prices array
+    // 3. direct prices array — MINOR units
     const priceObj = variant.prices?.[0]
     if (priceObj?.amount != null) {
-        const raw = Number(priceObj.amount)
         return {
-            amount: raw > 1000 ? raw / 100 : raw,
-            currency: (priceObj.currency_code || "USD").toLowerCase(),
+            amount: toMajorUnits(priceObj.amount),
+            currency: (priceObj.currency_code || "usd").toLowerCase(),
         }
     }
 
-    return { amount: 0, currency: "USD" }
+    return { amount: 0, currency: "usd" }
 }
 
 /**
@@ -58,27 +62,28 @@ export const getPricesForVariant = (variant: any): NormalizedVariantPrice | null
     if (!variant) return null
 
     const { amount, currency } = extractRawAmount(variant)
-    const originalAmount =
+
+    const rawOriginal =
         variant.calculated_price?.original_amount ??
         variant.original_price ??
-        amount
+        null
+
+    const originalAmount =
+        rawOriginal != null ? Number(rawOriginal) / 100 : amount
 
     const isSale = originalAmount > amount && amount > 0
 
     return {
         calculated_price_number: amount,
-        calculated_price: convertToLocale({
-            amount: amount,
-            currency_code: currency,
-        }),
+        calculated_price: convertToLocale({ amount, currency_code: currency }),
         original_price_number: originalAmount,
-        original_price: convertToLocale({
-            amount: originalAmount,
-            currency_code: currency,
-        }),
+        original_price: convertToLocale({ amount: originalAmount, currency_code: currency }),
         currency_code: currency,
         price_type: isSale ? "sale" : "default",
-        percentage_diff: isSale ? getPercentageDiff(originalAmount, amount) : 0,
+        percentage_diff:
+            isSale && originalAmount > 0
+                ? getPercentageDiff(originalAmount, amount)
+                : 0,
     }
 }
 

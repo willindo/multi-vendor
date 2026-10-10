@@ -15,28 +15,31 @@ import { extractInventoryQuantity } from "@/lib/util/vendor/hydration"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
-  region: HttpTypes.StoreRegion
+  region?: HttpTypes.StoreRegion
   disabled?: boolean
 }
 
 const optionsAsKeymap = (
-  variantOptions: HttpTypes.StoreProductVariant["options"]
+  variantOptions?: HttpTypes.StoreProductVariant["options"]
 ) => {
-  return variantOptions?.reduce((acc: Record<string, string>, varopt: any) => {
-    acc[varopt.option_id] = varopt.value
+  if (!variantOptions) return {}
+  return variantOptions.reduce((acc: Record<string, string>, varopt) => {
+    if (varopt.option_id && varopt.value) {
+      acc[varopt.option_id] = varopt.value
+    }
     return acc
   }, {})
 }
 
 export default function ProductActions({
   product,
+  region,
   disabled,
 }: ProductActionsProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
-
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
@@ -44,25 +47,22 @@ export default function ProductActions({
   // Auto-select single variant or sync initial variant from URL parameter
   useEffect(() => {
     const initialVariantId = searchParams.get("v_id")
-
     if (initialVariantId && product.variants?.length) {
       const match = product.variants.find((v) => v.id === initialVariantId)
       if (match) {
-        setOptions(optionsAsKeymap(match.options) ?? {})
+        setOptions(optionsAsKeymap(match.options))
         return
       }
     }
-
     if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
-      setOptions(variantOptions ?? {})
+      setOptions(variantOptions)
     }
   }, [product.variants, searchParams])
 
   // Resolve matching variant based on current options state
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return undefined
-
     return product.variants.find((v) => {
       const variantOptions = optionsAsKeymap(v.options)
       return isEqual(variantOptions, options)
@@ -98,7 +98,6 @@ export default function ProductActions({
     const params = new URLSearchParams(searchParams.toString())
     const targetValue = isValidVariant && selectedVariant ? selectedVariant.id : null
     const currentValue = params.get("v_id")
-
     if (currentValue === targetValue) return
 
     if (targetValue) {
@@ -115,11 +114,9 @@ export default function ProductActions({
   // Precise inventory resolution using extracted utility
   const { inStock, inventoryQuantity } = useMemo(() => {
     if (!selectedVariant) return { inStock: false, inventoryQuantity: 0 }
-
     if (selectedVariant.manage_inventory === false || selectedVariant.allow_backorder) {
       return { inStock: true, inventoryQuantity: Infinity }
     }
-
     const qty = extractInventoryQuantity(selectedVariant)
     return { inStock: qty > 0, inventoryQuantity: qty }
   }, [selectedVariant])
@@ -129,7 +126,6 @@ export default function ProductActions({
 
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return
-
     setIsAdding(true)
     try {
       await addToCart({

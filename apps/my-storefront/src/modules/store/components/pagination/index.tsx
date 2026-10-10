@@ -24,7 +24,8 @@ export function Pagination({
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams)
     params.set("page", newPage.toString())
-    router.push(`${pathname}?${params.toString()}`)
+    router.push(`${pathname}?${params.toString()}`, { scroll: true })
+    // or: window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   // Function to render a page button

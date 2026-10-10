@@ -27,8 +27,12 @@ const RefinementList = ({ sortBy, 'data-testid': dataTestId }: RefinementListPro
   )
 
   const setQueryParams = (name: string, value: string) => {
-    const query = createQueryString(name, value)
-    router.push(`${pathname}?${query}`)
+    const params = new URLSearchParams(searchParams)
+    params.set(name, value)
+    if (name === "sortBy") {
+      params.delete("page")   // ✅ now this actually sticks
+    }
+    router.push(`${pathname}?${params.toString()}`)
   }
 
   return (

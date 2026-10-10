@@ -48,8 +48,8 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         {/* Right Column: Checkout Configurations */}
         <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
           <ProductOnboardingCta />
-          <Suspense fallback={<ProductActionsWrapper id={product.id} region={region} />}>
-            <ProductActionsWrapper id={product.id} region={region} />
+          <Suspense fallback={<ProductActionsWrapper product={product} region={region} />}>
+            <ProductActionsWrapper product={product} region={region} />
           </Suspense>
         </div>
       </div>

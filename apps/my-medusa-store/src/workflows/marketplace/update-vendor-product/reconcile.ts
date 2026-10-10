@@ -32,7 +32,7 @@ export const reconcileSalesChannelsStep = createStep(
     }
 
     const query = container.resolve("query");
-    const remoteLink = container.resolve(ContainerRegistrationKeys.REMOTE_LINK);
+    const remoteLink = container.resolve(ContainerRegistrationKeys.LINK);
 
     // 1. Get currently linked sales channels for the product
     const { data: products } = await query.graph({
@@ -100,7 +100,7 @@ export const reconcileSalesChannelsStep = createStep(
   // Rollback Compensation
   async (rollbackData, { container }) => {
     if (!rollbackData) return;
-    const remoteLink = container.resolve(ContainerRegistrationKeys.REMOTE_LINK);
+    const remoteLink = container.resolve(ContainerRegistrationKeys.LINK);
 
     // Re-link what was unlinked
     if (rollbackData.previously_linked?.length) {

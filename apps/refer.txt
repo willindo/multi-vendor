@@ -33,7 +33,7 @@ EXCL_UDE_PATHS=' -not -path "*/node_modules/*"  -not -path "*/migrations/*" -not
 -o -path "*/lib/vendor/*" -not -path "*/admin/*" -not -path "*/store/*"
  
 cont_ents='-exec sh -c '\''echo "==== $1 ===="; cat "$1"; echo'\'' _ {} \;'
-INCL_UDES='-path "*/links/*"  ' 
+INCL_UDES='-path "*/*search*/*"  ' 
 EXCL_UDE_PATHS=' -not -path "*/node_modules/*" -not -path "*/scripts/*" -not -path "*/migration*/*" -not -iname "*test*" -not -iname "*back*" -not -iname "readme*"'
 eval find -L . \\\( $INCL_UDES \\\) -type f \\\( $EXCL_UDE_PATHS \\\)  -print
  $cont_ents

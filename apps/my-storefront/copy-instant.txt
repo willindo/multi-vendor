@@ -452,3 +452,25 @@ export interface BaseOrderFulfillment {
     marked_shipped_by: string | null;
     updated_at: Date;
 }
+
+./src/lib
+├── config.ts
+├── constants.tsx
+├── context
+│   └── modal-context.tsx
+├── data
+├── meilisearch-client.ts
+├── search-server.ts
+└── util
+    ├── env.ts
+    ├── get-percentage-diff.ts
+    ├── get-product-price.ts
+    ├── get-product-price1.ts
+    ├── isEmpty.ts
+    ├── medusa-error.ts
+    ├── money.ts
+    ├── normalize-product.ts
+    ├── repeat.ts
+    ├── sort-products.ts
+7 directories, 51 files
+badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-storefront$ 

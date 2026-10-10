@@ -1,0 +1,372 @@
+./src/modules/products 
+            components/
+                image-gallery/ index.tsx
+                product-actions/ index.tsx, mobile-actions.tsx, option-select.tsx
+                product-onboarding-cta/ index.tsx
+                product-preview/ index.tsx, price.tsx
+                product-price/ index.tsx
+                product-tabs/ accordion.tsx, index.tsx
+                related-products/ index.tsx
+                thumbnail/ index.tsx
+                vendor/ vendor-spotlight.tsx
+            templates/ index.tsx, index.tsx.back
+                product-actions-wrapper/ index.tsx
+                product-info/ index.tsx
+            store/
+            components/
+                pagination/ index.tsx
+                refinement-list/ index.tsx
+                    sort-products/ index.tsx
+            templates/ index.tsx, paginated-products.tsx
+14 directories, 17 file -=-
+// src/modules/products/templates/index.tsx
+import React, { Suspense } from "react"
+import ImageGallery from "@modules/products/components/image-gallery"
+import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
+import ProductTabs from "@modules/products/components/product-tabs"
+import RelatedProducts from "@modules/products/components/related-products"
+import ProductInfo from "@modules/products/templates/product-info"
+import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
+import ProductActionsWrapper from "./product-actions-wrapper"
+import { notFound } from "next/navigation"
+import { HttpTypes } from "@medusajs/types"
+import { ExtendedMarketplaceProduct } from "@/types/marketplace"
+type ProductTemplateProps = {
+  product: ExtendedMarketplaceProduct
+  region: HttpTypes.StoreRegion
+  countryCode: string
+  images: HttpTypes.StoreProductImage[]
+}
+const ProductTemplate: React.FC<ProductTemplateProps> = ({
+  product,
+  region,
+  countryCode,
+  images,
+}) => {
+  if (!product || !product.id) {
+    return notFound()
+  }
+  return (
+    <>
+      <div
+        className="content-container flex flex-col small:flex-row small:items-start py-6 relative gap-x-8"
+        data-testid="product-container"
+      >
+        {/* Left Column: Context Summaries, Vendor Info Card, and Accordion Specifications */}
+        <div className=" b-[#264513] border-orange-200 flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
+          <ProductInfo product={product} />
+          <ProductTabs product={product} />
+        </div>
+        {/* Center Column: Interactive Layout Media Gallery */}
+        <div className="block w-full relative">
+          <ImageGallery images={images} />
+        </div>
+        {/* Right Column: Checkout Configurations */}
+        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
+          <ProductOnboardingCta />
+          <Suspense fallback={<ProductActionsWrapper id={product.id!} region={region} />}>
+            <ProductActionsWrapper id={product.id!} region={region} />
+          </Suspense>
+        </div>
+      </div>
+      <div className="content-container my-16 small:my-32" data-testid="related-products-container">
+        <Suspense fallback={<SkeletonRelatedProducts />}>
+          <RelatedProducts product={product} countryCode={countryCode} />
+        </Suspense>
+      </div>
+    </>
+  )
+}
+export default ProductTemplate -=- 
+import { HttpTypes } from "@medusajs/types"
+import { Heading, Text } from "@medusajs/ui"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { ExtendedMarketplaceProduct } from "@/types/marketplace"
+type ProductInfoProps = {
+  product: ExtendedMarketplaceProduct
+}
+const ProductInfo = ({ product }: ProductInfoProps) => {
+  return (
+    <div id="product-info" className="border-[#a8470e] border-[2px] " >
+      <div className="border-[#264513] border-[2px] flex flex-col gap-y-4 lg:max-w-[500px] mx-auto">
+        {product.collection && (
+          <LocalizedClientLink
+            href={`/collections/${product.collection.handle}`}
+            className="text-medium text-ui-fg-muted hover:text-ui-fg-subtle"
+          >
+            {product.collection.title}
+          </LocalizedClientLink>
+        )}
+        <Heading
+          level="h2"
+          className="text-3xl text-[#265474] leading-10"
+          data-testid="product-title"
+        >
+          {product.title}
+        </Heading>
+        <Text
+          className="text-medium text-ui-fg-subtle whitespace-pre-line"
+          data-testid="product-description"
+        >
+          {product.description}
+        </Text>
+      </div>
+    </div>
+  )
+}
+export default ProductInfo -=-
+import { getProductByHandle, listProducts } from "@lib/data/products"
+import { HttpTypes } from "@medusajs/types"
+import ProductActions from "@modules/products/components/product-actions"
+/**
+ * Fetches real time pricing for a product and renders the product actions component.
+ */
+export default async function ProductActionsWrapper({
+  id,
+  region,
+}: {
+  id?: string
+  region: HttpTypes.StoreRegion
+}) {
+  const product = await listProducts({
+    queryParams: { id: [id] } as any,
+    regionId: region.id,
+  }).then(({ response }) => response.products[0])
+  // const product = await getProductByHandle(handle, region)
+  if (!product) {
+    return null
+  }
+  return <ProductActions product={product} region={region} />
+}-=-
+"use client"
+import { addToCart } from "@lib/data/cart"
+import { useIntersection } from "@lib/hooks/use-in-view"
+import { HttpTypes } from "@medusajs/types"
+import { Button } from "@medusajs/ui"
+import Divider from "@modules/common/components/divider"
+import OptionSelect from "@modules/products/components/product-actions/option-select"
+import { isEqual } from "lodash"
+import { useParams, usePathname, useSearchParams, useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import ProductPrice from "../product-price"
+import MobileActions from "./mobile-actions"
+import { extractInventoryQuantity } from "@/lib/util/vendor/hydration"
+type ProductActionsProps = {
+  product: HttpTypes.StoreProduct
+  region: HttpTypes.StoreRegion
+  // countryCode: string
+  disabled?: boolean
+}
+const optionsAsKeymap = (
+  variantOptions: HttpTypes.StoreProductVariant["options"]
+) => {
+  return variantOptions?.reduce((acc: Record<string, string>, varopt: any) => {
+    acc[varopt.option_id] = varopt.value
+    return acc
+  }, {})
+}
+export default function ProductActions({
+  product,
+  disabled,
+}: ProductActionsProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
+  const [options, setOptions] = useState<Record<string, string | undefined>>({})
+  const [isAdding, setIsAdding] = useState(false)
+  const countryCode = useParams().countryCode as string
+  // Auto-select single variant or sync initial variant from URL parameter
+  useEffect(() => {
+    const initialVariantId = searchParams.get("v_id")
+    if (initialVariantId && product.variants?.length) {
+      const match = product.variants.find((v) => v.id === initialVariantId)
+      if (match) {
+        setOptions(optionsAsKeymap(match.options) ?? {})
+        return
+      }
+    }
+    if (product.variants?.length === 1) {
+      const variantOptions = optionsAsKeymap(product.variants[0].options)
+      setOptions(variantOptions ?? {})
+    }
+  }, [product.variants, searchParams])
+  // Resolve matching variant based on current options state
+  const selectedVariant = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return undefined
+    return product.variants.find((v) => {
+      const variantOptions = optionsAsKeymap(v.options)
+      return isEqual(variantOptions, options)
+    })
+  }, [product.variants, options])
+  // Pre-calculate lowest-priced fallback variant for display before user selection
+  const cheapestVariant = useMemo(() => {
+    if (!product.variants?.length) return undefined
+    return [...product.variants].sort((a, b) => {
+      const priceA = a.calculated_price?.calculated_amount ?? Infinity
+      const priceB = b.calculated_price?.calculated_amount ?? Infinity
+      return priceA - priceB
+    })[0]
+  }, [product.variants])
+  const setOptionValue = (optionId: string, value: string) => {
+    setOptions((prev) => ({
+      ...prev,
+      [optionId]: value,
+    }))
+  }
+  const isValidVariant = useMemo(() => {
+    return product.variants?.some((v) => {
+      const variantOptions = optionsAsKeymap(v.options)
+      return isEqual(variantOptions, options)
+    })
+  }, [product.variants, options])
+  // Sync state to URL seamlessly without blocking render thread
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    const targetValue = isValidVariant && selectedVariant ? selectedVariant.id : null
+    const currentValue = params.get("v_id")
+    if (currentValue === targetValue) return
+    if (targetValue) {
+      params.set("v_id", targetValue)
+    } else {
+      params.delete("v_id")
+    }
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    })
+  }, [selectedVariant, isValidVariant, pathname, router, searchParams])
+  // Precise inventory resolution using extracted utility
+  const { inStock, inventoryQuantity } = useMemo(() => {
+    if (!selectedVariant) return { inStock: false, inventoryQuantity: 0 }
+    if (selectedVariant.manage_inventory === false || selectedVariant.allow_backorder) {
+      return { inStock: true, inventoryQuantity: Infinity }
+    }
+    const qty = extractInventoryQuantity(selectedVariant)
+    return { inStock: qty > 0, inventoryQuantity: qty }
+  }, [selectedVariant])
+  const actionsRef = useRef<HTMLDivElement>(null)
+  const inView = useIntersection(actionsRef, "0px")
+  const handleAddToCart = async () => {
+    if (!selectedVariant?.id) return
+    setIsAdding(true)
+    try {
+      await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode,
+      })
+    } finally {
+      setIsAdding(false)
+    }
+  }
+  const displayVariant = selectedVariant || cheapestVariant
+  return (
+    <>
+      <div className="flex flex-col gap-y-4" ref={actionsRef}>
+        {(product.variants?.length ?? 0) > 1 && (
+          <div className="flex flex-col gap-y-4">
+            {(product.options || []).map((option) => (
+              <div key={option.id}>
+                <OptionSelect
+                  option={option}
+                  current={options[option.id]}
+                  updateOption={setOptionValue}
+                  title={option.title ?? ""}
+                  data-testid="product-options"
+                  disabled={!!disabled || isAdding}
+                />
+              </div>
+            ))}
+            <Divider />
+          </div>
+        )}
+        {/* Dynamic price resolution falling back to lowest price */}
+        <ProductPrice product={product} variant={displayVariant} />
+        {/* Stock status indicator */}
+        {selectedVariant && (
+          <div className="text-sm font-medium">
+            {inStock ? (
+              <span className="text-emerald-600">
+                In Stock{" "}
+                {inventoryQuantity !== Infinity && `(${inventoryQuantity} available)`}
+              </span>
+            ) : (
+              <span className="text-rose-600">Out of Stock</span>
+            )}
+          </div>
+        )}
+        <Button
+          onClick={handleAddToCart}
+          disabled={
+            !inStock ||
+            !selectedVariant ||
+            !!disabled ||
+            isAdding ||
+            !isValidVariant
+          }
+          variant="primary"
+          className="w-full h-10"
+          isLoading={isAdding}
+          data-testid="add-product-button"
+        >
+          {!selectedVariant
+            ? "Select options"
+            : !inStock
+              ? "Out of stock"
+              : "Add to cart"}
+        </Button>
+        <MobileActions
+          product={product}
+          variant={selectedVariant}
+          options={options}
+          updateOptions={setOptionValue}
+          inStock={inStock}
+          handleAddToCart={handleAddToCart}
+          isAdding={isAdding}
+          show={!inView}
+          optionsDisabled={!!disabled || isAdding}
+        />
+      </div>
+    </>
+  )
+}
+
+     source_table      |      source_column      |     target_table     | target_column 
+------------------------+-------------------------+----------------------+---------------
+ product_option_value   | option_id               | product_option       | id
+ product_variant_option | variant_id              | product_variant      | id
+ product_variant_option | option_value_id         | product_option_value | id
+ product_option         | product_id              | product              | id
+
+        table_name         |       column_name       
+---------------------------+-------------------------
+ cart_line_item            | variant_option_values
+ order_line_item           | variant_option_values
+ product_option_value      | option_id
+ product_variant_option    | option_value_id
+
+                      Table "public.product_option"
+   Column   |           Type           | Collation | Nullable | Default 
+------------+--------------------------+-----------+----------+---------
+ id         | text                     |           | not null | 
+ title      | text                     |           | not null | 
+ product_id | text                     |           | not null | 
+ metadata   | jsonb                    |           |          | 
+
+                   Table "public.product_option_value"
+   Column   |           Type           | Collation | Nullable | Default 
+------------+--------------------------+-----------+----------+---------
+ id         | text                     |           | not null | 
+ value      | text                     |           | not null | 
+ option_id  | text                     |           |          | 
+ metadata   | jsonb                    |           |          | 
+           Table "public.product_variant_option"
+     Column      | Type | Collation | Nullable | Default 
+-----------------+------+-----------+----------+---------
+ variant_id      | text |           | not null | 
+ option_value_id | text |           | not null | 
+Indexes:
+    "product_variant_option_pkey" PRIMARY KEY, btree (variant_id, option_value_id)
+Foreign-key constraints:
+    "product_variant_option_option_value_id_foreign" FOREIGN KEY (option_value_id) REFERENCES product_option_value(id) ON UPDATE CASCADE ON DELETE CASCADE
+    "product_variant_option_variant_id_foreign" FOREIGN KEY (variant_id) REFERENCES product_variant(id) ON UPDATE CASCADE ON DELETE CASCADE

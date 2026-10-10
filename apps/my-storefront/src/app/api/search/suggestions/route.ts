@@ -1,15 +1,14 @@
-import { NextRequest } from "next/server"
+// src/app/api/search/suggestions/route.ts
+import { NextRequest, NextResponse } from "next/server"
 import { searchSuggestions } from "@lib/search-server"
 
-export async function GET(
-  req: NextRequest
-) {
-  const query =
-    req.nextUrl.searchParams.get("q") ||
-    ""
+export async function GET(req: NextRequest) {
+  const query = req.nextUrl.searchParams.get("q") || ""
 
-  const hits =
-    await searchSuggestions(query)
+  if (!query.trim()) {
+    return NextResponse.json([])
+  }
 
-  return Response.json(hits)
+  const hits = await searchSuggestions(query, 8)
+  return NextResponse.json(hits)
 }

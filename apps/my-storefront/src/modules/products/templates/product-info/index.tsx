@@ -1,10 +1,13 @@
+'use client'
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text } from "@medusajs/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { ExtendedMarketplaceProduct } from "@/types/marketplace"
 
 type ProductInfoProps = {
-  product: HttpTypes.StoreProduct
+  product: ExtendedMarketplaceProduct
 }
+
 
 const ProductInfo = ({ product }: ProductInfoProps) => {
   return (
@@ -20,7 +23,7 @@ const ProductInfo = ({ product }: ProductInfoProps) => {
         )}
         <Heading
           level="h2"
-          className="text-3xl leading-10 text-ui-fg-base"
+          className="text-3xl text-[#265474] leading-10"
           data-testid="product-title"
         >
           {product.title}

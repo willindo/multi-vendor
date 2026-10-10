@@ -34,6 +34,7 @@ export default async function productUpsertHandler({
         "description",
         "handle",
         "thumbnail",
+        "created_at",
         // ✅ Product options and their values
         "options.id",
         "options.title",
@@ -44,10 +45,7 @@ export default async function productUpsertHandler({
         // ✅ Junction table (product_variant_option) - CORRECT FIELDS
         "variants.options.id",
         "variants.options.value", // This is the option value text
-        // "variants.options.option_value_id", // This links to product_option_value
-        // "variants.options.option_value.id",
-        // "variants.options.option_value.value",
-        // "variants.options.option_value.option_id",
+        "variants.options.option_value_id", // This links to product_option_value
         // ✅ Prices
         "variants.price_set.prices.*",
         "variants.metadata",
@@ -69,11 +67,6 @@ export default async function productUpsertHandler({
     if (!product || product.deleted_at) {
       console.log(`🗑️ Product ${productId} removed from search index.`);
       await index.deleteDocument(productId);
-      return;
-    }
-
-    if (!product) {
-      logger.warn(`⚠️ Search synchronization skipped: Product ${productId} not found.`);
       return;
     }
 

@@ -1,7 +1,9 @@
+// /src/scripts/seed-search.ts
 import { ExecArgs } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import setupMeilisearch from "./setup-meilisearch";
 import { buildProductDocument } from "@/lib/search/build-product-document";
+import { getProductsIndex, } from "@/lib/meilisearch";
 
 export default async function seedSearch({ container }: ExecArgs) {
   console.log("🚀 Starting fresh search index reset and seed...");
@@ -30,6 +32,7 @@ export default async function seedSearch({ container }: ExecArgs) {
     await setupMeilisearch();
 
     const index = meiliClient.index("products");
+    // const index = getProductsIndex()
 
     // Fetch products from Medusa
     const { data: products } = await query.graph({
@@ -40,24 +43,32 @@ export default async function seedSearch({ container }: ExecArgs) {
         "description",
         "handle",
         "thumbnail",
+        "created_at",
+
+        // Product-level options — required for valueLookup
         "options.id",
         "options.title",
         "options.values.id",
         "options.values.value",
+
+        // Variants — bridge rows
         "variants.*",
         "variants.options.id",
         "variants.options.value",
-        // "variants.options.option_value_id",
-        // "variants.options.option_value.id",
-        // "variants.options.option_value.value",
-        // "variants.options.option_value.option_id",
+        "variants.options.option_value_id",   // ← required to build option_id
+
+        // Prices + inventory
         "variants.price_set.prices.*",
         "variants.metadata",
         "variants.inventory_items.*",
+        "variants.inventory_items.inventory_item_id",
+
+        "deleted_at",
+
+        // Vendor + apparel
         "vendor.id",
         "vendor.name",
         "vendor.handle",
-        "apparel_detail.id",
         "apparel_detail.*",
       ],
     });

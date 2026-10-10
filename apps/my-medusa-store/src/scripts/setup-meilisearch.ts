@@ -1,3 +1,4 @@
+// /src/scripts/setup-meilisearch.ts
 import { getProductsIndex } from "../lib/meilisearch";
 
 export default async function setupMeilisearch() {
@@ -5,6 +6,13 @@ export default async function setupMeilisearch() {
 
   // 1. Filterable Attributes (Used in sidebar filters)
   await index.updateFilterableAttributes([
+    "id",
+    "handle",
+    // Taxonomy (added — were missing)
+    "categories.id",
+    "collection_id",
+    "tags.id",
+    "tags.value",
     "vendor_id",
     "sizes",
     "colors",
@@ -28,6 +36,7 @@ export default async function setupMeilisearch() {
 
   // 2. Sortable Attributes (Used for storefront sorting dropdowns)
   await index.updateSortableAttributes([
+    "created_at",
     "price",
     "inventory_quantity"
   ]);
@@ -65,6 +74,9 @@ export default async function setupMeilisearch() {
   await index.updateFaceting({
     maxValuesPerFacet: 100,
   });
+
+  // 7. Pagination limit (default 1000, but set explicitly so future growth is safe)
+  await index.updatePagination({ maxTotalHits: 10000 });
 
   console.log("✅ Meilisearch configuration updated successfully");
 }
