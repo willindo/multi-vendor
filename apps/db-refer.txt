@@ -189,14 +189,14 @@ JOIN information_schema.constraint_column_usage ccu
     ON tc.constraint_name = ccu.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY'
 AND (
-    tc.table_name LIKE '%option%'
-    OR ccu.table_name LIKE '%option%'
+    tc.table_name LIKE '%stock%'
+    OR ccu.table_name LIKE '%stock%'
 );    
 
 SELECT table_name, column_name
 FROM information_schema.columns
 WHERE table_schema = 'public'
-AND column_name LIKE '%option%';
+AND column_name LIKE '%stock%';
 
 SELECT
     tc.table_name,

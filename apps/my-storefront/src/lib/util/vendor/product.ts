@@ -1,3 +1,4 @@
+// /src/lib/util/vendor/product.ts
 import { normalizeInventory, shouldManageInventory } from "./inventory"
 import { normalizePrice, ensureCurrencyCode } from "./pricing"
 import { sanitizeSku } from "./validation"

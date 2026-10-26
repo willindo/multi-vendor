@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "passes": {
+    "Image": {
+      "inputs": {},
+      "resolution": {
+        "aspectRatio": "16:9"
+      },
+      "geometry": {
+        "type": "cube"
+      }
+    }
+  }
+}

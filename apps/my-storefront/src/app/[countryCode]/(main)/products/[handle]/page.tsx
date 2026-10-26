@@ -4,6 +4,7 @@ import { getProductByHandle } from "@lib/data/products"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
+import { ExtendedMarketplaceProduct } from "@/types/marketplace"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
@@ -30,7 +31,8 @@ export async function generateStaticParams() {
 }
 
 function getImagesForVariant(
-  product: HttpTypes.StoreProduct,
+  // product: HttpTypes.StoreProduct,
+  product: ExtendedMarketplaceProduct,
   selectedVariantId?: string
 ) {
   if (!selectedVariantId || !product.variants) {

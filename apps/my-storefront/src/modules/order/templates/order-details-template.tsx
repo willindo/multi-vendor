@@ -4,9 +4,11 @@ import { HttpTypes } from "@medusajs/types"
 import Help from "@modules/order/components/help"
 import OrderSummary from "@modules/order/components/order-summary"
 import ShippingDetails from "@modules/order/components/shipping-details"
+import { StorefrontOrder } from "@/types/order"
 
 type OrderDetailsTemplateProps = {
   order: HttpTypes.StoreOrder
+  // order: StorefrontOrder
 }
 
 export default function OrderDetailsTemplate({ order }: OrderDetailsTemplateProps) {
@@ -24,7 +26,7 @@ export default function OrderDetailsTemplate({ order }: OrderDetailsTemplateProp
   return (
     <div className="py-8 bg-neutral-50/30 min-h-screen">
       <div className="content-container max-w-5xl mx-auto space-y-6">
-        
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-6">
           <div>
             <h1 className="text-xl font-black text-neutral-900 tracking-tight">
@@ -66,10 +68,10 @@ export default function OrderDetailsTemplate({ order }: OrderDetailsTemplateProp
                       <div key={item.id} className="flex justify-between items-center py-3 first:pt-0 last:pb-0">
                         <div className="flex items-center gap-3">
                           {item.thumbnail && (
-                            <img 
-                              src={item.thumbnail} 
-                              alt={item.product_title || item.title} 
-                              className="w-10 h-10 object-cover rounded-lg border border-neutral-100 bg-neutral-50" 
+                            <img
+                              src={item.thumbnail}
+                              alt={item.product_title || item.title}
+                              className="w-10 h-10 object-cover rounded-lg border border-neutral-100 bg-neutral-50"
                             />
                           )}
                           <div>
@@ -77,12 +79,11 @@ export default function OrderDetailsTemplate({ order }: OrderDetailsTemplateProp
                             <p className="text-[11px] text-neutral-400 mt-0.5">Quantity: {item.quantity}</p>
                           </div>
                         </div>
-                        
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                          isShipped 
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${isShipped
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>
+                          }`}>
                           {isShipped ? "Shipped" : "Processing Allocation"}
                         </span>
                       </div>

@@ -9,7 +9,13 @@ import { getRegion, retrieveRegion } from "./regions"
 import { normalizeProduct } from "../util/normalize-product"
 import { meilisearchClient } from "@lib/meilisearch-client"
 import { queryStorefrontCatalog, StoreFilterParams } from "@lib/search-server"
+import { ExtendedMarketplaceProduct } from "@/types/marketplace"
 
+type ProductHandleProps = {
+    product: ExtendedMarketplaceProduct
+    // handle: string
+    // countryCode: string
+}
 //  Define custom query params interface extending Medusa defaults
 export interface StorefrontProductQueryParams
     extends HttpTypes.FindParams,
@@ -47,7 +53,7 @@ export const getProductByHandle = async (handle: string, countryCode: string) =>
     const next = { ...(await getCacheOptions("products")) }
 
     try {
-        const { products } = await sdk.client.fetch<{ products: HttpTypes.StoreProduct[] }>(
+        const { products } = await sdk.client.fetch<{ products: ProductHandleProps[] }>(
             `/store/products`,
             {
                 method: "GET",
@@ -59,6 +65,7 @@ export const getProductByHandle = async (handle: string, countryCode: string) =>
                     // countryCode: region.countries?.[0]?.iso_2,
                     fields:
                         "*variants,*variants.options,*options,*options.values,*images,*variants.images," +
+                        "title,description,subtitle,material," +
                         "collection.id,collection.title,collection.handle," +
                         "categories.id,categories.name,categories.handle," +
                         "tags.id,tags.value," +

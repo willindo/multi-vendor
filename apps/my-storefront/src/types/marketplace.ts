@@ -32,7 +32,8 @@ export type ExtendedMarketplaceProduct = HttpTypes.StoreProduct & {
   // vendor_id?: string
   // vendor_name?: string
   apparel_detail?: ApparelDetailFields | null
-  title?: string
-  description?: string
-  handle?: string
+  title?: string | null
+  description?: string | null
+  subtitle?: string | null
+  handle?: string | null
 }

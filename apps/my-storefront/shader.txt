@@ -1,0 +1,34 @@
+badsha@DESKTOP-BP2PLDB:~/medusa-dev/apps/my-storefront$ 
+src/
+  shader-engine/
+    contracts/
+      ShaderUniforms.ts
+      RenderConfig.ts
+    core/
+      ShaderRegistry.ts
+      UniformManager.ts
+      Timeline.ts
+    backends/
+      webgl2-2d/
+        WebGL2Renderer.ts
+        FullscreenQuad.ts
+      r3f-3d/
+        SceneCanvas.tsx
+        MeshFactory.tsx
+        ShaderMaterialFactory.ts
+    export/
+      ImageExporter.ts
+      FrameRenderer.ts
+      VideoEncoder.ts
+    ui/
+      ShaderCanvas.tsx
+      ShaderControls.tsx
+      ExportPanel.tsx
+public/
+  shaders/
+├── 2d
+│   └── gradient.frag
+├── 3d
+└── shared
+    └── fullscreen.vert
+    

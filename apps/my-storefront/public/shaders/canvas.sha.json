@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "passes": {
+    "Image": {
+      "inputs": {},
+      "geometry": {
+        "type": "cube"
+      },
+      "vertex": "./canvas.vert"
+    }
+  }
+}

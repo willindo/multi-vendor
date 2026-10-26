@@ -23,6 +23,7 @@ type Input = {
   product: CreateProductWorkflowInputDTO;
   apparel_detail: ApparelDetails;
   location_id?: string;
+  shipping_profile_id?: string;
 };
 
 // ============================================================
@@ -99,21 +100,64 @@ export const createVendorProductWorkflow = createWorkflow(
       return normalizeProductForVendor(data.input.product, vendor.id);
     });
 
-    // 3. Fetch sales channels
+    // 3. Fetch default sales channel AND default shipping profile
     const { data: stores } = useQueryGraphStep({
       entity: "store",
       fields: ["default_sales_channel_id"],
     }).config({ name: "get-store" });
 
+    const { data: shippingProfiles } = useQueryGraphStep({
+      entity: "shipping_profile",
+      fields: ["id"],
+      filters: { type: "default" }, // Medusa identifies default shipping profile by type: "default"
+    }).config({ name: "get-default-shipping-profile" });
+
+    const { data: scLocations } = useQueryGraphStep({
+      entity: "sales_channel",
+      fields: ["id", "stock_locations.id"], // or "locations.id"
+      filters: { id: [stores?.[0]?.default_sales_channel_id] as any },
+    }).config({ name: "get-sc-locations" });
+
+    const resolvedLocationId = transform(
+      { input, scLocations },
+      (d) => {
+        const linked = d.scLocations?.[0]?.stock_locations?.[0]?.id
+          ?? d.scLocations?.[0]?.id;
+        return d.input.location_id || linked || "sl_default";
+      }
+    );
+
     // 4. Prepare product data with sales channel
-    const productData = transform({ normalizedProduct, stores }, (data) => ({
-      products: [
-        {
-          ...data.normalizedProduct,
-          sales_channels: [{ id: data.stores[0].default_sales_channel_id }],
-        },
-      ],
-    }));
+    const productData = transform(
+      { normalizedProduct, stores, shippingProfiles, input },
+      (data) => {
+        const salesChannelId = data.stores[0]?.default_sales_channel_id;
+        const defaultProfileId = data.shippingProfiles[0]?.id;
+
+        // Priority: explicit input > default profile
+        const shippingProfileId =
+          data.input.shipping_profile_id ?? defaultProfileId;
+
+        if (!salesChannelId) {
+          throw new Error("No default sales channel configured in store.");
+        }
+        if (!shippingProfileId) {
+          throw new Error(
+            "No shipping profile available. Please create a default shipping profile or pass shipping_profile_id explicitly."
+          );
+        }
+
+        return {
+          products: [
+            {
+              ...data.normalizedProduct,
+              sales_channels: [{ id: salesChannelId }],
+              shipping_profile_id: shippingProfileId, // key fix
+            },
+          ],
+        };
+      }
+    );
 
     // console.log(
     //   "[WORKFLOW] normalizedProduct:",
@@ -138,7 +182,8 @@ export const createVendorProductWorkflow = createWorkflow(
     //     2
     //   )
     // )
-    // 5. Create product
+
+    // 5. Create product (now with sales channel + shipping profile)
     const productResult = createProductsWorkflow.runAsStep({
       input: productData as CreateProductsWorkflowInput,
     });

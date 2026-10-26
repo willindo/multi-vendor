@@ -50,21 +50,14 @@ export async function GET(
         // verify ownership
         //
 
-        const relation = await db(
-            "marketplace_vendor_order_order"
-        )
-            .where({
-                vendor_id: vendorId,
-                order_id: orderId,
-            })
+        const relation = await db("marketplace_vendor_order_order")
+            .where({ vendor_id: vendorId, order_id: orderId })
             .whereNull("deleted_at")
-            .orderBy("created_at", "desc")
-        // .first()
+            // .orderBy("created_at", "desc")
+            .first()
 
         if (!relation) {
-            return res.status(404).json({
-                message: "Order not found.",
-            })
+            return res.status(404).json({ message: "Order not found." })
         }
 
         const { data: [order] } = await query.graph({

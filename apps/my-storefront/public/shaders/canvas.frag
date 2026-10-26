@@ -1,4 +1,4 @@
-#version 300 es
+// #version 300 es
 // canvas.frag — Fragment shader (preview-ready)
 // ─────────────────────────────────────────────
 // HOW TO PREVIEW:
@@ -13,12 +13,13 @@ precision highp float;
 #endif
 
 // Standard uniforms — auto-provided by glslCanvas / ShadeView
-uniform vec2  u_resolution;  // canvas size in pixels
-uniform float u_time;        // elapsed seconds
-uniform vec2  u_mouse;       // mouse position in pixels
+// uniform vec2  iResolution;  // canvas size in pixels
+// uniform float iTime;        // elapsed seconds
+// uniform vec2  iMouse;       // mouse position in pixels
 
 // Fragment output (replaces gl_FragColor removed in GLSL ES 3.00)
-out vec4 fragColor;
+// out vec4 fragColor;
+// in vec2 fragCoord;
 
 // ── helpers ───────────────────────────────────
 
@@ -52,16 +53,20 @@ float fbm(vec2 p) {
 
 // ── main ──────────────────────────────────────
 
-void main() {
-  vec2 uv = gl_FragCoord.xy / u_resolution;
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  // void main() {
+  // vec2 uv = gl_FragCoord.xy / iResolution;
+  // vec2 uv = fragCoord.xy / iResolution;
+  vec2 uv = fragCoord / iResolution.xy;
 
   // aspect-correct coords centered at 0
-  vec2 st = (gl_FragCoord.xy - u_resolution * 0.5) / min(u_resolution.x, u_resolution.y);
+  // vec2 st = (gl_FragCoord.xy - iResolution * 0.5) / min(iResolution.x, iResolution.y);
+  vec2 st = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
 
   // mouse influence (normalised 0-1)
-  vec2 mouse = u_mouse / u_resolution;
+  // vec2 mouse = iMouse / iResolution;
 
-  float t = u_time * 0.4;
+  float t = iTime * 0.4;
 
   // animated domain warp
   vec2 q = vec2(
@@ -77,7 +82,7 @@ void main() {
   float f = fbm(st + r);
 
   // base wave (matches your original ShaderCanvas.tsx logic)
-  float wave = sin(uv.x * 10.0 + uv.y * 6.0 + u_time);
+  float wave = sin(uv.x * 10.0 + uv.y * 6.0 + iTime);
 
   // colour palette — deep ocean to aurora
   vec3 c1 = vec3(0.02, 0.05, 0.18);   // deep navy

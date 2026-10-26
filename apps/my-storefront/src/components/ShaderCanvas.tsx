@@ -50,19 +50,46 @@ export default function ShaderCanvas() {
             }
 
             try {
-                const [vertexSource, fragmentSource] = await Promise.all([
+                const [vertexSource, fragmentCoreSource] = await Promise.all([
                     fetch("/shaders/canvas.vert").then((r) => {
                         if (!r.ok) throw new Error("Failed to load canvas.vert");
                         return r.text();
                     }),
                     fetch("/shaders/canvas.frag").then((r) => {
+
                         if (!r.ok) throw new Error("Failed to load canvas.frag");
                         return r.text();
                     }),
+
                 ]);
+                // const vertexSource = `#version 300 es
+                // in vec2 aPosition;
 
+                // ${vertexCoreSource}
+
+                // void main() {
+                //     gl_Position = getVertexPosition(aPosition);
+                //     }
+                //     `;
+                // Browser-specific fragment shader wrapper
+                const fragmentSource = `#version 300 es
+                precision highp float;
+                
+                uniform vec3 iResolution;
+                uniform float iTime;
+                uniform vec4 iMouse;
+                
+                out vec4 fragColor;
+                
+                ${fragmentCoreSource}
+                
+                void main() {
+                    mainImage(fragColor, gl_FragCoord.xy);
+                    }
+                    `;
                 if (!canvas.isConnected) return;
-
+                console.log(vertexSource, "vertexSource")
+                // console.log(fragmentSource, "fragmentSource")
                 vertexShader = compileShader(
                     gl,
                     gl.VERTEX_SHADER,
@@ -77,7 +104,7 @@ export default function ShaderCanvas() {
 
                 program = gl.createProgram();
 
-                if (!program) throw new Error("Failed to create program");
+                if (!program) throw new Error("Failed to create WebGL program");
 
                 gl.attachShader(program, vertexShader);
                 gl.attachShader(program, fragmentShader);
@@ -94,31 +121,54 @@ export default function ShaderCanvas() {
                 buffer = gl.createBuffer();
                 if (!buffer) throw new Error("Failed to create buffer");
 
-                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-                gl.bufferData(
-                    gl.ARRAY_BUFFER,
-                    new Float32Array([
-                        -1, -1,
-                        1, -1,
-                        -1, 1,
-                        1, 1,
-                    ]),
-                    gl.STATIC_DRAW
-                );
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+                // gl.bufferData(
+                //     gl.ARRAY_BUFFER,
+                //     new Float32Array([
+                //         -1, -1,
+                //         1, -1,
+                //         -1, 1,
+                //         1, 1,
+                //     ]),
+                //     gl.STATIC_DRAW
+                // );
+                const identity = new Float32Array([
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1,
+                ]);
+                const vertices = [
+                    -1, -1, 0,
+                    1, -1, 0,
+                    -1, 1, 0,
+                    1, 1, 0,
+                ];
+                const positionLocation = gl.getAttribLocation(program, "aPosition");
+                const normalLocation = gl.getAttribLocation(program, "aNormal");
 
-                const position = gl.getAttribLocation(program, "aPosition");
-
-                if (position < 0) {
-                    throw new Error("aPosition attribute not found");
+                if (positionLocation < 0 || normalLocation < 0) {
+                    throw new Error("aPosition attribute or aNormal attribute not found");
                 }
 
-                gl.enableVertexAttribArray(position);
-                gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(positionLocation);
+                gl.enableVertexAttribArray(normalLocation);
+                gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+                gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, 0, 0);
 
-                const resolution = gl.getUniformLocation(program, "u_resolution");
-                const time = gl.getUniformLocation(program, "u_time");
-                const mouse = gl.getUniformLocation(program, "u_mouse");
+                const resolution = gl.getUniformLocation(program, "iResolution");
+                const time = gl.getUniformLocation(program, "iTime");
+                const mouse = gl.getUniformLocation(program, "iMouse");
+                const modelViewLocation = gl.getUniformLocation(program, "uModelViewMatrix");
+                const projectionLocation = gl.getUniformLocation(program, "uProjectionMatrix");
+                if (modelViewLocation) {
+                    gl.uniformMatrix4fv(modelViewLocation, false, identity);
+                }
 
+                if (projectionLocation) {
+                    gl.uniformMatrix4fv(projectionLocation, false, identity);
+                }
                 const start = performance.now();
 
                 function render(now: number) {
@@ -138,7 +188,7 @@ export default function ShaderCanvas() {
                     gl.viewport(0, 0, width, height);
 
                     if (resolution) {
-                        gl.uniform2f(resolution, width, height);
+                        gl.uniform3f(resolution, width, height, 1);
                     }
 
                     if (time) {
@@ -146,7 +196,7 @@ export default function ShaderCanvas() {
                     }
 
                     if (mouse) {
-                        gl.uniform2f(mouse, 0, 0);
+                        gl.uniform4f(mouse, 0, 0, 0, 0);
                     }
 
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

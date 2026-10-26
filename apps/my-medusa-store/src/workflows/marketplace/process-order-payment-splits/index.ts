@@ -9,15 +9,18 @@ import {
 import {
   executeTransfersStep,
 } from "./steps/execute-transfers"
+
 export interface ProcessOrderPaymentSplitsInput {
   orderId: string
 }
+
 export interface ProcessOrderPaymentSplitsResult {
   orderId: string
   transferCount: number
   status:
   | "COMPLETED"
 }
+
 export const processOrderPaymentSplitsWorkflow =
   createWorkflow(
     "process-order-payment-splits",
@@ -49,6 +52,7 @@ export const processOrderPaymentSplitsWorkflow =
           splits:
             splitResult.splits,
         })
+
       return new WorkflowResponse({
         orderId:
           input.orderId,

@@ -1,13 +1,14 @@
 import InstantSearch from "@/components/search/InstantSearch"
-import ShaderCanvas from "@/components/ShaderCanvas"
+import ShaderCanvas from "@/shader-engine/ui/ShaderCanvas"
+// import ShaderCanvas from "@/components/ShaderCanvas"
 import { Github } from "@medusajs/icons"
 import { Button, Heading } from "@medusajs/ui"
 
 const Hero = () => {
   return (
     <>
+      {/* <ShaderCanvas /> */}
       <InstantSearch />
-      <ShaderCanvas />
       <div className="h-[75vh] w-full border-b border-ui-border-base relative bg-ui-bg-subtle">
         <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center small:p-32 gap-6">
           <span>

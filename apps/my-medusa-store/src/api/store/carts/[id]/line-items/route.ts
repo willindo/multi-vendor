@@ -1,6 +1,7 @@
 // /src/api/store/carts/[id]/line-items/route.ts
+import { ensureChannelHasLocation } from "@/lib/ensure-channel-location";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { addToCartWorkflow } from "@medusajs/medusa/core-flows";
 
 type AddLineItemBody = {
@@ -18,7 +19,27 @@ export async function POST(
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   try {
-    // 1. Fetch Vendor details securely through Medusa Graph Link
+    // ── 1. Resolve the cart's sales channel FIRST, and ensure it has a location
+    //       BEFORE addToCartWorkflow runs its inventory confirmation step.
+    const { data: cartMeta } = await query.graph({
+      entity: "cart",
+      fields: ["id", "sales_channel_id"],
+      filters: { id: cartId },
+    });
+
+    const salesChannelId = cartMeta?.[0]?.sales_channel_id;
+    if (!salesChannelId) {
+      res.status(400).json({
+        message: `Cart ${cartId} has no sales channel — cannot confirm inventory.`,
+      });
+      return;
+    }
+
+    // Idempotent: no-ops if the channel already has a location,
+    // or if it is not the store's default channel (multi-tenant safe).
+    await ensureChannelHasLocation(req.scope, salesChannelId);
+
+    // ── 2. Vendor lookup (unchanged)
     const { data: products } = await query.graph({
       entity: "product",
       fields: [
@@ -29,25 +50,23 @@ export async function POST(
         "vendor.handle",
         "vendor.name",
       ],
-      filters: {
-        variants: { id: [variant_id] },
-      },
+      filters: { variants: { id: [variant_id] } },
     });
 
-    console.log(`📦 [Line Item] Found ${products?.length || 0} products`);
     const product = products?.[0];
     const vendor = Array.isArray(product?.vendor)
       ? product.vendor[0]
       : product?.vendor;
 
-    console.log(`📦 [Line Item] Found vendor ${JSON.stringify(vendor)}`);
     if (!vendor?.id) {
-      res.status(400).json({ message: "This product is not linked to a valid vendor profile." });
+      res.status(400).json({
+        message: "This product is not linked to a valid vendor profile.",
+      });
       return;
     }
 
-    // 2. Run standard Core Workflow
-    const { result, errors } = await addToCartWorkflow(req.scope).run({
+    // ── 3. Run addToCartWorkflow (inventory confirmation will now succeed)
+    const { errors } = await addToCartWorkflow(req.scope).run({
       input: {
         cart_id: cartId,
         items: [
@@ -65,44 +84,43 @@ export async function POST(
     });
 
     if (errors?.length) {
-      console.error("❌ [addToCartWorkflow] Errors:", JSON.stringify(errors, null, 2));
-      const firstError = errors[0]?.error?.message || "Workflow processing execution failed.";
-
+      console.error(
+        "❌ [addToCartWorkflow] Errors:",
+        JSON.stringify(errors, null, 2)
+      );
       res.status(400).json({
-        message: firstError,
+        message: errors[0]?.error?.message || "Workflow execution failed.",
         errors,
       });
       return;
     }
-    // Fetch line item via Query Graph for accurate, fresh relations
+
+    // ── 4. Re-read the cart to return the fresh line item
     const { data: carts } = await query.graph({
       entity: "cart",
-      fields: ["id", "items.*", "items.metadata"],
+      fields: ["id", "items.*", "items.metadata", "sales_channel_id"],
       filters: { id: cartId },
     });
 
     const cart = carts?.[0];
-    const latestItem = cart?.items?.find((item: any) => item.variant_id === variant_id);
+    const latestItem = cart?.items?.find(
+      (item: any) => item.variant_id === variant_id
+    );
 
     if (!latestItem) {
       res.status(404).json({
         success: false,
-        message: `Variant ${variant_id} was not found inside the updated cart context arrays.`,
+        message: `Variant ${variant_id} not found after cart update.`,
       });
       return;
     }
 
-    res.json({
-      success: true,
-      item: latestItem,
-    });
-    return;
+    res.json({ success: true, item: latestItem });
   } catch (error) {
     console.error("❌ [Line Item Route Exception]:", error);
     res.status(500).json({
       message: "Failed to manage cart item updates.",
       error: (error as Error).message,
     });
-    return;
   }
 }

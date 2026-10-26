@@ -112,7 +112,13 @@ export async function POST(
     } else if (shippedCount === 0) {
       vendorFulfillmentStatus = "not_fulfilled";
     }
-
+    // 5. Only update the line item — leave order.fulfillment_status to Medusa
+    // await orderModuleService.updateOrderLineItems([
+    //   {
+    //     id: itemId,
+    //     metadata: updatedMetadata,
+    //   },
+    // ])
     // 5. ✅ FIXED: Only update fulfillment_status, not main order status
     await orderModuleService.updateOrders([
       {

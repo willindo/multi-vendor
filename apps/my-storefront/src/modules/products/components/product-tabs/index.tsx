@@ -78,7 +78,8 @@ const ProductInfoTab = ({
   return (
     <div className="grid grid-cols-1 small:grid-cols-2 gap-y-4 gap-x-8 py-2">
       <InfoRow label="Title" value={product.title || "-"} />
-      <InfoRow label="Product Information" value={product.description || "-"} />
+      <InfoRow label="Subitle" value={product.subtitle || "-"} />
+      <InfoRow label="Product Description" value={product.description || "-"} />
       <InfoRow label="Material" value={product.material || "-"} />
       <InfoRow label="Country of origin" value={product.origin_country || "-"} />
       <InfoRow label="Type" value={product.type?.value || "-"} />
