@@ -34,7 +34,7 @@ export default async function VendorOrdersPage() {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-    }).format(amount / 100)
+    }).format(amount)
   }
 
   return (
@@ -101,22 +101,20 @@ export default async function VendorOrdersPage() {
                     <td className="p-4 font-semibold text-neutral-950">{formatCurrency(order.total_vendor_amount)}</td>
                     <td className="p-4">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                          order.fulfillment_status === "shipped" || order.fulfillment_status === "fulfilled"
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${order.fulfillment_status === "shipped" || order.fulfillment_status === "fulfilled"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}
+                          }`}
                       >
                         {order.fulfillment_status?.replace("_", " ")}
                       </span>
                     </td>
                     <td className="p-4">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                          order.payment_routing_status === "routed"
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${order.payment_routing_status === "routed"
                             ? "bg-blue-50 text-blue-700 border-blue-200"
                             : "bg-neutral-50 text-neutral-600 border-neutral-200"
-                        }`}
+                          }`}
                       >
                         {order.payment_routing_status}
                       </span>

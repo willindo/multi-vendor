@@ -54,7 +54,7 @@ export default function CreateProductFormClient({
   const [status, setStatus] = useState(initialProduct?.status || "draft")
   const [priceAmount, setPriceAmount] = useState<number>(
     initialProduct?.variants?.[0]?.prices?.[0]?.amount ?
-      initialProduct.variants[0].prices[0].amount / 100 : 0
+      initialProduct.variants[0].prices[0].amount : 0
   )
   const [currencyCode, setCurrencyCode] = useState(
     initialProduct?.variants?.[0]?.prices?.[0]?.currency_code?.toUpperCase() || "USD"

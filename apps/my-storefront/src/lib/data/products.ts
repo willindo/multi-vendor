@@ -70,6 +70,8 @@ export const getProductByHandle = async (handle: string, countryCode: string) =>
                         "categories.id,categories.name,categories.handle," +
                         "tags.id,tags.value," +
                         "+variants.inventory_quantity,+variants.inventory_items.inventory.location_levels.*," +
+                        // "+variants.calculated_price.calculated_price.*," +
+                        // "+variants.calculated_price.original_price.*," +
                         "+apparel_detail.*,+metadata"
                 },
                 headers,

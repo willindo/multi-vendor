@@ -1,7 +1,7 @@
 // src/modules/products/components/product-price/index.tsx
 
 import { clx } from "@medusajs/ui"
-import { getProductPrice } from "@lib/util/get-product-price1"
+import { getProductPrice } from "@lib/util/get-product-price"
 import { HttpTypes } from "@medusajs/types"
 
 export default function ProductPrice({

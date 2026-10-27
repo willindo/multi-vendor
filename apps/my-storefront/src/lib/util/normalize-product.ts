@@ -1,6 +1,6 @@
 // src/lib/util/normalize-product.ts
 import { HttpTypes } from "@medusajs/types"
-import { extractRawAmount } from "./get-product-price1"
+// import { extractRawAmount } from "./get-product-price1"
 import { extractInventoryQuantity } from "./vendor/hydration"
 
 /**
@@ -34,7 +34,7 @@ export function normalizeProduct(product: any): HttpTypes.StoreProduct {
     // ── Normalize variants ──
     const normalizedVariants = product.variants.map((variant: any) => {
         const stockQty = extractInventoryQuantity(variant)
-        const { amount, currency } = extractRawAmount(variant)
+        // const { amount, currency } = extractRawAmount(variant)
 
         const normalizedOptions = (variant.options ?? []).map((vo: any) => {
             const optionValueId =
@@ -68,9 +68,10 @@ export function normalizeProduct(product: any): HttpTypes.StoreProduct {
                     : Number(stockQty ?? 0),
             calculated_price:
                 variant.calculated_price ?? {
-                    calculated_amount: amount,
-                    original_amount: amount,
-                    currency_code: currency,
+                    amount: variant.calculated_price.calculated_amount,
+                    original_amount: variant.calculated_price.original_amount,
+                    currency_code: variant.calculated_price.currency_code,
+                    price_type: variant.calculated_price.calculated_price.price_list_type,
                 },
             options: normalizedOptions,
         }

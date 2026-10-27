@@ -12,6 +12,8 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { extractInventoryQuantity } from "@/lib/util/vendor/hydration"
+// import { getPricesForVariant } from "@/lib/util/get-product-price1"
+
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -71,12 +73,17 @@ export default function ProductActions({
 
   // Pre-calculate lowest-priced fallback variant for display before user selection
   const cheapestVariant = useMemo(() => {
+    // const cheapestVariant: any = product.variants
     if (!product.variants?.length) return undefined
-    return [...product.variants].sort((a, b) => {
-      const priceA = a.calculated_price?.calculated_amount ?? Infinity
-      const priceB = b.calculated_price?.calculated_amount ?? Infinity
-      return priceA - priceB
-    })[0]
+    return [...product.variants]
+      .filter((v: any) => v.calculated_price?.calculated_amount != null && v.calculated_price?.original_amount != null)
+      .sort(
+        (a: any, b: any) => {
+          return (
+            a.calculated_price.calculated_amount -
+            b.calculated_price.calculated_amount
+          )
+        })[0]
   }, [product.variants])
 
   const setOptionValue = (optionId: string, value: string) => {

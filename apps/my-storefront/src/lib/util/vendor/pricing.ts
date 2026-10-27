@@ -3,7 +3,7 @@ export function normalizePrice(value?: number | null): number {
         return 0
     }
 
-    return Math.round(value * 100)
+    return Math.round(value)
 }
 
 export function denormalizePrice(value?: number | null): number {
@@ -11,7 +11,7 @@ export function denormalizePrice(value?: number | null): number {
         return 0
     }
 
-    return value / 100
+    return value
 }
 
 export function ensureCurrencyCode(code?: string) {

@@ -1,3 +1,4 @@
+// /src/modules/products/components/product-preview/price.tsx
 import { Text, clx } from "@medusajs/ui"
 import { VariantPrice } from "../../../../types/global"
 

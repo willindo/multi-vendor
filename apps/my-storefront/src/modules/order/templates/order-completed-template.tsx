@@ -27,7 +27,7 @@ export default function OrderCompletedTemplate({ order }: OrderCompletedTemplate
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: order.currency_code?.toUpperCase() || "INR",
-    }).format(amount / 100)
+    }).format(amount)
   }
 
   return (

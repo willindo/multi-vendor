@@ -126,13 +126,13 @@ function buildVariantOptions(
 
 export function extractPriceAmount(
     variant?: ProductVariant | any,
-    targetCurrency: string = "inr"
+    targetCurrency: string = "usd"
 ): number {
     if (!variant) return 0
 
     // 1. Medusa calculated_price — MINOR units
     if (variant.calculated_price?.calculated_amount != null) {
-        return Number(variant.calculated_price.calculated_amount) / 100
+        return Number(variant.calculated_price.calculated_amount)
     }
 
     // 2. price_set.prices / prices — MINOR units
@@ -152,10 +152,10 @@ export function extractPriceAmount(
 
     const parsed = Number(raw)
     if (!Number.isFinite(parsed)) return 0
-    return parsed / 100
+    return parsed
 }
 
-export function extractCurrencyCode(variant?: ProductVariant, fallback = "INR"): string {
+export function extractCurrencyCode(variant?: ProductVariant, fallback = "USD"): string {
     if (!variant) return fallback.toUpperCase()
     const code =
         variant.currencyCode ||
@@ -166,7 +166,7 @@ export function extractCurrencyCode(variant?: ProductVariant, fallback = "INR"):
     return code.toUpperCase()
 }
 
-export function extractFormattedPrice(variant?: ProductVariant, targetCurrency = "INR"): string {
+export function extractFormattedPrice(variant?: ProductVariant, targetCurrency = "USD"): string {
     const amount = extractPriceAmount(variant, targetCurrency)
     const symbol = getCurrencySymbol(targetCurrency)
     return `${symbol}${amount.toFixed(2)}`
